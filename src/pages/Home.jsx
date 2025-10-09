@@ -16,6 +16,7 @@ export default function Home() {
   const [nowPlaying, setNowPlaying] = useState([])
   const [topRated, setTopRated] = useState([])
   const [loading, setLoading] = useState(true)
+  console.log("Mock loaded:", mockMovies)
 
   useEffect(() => {
     let canceled = false
