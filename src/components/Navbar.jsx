@@ -71,6 +71,14 @@ export default function Navbar() {
         >
           Sign in
         </button>
+        {/* 👤 Lịch sử vé */}
+        <button
+          onClick={() => navigate("/bookings")}
+          className="hidden sm:inline px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium"
+        >
+          Vé của tôi
+        </button>
+
       </div>
     </header>
   )
