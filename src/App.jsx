@@ -4,19 +4,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
 import Dashboard from './components/Dashboard/Dashboard'
-import Sidebar from './components/Layout/Sidebar'
-import Header from './components/Layout/Header'
-import Dashboard from './components/Dashboard/Dashboard'
 import Home from './pages/Home'
-import MovieDetail from "./pages/MovieDetail"
-import Search from "./pages/Search"
-import Watchlist from "./pages/Watchlist"
-import Login from "./pages/Login"
-import Register from "./pages/Register"
-import Booking from "./pages/Booking"
-import BookingConfirmation from "./pages/BookingConfirmation"
-import BookingHistory from "./pages/BookingHistory"
-import BookingDetail from "./pages/BookingDetail"
+import MovieDetail from './pages/MovieDetail'
+import Search from './pages/Search'
+import Watchlist from './pages/Watchlist'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Booking from './pages/Booking'
+import BookingConfirmation from './pages/BookingConfirmation'
+import BookingHistory from './pages/BookingHistory'
+import BookingDetail from './pages/BookingDetail'
 
 export default function App() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false)
