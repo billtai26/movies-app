@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Base design tokens (tweak as needed) */
+:root {
+  color-scheme: dark;
+}
+
+/* Utilities */
+.scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { border-radius: 9999px; }
