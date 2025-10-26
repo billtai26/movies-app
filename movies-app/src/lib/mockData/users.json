@@ -1,0 +1,22 @@
+[
+  {
+    "id": "u1",
+    "name": "User A",
+    "email": "usera@example.com",
+    "role": "user",
+    "points": 120
+  },
+  {
+    "id": "st1",
+    "name": "Staff B",
+    "email": "staffb@example.com",
+    "role": "staff",
+    "theaterId": "t1"
+  },
+  {
+    "id": "ad1",
+    "name": "Admin C",
+    "email": "adminc@example.com",
+    "role": "admin"
+  }
+]

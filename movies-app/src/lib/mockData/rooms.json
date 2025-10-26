@@ -1,0 +1,27 @@
+[
+  {
+    "id": "r1",
+    "theaterId": "t1",
+    "name": "Room A",
+    "rows": 8,
+    "cols": 12,
+    "vipRows": [
+      "A",
+      "B"
+    ],
+    "coupleRows": [
+      "H"
+    ]
+  },
+  {
+    "id": "r2",
+    "theaterId": "t1",
+    "name": "Room B",
+    "rows": 6,
+    "cols": 10,
+    "vipRows": [
+      "A"
+    ],
+    "coupleRows": []
+  }
+]
