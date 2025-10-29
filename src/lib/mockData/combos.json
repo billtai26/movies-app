@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cb1",
+    "name": "Combo 1",
+    "items": [
+      "Popcorn",
+      "Soda"
+    ],
+    "price": 65000
+  },
+  {
+    "id": "cb2",
+    "name": "Combo 2",
+    "items": [
+      "Caramel Popcorn",
+      "2x Soda"
+    ],
+    "price": 95000
+  }
+]
