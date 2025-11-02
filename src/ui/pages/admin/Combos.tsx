@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useCollection } from "../../../lib/mockCrud";
 import { seedAll } from "../../../lib/seed";
 
 export default function AdminCombos() {
   const { rows, create, update, remove } = useCollection<any>("combos");
   const [search, setSearch] = useState("");
-  const [filterImage, setFilterImage] = useState(""); // Lọc theo ảnh
+  const [filterImage, setFilterImage] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
   const [viewing, setViewing] = useState<any | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", price: "", desc: "", image: "" });
 
@@ -83,8 +85,15 @@ export default function AdminCombos() {
     setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Xóa combo này?")) remove(id);
+  const handleDelete = (r: any) => {
+    setConfirmDelete(r);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      remove(confirmDelete.id);
+      setConfirmDelete(null);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,12 +106,10 @@ export default function AdminCombos() {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow space-y-5">
-      {/* Header + Bộ lọc + Thanh công cụ */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Quản lý combo đồ ăn
-        </h2>
+    <div className="card w-full overflow-hidden">
+      {/* Header + Bộ lọc */}
+      <div className="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="text-lg font-semibold">Quản lý combo đồ ăn</div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           {/* Lọc theo ảnh */}
@@ -143,10 +150,7 @@ export default function AdminCombos() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button
-              onClick={openAddModal}
-              className="btn-primary whitespace-nowrap"
-            >
+            <button onClick={openAddModal} className="btn-primary">
               + Thêm
             </button>
           </div>
@@ -154,9 +158,9 @@ export default function AdminCombos() {
       </div>
 
       {/* Bảng dữ liệu */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-gray-700 dark:text-gray-200">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+      <div className="hidden md:block overflow-x-auto rounded-xl border dark:border-gray-800">
+        <table className="min-w-[700px] w-full text-sm border-collapse">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th className="text-left px-3 py-2">Hình ảnh</th>
               <th className="text-left px-3 py-2">Tên combo</th>
@@ -169,7 +173,7 @@ export default function AdminCombos() {
             {pageRows.map((r: any) => (
               <tr
                 key={r.id}
-                className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                className="border-t dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
               >
                 <td className="px-3 py-2">
                   {r.image ? (
@@ -185,27 +189,25 @@ export default function AdminCombos() {
                   )}
                 </td>
                 <td className="px-3 py-2">{r.name}</td>
-                <td className="px-3 py-2">
-                  {r.price.toLocaleString("vi-VN")} ₫
-                </td>
+                <td className="px-3 py-2">{r.price.toLocaleString()} ₫</td>
                 <td className="px-3 py-2">{r.desc || "—"}</td>
                 <td className="px-3 py-2 text-center">
                   <div className="flex justify-center gap-2">
                     <button
                       onClick={() => setViewing(r)}
-                      className="bg-green-500 hover:bg-green-400 text-white px-3 py-1 rounded-md text-xs"
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs"
                     >
                       Xem
                     </button>
                     <button
                       onClick={() => openEditModal(r)}
-                      className="bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded-md text-xs"
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
                     >
                       Sửa
                     </button>
                     <button
-                      onClick={() => handleDelete(r.id)}
-                      className="bg-red-500 hover:bg-red-400 text-white px-3 py-1 rounded-md text-xs"
+                      onClick={() => handleDelete(r)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
                     >
                       Xóa
                     </button>
@@ -215,7 +217,10 @@ export default function AdminCombos() {
             ))}
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
+                <td
+                  colSpan={5}
+                  className="text-center py-6 text-gray-500 dark:text-gray-400"
+                >
                   Không có dữ liệu
                 </td>
               </tr>
@@ -224,13 +229,64 @@ export default function AdminCombos() {
         </table>
       </div>
 
+      {/* Card Mode (mobile) */}
+      <div className="block md:hidden space-y-3">
+        {pageRows.map((r: any) => (
+          <div
+            key={r.id}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
+          >
+            <div className="flex gap-3 items-center mb-2">
+              {r.image ? (
+                <img
+                  src={r.image}
+                  alt={r.name}
+                  className="w-16 h-16 object-cover rounded-md border"
+                />
+              ) : (
+                <div className="w-16 h-16 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-md text-gray-400 text-xs">
+                  Không ảnh
+                </div>
+              )}
+              <div>
+                <div className="font-semibold">{r.name}</div>
+                <div className="text-sm text-gray-500">
+                  {r.price.toLocaleString()} ₫
+                </div>
+              </div>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+              {r.desc || "Không có mô tả"}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewing(r)}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-1 rounded-md text-sm"
+              >
+                Xem
+              </button>
+              <button
+                onClick={() => openEditModal(r)}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-1 rounded-md text-sm"
+              >
+                Sửa
+              </button>
+              <button
+                onClick={() => handleDelete(r)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1 rounded-md text-sm"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
         <div className="text-sm text-gray-600 dark:text-gray-300">
-          Hiển thị {total === 0 ? 0 : `${start + 1}–${Math.min(end, total)}`} /
-          Tổng {total}
+          Hiển thị {total === 0 ? 0 : `${start + 1}–${Math.min(end, total)}`} / Tổng {total}
         </div>
-
         <div className="flex items-center gap-2">
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
@@ -243,11 +299,9 @@ export default function AdminCombos() {
           >
             Trang trước
           </button>
-
           <span className="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
             {page} / {totalPages}
           </span>
-
           <button
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
               page >= totalPages
@@ -262,17 +316,16 @@ export default function AdminCombos() {
         </div>
       </div>
 
-      {/* Modal thêm/sửa */}
+      {/* Modal Thêm / Sửa */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-[420px] p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-[450px] p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-              {editing ? "Cập nhật combo" : "Thêm combo mới"}
+              {editing ? "Sửa combo" : "Thêm combo"}
             </h3>
-
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
                   Hình ảnh combo
                 </label>
                 {form.image && (
@@ -289,50 +342,31 @@ export default function AdminCombos() {
                   className="text-sm text-gray-600 dark:text-gray-300"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  Tên combo
-                </label>
-                <input
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-transparent"
-                  placeholder="Nhập tên combo"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  Giá (₫)
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-transparent"
-                  placeholder="Nhập giá combo"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  Mô tả
-                </label>
-                <textarea
-                  rows={3}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-transparent"
-                  placeholder="Mô tả combo"
-                  value={form.desc}
-                  onChange={(e) => setForm({ ...form, desc: e.target.value })}
-                />
-              </div>
+              <input
+                className="input w-full"
+                placeholder="Tên combo"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+              <input
+                type="number"
+                className="input w-full"
+                placeholder="Giá combo"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+              />
+              <textarea
+                rows={3}
+                className="input w-full"
+                placeholder="Mô tả combo"
+                value={form.desc}
+                onChange={(e) => setForm({ ...form, desc: e.target.value })}
+              />
             </div>
-
             <div className="flex justify-end gap-2 mt-5">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-1.5 rounded-md bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100"
+                className="px-4 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
               >
                 Hủy
               </button>
@@ -340,56 +374,76 @@ export default function AdminCombos() {
                 onClick={handleSave}
                 className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white"
               >
-                {editing ? "Cập nhật" : "Thêm"}
+                {editing ? "Lưu thay đổi" : "Thêm mới"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal xem chi tiết */}
+      {/* Modal Chi tiết */}
       {viewing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-[420px] p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-[450px] p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
               Chi tiết combo
             </h3>
-
-            <div className="space-y-3">
-              {viewing.image && (
-                <img
-                  src={viewing.image}
-                  alt={viewing.name}
-                  className="w-full h-40 object-cover rounded-lg border border-gray-300 dark:border-gray-700 mb-2"
-                />
-              )}
-
-              <div>
-                <div className="text-sm text-gray-500">Tên combo</div>
-                <div className="font-medium">{viewing.name}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Giá</div>
-                <div className="font-medium">
-                  {Number(viewing.price).toLocaleString("vi-VN")} ₫
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Mô tả</div>
-                <div className="font-medium whitespace-pre-wrap">
-                  {viewing.desc || "—"}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
+            {viewing.image && (
+              <img
+                src={viewing.image}
+                alt={viewing.name}
+                className="w-full h-48 object-cover rounded-lg border mb-3"
+              />
+            )}
+            <p><strong>Tên combo:</strong> {viewing.name}</p>
+            <p><strong>Giá:</strong> {viewing.price.toLocaleString()} ₫</p>
+            <p className="whitespace-pre-wrap"><strong>Mô tả:</strong> {viewing.desc || "—"}</p>
+            <div className="flex justify-end mt-4">
               <button
                 onClick={() => setViewing(null)}
-                className="px-4 py-1.5 rounded-md bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100"
+                className="px-4 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xác nhận xoá */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[380px] p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle
+                className="text-red-600 dark:text-red-400"
+                size={22}
+              />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Xác nhận xoá
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">
+              Bạn có chắc chắn muốn xoá{" "}
+              <span className="font-semibold text-red-500">
+                {confirmDelete.name}
+              </span>
+              ?
+              ?<br />
+              Hành động này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 text-sm"
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-sm shadow-sm"
+              >
+                Xác nhận xoá
               </button>
             </div>
           </div>
