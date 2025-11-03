@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== 🎨 Theme & Components ========== */
+:root {
+  --brand: #0ea5e9; /* cyan/blue */
+  color-scheme: light dark;
+}
+.dark {
+  --brand: #f26b38; /* orange for dark mode */
+}
+
+.btn {
+  @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2 font-medium shadow-sm transition hover:opacity-90;
+}
+.btn-primary {
+  @apply btn text-white;
+  background: var(--brand);
+}
+.btn-outline {
+  @apply btn border border-gray-300 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
+}
+.card {
+  @apply rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-900 dark:text-gray-100;
+}
+.input {
+  @apply w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
+}
+.input:focus {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+.label {
+  @apply mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+.chip {
+  @apply inline-flex items-center rounded-lg px-2 py-0.5 text-xs;
+  background: rgba(0, 0, 0, 0.08);
+}
+.chip-brand {
+  background: var(--brand);
+  color: white;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+}
+header.nav {
+  @apply bg-white/70 backdrop-blur dark:bg-gray-900/70;
+}
+.link {
+  color: var(--brand);
+}
+
+/* ========== 🌌 Cinematic Aurora Background ========== */
+@keyframes auroraBackground {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-aurora {
+  background: linear-gradient(120deg, #1a103d, #3b0a55, #0a4a6a, #421b74, #0a1529);
+  background-size: 400% 400%;
+  animation: auroraBackground 20s ease infinite;
+}
+
+/* ========== ✨ Aurora Glow Border Around Forms ========== */
+@keyframes auroraGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.glow-border {
+  border: 1px solid transparent;
+  background: linear-gradient(120deg, #6b21a8, #3b82f6, #9333ea, #06b6d4);
+  background-size: 300% 300%;
+  animation: auroraGlow 6s ease infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  border-radius: 1.25rem;
+}
+
+/* ========== 🎞️ Smooth Form Appear Animation ========== */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-card {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+/* ========== 🌠 Universal Background Overlay ========== */
+body.bg-cinema {
+  @apply text-white;
+  background-color: #0a0a1a;
+  background-image: radial-gradient(
+      circle at 20% 20%,
+      rgba(59, 130, 246, 0.25) 0,
+      transparent 40%
+    ),
+    radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.25) 0, transparent 40%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Overlay động ánh sáng tím-xanh */
+body.bg-cinema::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(270deg, rgba(147, 51, 234, 0.2), rgba(59, 130, 246, 0.2));
+  filter: blur(120px);
+  animation: auroraBackground 30s ease infinite;
+  z-index: -1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* ========== 👤 Avatar Fix ========== */
+.avatar-fix {
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+}
+
+/* Ensure all avatars maintain proper aspect ratio */
+img[alt="avatar"] {
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "s1",
+    "movieId": "m1",
+    "theaterId": "t1",
+    "roomId": "r1",
+    "startTime": "2025-10-26T10:30:00",
+    "price": 75000
+  },
+  {
+    "id": "s2",
+    "movieId": "m1",
+    "theaterId": "t1",
+    "roomId": "r1",
+    "startTime": "2025-10-26T13:15:00",
+    "price": 80000
+  },
+  {
+    "id": "s3",
+    "movieId": "m1",
+    "theaterId": "t1",
+    "roomId": "r2",
+    "startTime": "2025-10-26T16:00:00",
+    "price": 85000
+  },
+  {
+    "id": "s4",
+    "movieId": "m1",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T19:30:00",
+    "price": 90000
+  },
+  {
+    "id": "s5",
+    "movieId": "m1",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-27T11:00:00",
+    "price": 75000
+  },
+  {
+    "id": "s6", 
+    "movieId": "m2",
+    "theaterId": "t1",
+    "roomId": "r1",
+    "startTime": "2025-10-26T11:45:00",
+    "price": 75000
+  },
+  {
+    "id": "s7",
+    "movieId": "m2",
+    "theaterId": "t1",
+    "roomId": "r2",
+    "startTime": "2025-10-26T14:30:00",
+    "price": 80000
+  },
+  {
+    "id": "s8",
+    "movieId": "m2",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T17:15:00",
+    "price": 85000
+  },
+  {
+    "id": "s9",
+    "movieId": "m2",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T20:00:00",
+    "price": 90000
+  },
+  {
+    "id": "s10",
+    "movieId": "m4",
+    "theaterId": "t1",
+    "roomId": "r1",
+    "startTime": "2025-10-26T12:00:00",
+    "price": 75000
+  },
+  {
+    "id": "s11",
+    "movieId": "m4",
+    "theaterId": "t1",
+    "roomId": "r2",
+    "startTime": "2025-10-26T15:30:00",
+    "price": 80000
+  },
+  {
+    "id": "s12",
+    "movieId": "m4",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T18:45:00",
+    "price": 85000
+  },
+  {
+    "id": "s13",
+    "movieId": "m5",
+    "theaterId": "t1",
+    "roomId": "r1",
+    "startTime": "2025-10-26T10:00:00",
+    "price": 75000
+  },
+  {
+    "id": "s14",
+    "movieId": "m5",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T13:45:00",
+    "price": 80000
+  },
+  {
+    "id": "s15",
+    "movieId": "m5",
+    "theaterId": "t2",
+    "roomId": "r1",
+    "startTime": "2025-10-26T16:30:00",
+    "price": 85000
+  }
+]
