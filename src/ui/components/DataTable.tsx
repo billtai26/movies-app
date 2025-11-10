@@ -40,8 +40,8 @@ export default function DataTable<T>({
                 onClick={() => onRowClick && onRowClick(r)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-blue-100 dark:bg-blue-900'
-                    : 'odd:bg-gray-50 dark:odd:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-blue-100'
+                    : 'odd:bg-gray-50 hover:bg-gray-200'
                 }`}
               >
                 {columns.map((c) => (

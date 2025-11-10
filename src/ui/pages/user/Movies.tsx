@@ -1,33 +1,85 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import MovieCard from "../../components/MovieCard";
+import { useCollection } from "../../../lib/mockCrud";
+import { seedAll } from "../../../lib/seed";
 
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+export default function Movies() {
+  React.useEffect(() => { seedAll(); }, []);
+  const { rows: movies = [] } = useCollection<any>("movies");
+  const [tab, setTab] = React.useState<"now" | "coming" | "imax" | "all">("now");
 
-export default function Movies(){
-  const [items, setItems] = React.useState<any[]>([])
-  const [q, setQ] = React.useState('')
-  React.useEffect(()=>{ api.listMovies().then(setItems) },[])
-  const filtered = items.filter(m => m.title.toLowerCase().includes(q.toLowerCase()))
+  // Tabs y chang Galaxy
+  const tabs = [
+    { key: "now", label: "Đang chiếu" },
+    { key: "coming", label: "Sắp chiếu" },
+    { key: "imax", label: "Phim IMAX" },
+    { key: "all", label: "Toàn quốc" },
+  ];
+
+  // Lọc phim theo tab
+  const filtered =
+    tab === "all" ? movies : movies.filter((m) => m.status === tab);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <input className="input" placeholder="Tìm kiếm phim..." value={q} onChange={e=>setQ(e.target.value)}/>
+    <div className="max-w-7xl mx-auto px-4 py-10">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          Danh sách phim
+        </h1>
       </div>
-      <div className="grid-cards gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {filtered.map(m => (
-          <Link key={m.id} to={`/movies/${m.id}`} className="group relative overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800">
-            <img src={m.poster} className="h-72 w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-            <div className="absolute inset-0 hidden items-center justify-center gap-2 bg-black/50 group-hover:flex">
-              <button className="rounded-xl bg-white/90 px-3 py-1 text-sm font-medium text-gray-900">Xem trailer</button>
-              <button className="rounded-xl bg-brand px-3 py-1 text-sm font-medium text-white">Đặt vé</button>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
-              <div className="font-semibold">{m.title}</div>
-              <div className="text-xs opacity-80">{m.genre.join(', ')}</div>
-            </div>
-          </Link>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center gap-6 mb-8">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key as any)}
+            className={`text-sm font-medium transition-colors ${
+              tab === t.key
+                ? "text-[#1a6aff] border-b-2 border-[#1a6aff] pb-1"
+                : "text-gray-500 hover:text-[#1a6aff]"
+            }`}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
+
+      {/* Movie grid */}
+      {filtered.length === 0 ? (
+        <p className="text-center text-gray-500 py-10">
+          Không tìm thấy phim nào phù hợp.
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-6">
+          {filtered.map((m) => (
+            <MovieCard key={m.id} movie={m} />
+          ))}
+        </div>
+      )}
+      {/* --- Mô tả phim đang chiếu (SEO section) --- */}
+<div className="mt-12 border-t pt-8">
+  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+    PHIM ĐANG CHIẾU
+  </h2>
+  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+    Một mùa Halloween lại đến, và không khí rùng rợn tràn ngập các rạp chiếu phim. 
+    Only Cinema mang đến cho bạn những tác phẩm điện ảnh đa dạng: từ hành động mãn nhãn, 
+    tình cảm ngọt ngào đến kinh dị nghẹt thở. Cùng khám phá ngay danh sách phim đang chiếu hấp dẫn nhất tuần này!
+  </p>
+  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mt-3">
+    Nổi bật trong số đó là các siêu phẩm như <b>Trò Chơi Ảo Giác: Ares</b> – tiếp nối huyền thoại Tron, 
+    <b>Nhà Ma Xó</b> – phim kinh dị Việt Nam đang gây sốt phòng vé, cùng hàng loạt phim 
+    hoạt hình và tâm lý xã hội đang thu hút đông đảo khán giả.
+  </p>
+  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mt-3">
+    Hãy đến Only Cinema để tận hưởng trải nghiệm điện ảnh đỉnh cao, cùng âm thanh Dolby và hình ảnh chuẩn 4K. 
+    Đặt vé ngay hôm nay để không bỏ lỡ suất chiếu yêu thích của bạn!
+  </p>
+</div>
+
     </div>
-  )
+  );
 }
