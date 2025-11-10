@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     // đảm bảo dữ liệu mock được nạp
     try {
-      seedAll();
+
       console.log("✅ Mock data seeded!");
     } catch (err) {
       console.error("❌ Seed error:", err);

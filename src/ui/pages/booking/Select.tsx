@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+
 
 export default function Select(){
   const nav = useNavigate()

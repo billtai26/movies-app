@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+
 
 export default function AdminCombos() {
   const { rows, create, update, remove } = useCollection<any>("combos");
@@ -18,7 +18,7 @@ export default function AdminCombos() {
   const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
-    seedAll();
+
   }, []);
 
   const filteredRows = rows

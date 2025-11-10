@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+
 
 export default function MovieDetail(){
   const { id } = useParams()

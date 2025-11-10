@@ -12,12 +12,17 @@ import {
   Edit3,
   Percent,
   Menu,
+  Film, // 🆕 thêm icon mới
 } from "lucide-react";
 
 export default function StaffLayout() {
   const items = [
     { to: "/staff", label: "Tổng quan", icon: <ClipboardCheck size={16} /> },
     { to: "/staff/checkin", label: "Check-in vé", icon: <Ticket size={16} /> },
+
+    // 🆕 THÊM DÒNG NÀY NGAY SAU CHECKIN
+    { to: "/staff/booking", label: "Đặt vé tại quầy", icon: <Film size={16} /> },
+
     { to: "/staff/seat-change", label: "Đổi ghế tại quầy", icon: <RefreshCw size={16} /> },
     { to: "/staff/combos", label: "Xử lý combo", icon: <Utensils size={16} /> },
     { to: "/staff/reports", label: "Báo cáo sự cố", icon: <FileWarning size={16} /> },
@@ -31,7 +36,6 @@ export default function StaffLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar: LUÔN fixed, KHÔNG md:static */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transition-transform duration-300 dark:bg-gray-800
         ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
@@ -39,7 +43,6 @@ export default function StaffLayout() {
         <Sidebar items={items} />
       </aside>
 
-      {/* Overlay mobile */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -47,7 +50,6 @@ export default function StaffLayout() {
         />
       )}
 
-      {/* Main: bù đúng 16rem khi >= md */}
       <div className="flex flex-1 flex-col md:ml-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-white p-3 dark:border-gray-700 dark:bg-gray-900 md:justify-end">
           <div className="flex items-center gap-2 md:hidden">
@@ -77,7 +79,6 @@ export default function StaffLayout() {
             <Outlet />
           </div>
         </main>
-
       </div>
     </div>
   );

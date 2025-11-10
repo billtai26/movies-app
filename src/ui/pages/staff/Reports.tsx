@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { seedAll } from "../../../lib/seed";
+
 import { useCollection } from "../../../lib/mockCrud";
 
 interface Report {
@@ -14,7 +14,7 @@ interface Report {
 export default function Reports() {
   // --- Phần thống kê vé ---
   useEffect(() => {
-    seedAll();
+
   }, []);
   const { rows: tickets } = useCollection<any>("tickets");
   const total = tickets.length;

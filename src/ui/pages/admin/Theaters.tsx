@@ -2,9 +2,9 @@
 import React, { useEffect } from "react";
 import CrudTable from "../../components/CrudTable";
 import { schemas } from "../../../types/entities";
-import { seedAll } from "../../../lib/seed";
+
 
 export default function AdminTheaters() {
-  useEffect(() => { seedAll(); }, []);
+  useEffect(() => {  }, []);
   return <CrudTable schema={schemas["theaters"]} />;
 }

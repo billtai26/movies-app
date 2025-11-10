@@ -1,61 +1,92 @@
-import axios from 'axios'
-import { BASE_URL } from './config'
+import axios from "axios";
 
+// === BASE URL ===
+export const BASE_URL =
+  import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || "http://localhost:8017/api";
+
+// === Helper: call API with safe error handling ===
+async function safeRequest<T>(promise: Promise<{ data: T }>): Promise<T> {
+  try {
+    const res = await promise;
+    // Nếu backend trả { data: [...] } thì lấy ra, còn trả raw thì giữ nguyên
+    return (res.data as any)?.data ?? res.data;
+  } catch (err: any) {
+    console.error("❌ API Error:", err?.response?.status, err?.response?.data || err.message);
+    throw new Error(err?.response?.data?.message || "Server error");
+  }
+}
+
+// === API Object ===
 export const api = {
-  async listMovies(status?: 'now' | 'coming') {
-    const res = await axios.get(`${BASE_URL}/movies`, { params: { status } })
-    return res.data
+  // 🎬 Movies
+  async listMovies(status?: "now" | "coming") {
+    return safeRequest(axios.get(`${BASE_URL}/movies`, { params: { status } }));
   },
   async getMovie(id: string) {
-    const res = await axios.get(`${BASE_URL}/movies/${id}`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/movies/${id}`));
   },
+
+  // 🎭 Theaters
   async listTheaters() {
-    const res = await axios.get(`${BASE_URL}/theaters`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/theaters`));
   },
+
+  // 💺 Rooms
   async listRooms(theaterId?: string) {
-    const res = await axios.get(`${BASE_URL}/rooms`, { params: { theaterId } })
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/rooms`, { params: { theaterId } }));
   },
+
+  // 🕒 Showtimes
   async listShowtimes() {
-    const res = await axios.get(`${BASE_URL}/showtimes`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/showtimes`));
   },
   async listShowtimesByMovie(movieId: string) {
-    const res = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId } })
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/showtimes`, { params: { movieId } }));
   },
   async getShowtime(id: string) {
-    const res = await axios.get(`${BASE_URL}/showtimes/${id}`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/showtimes/${id}`));
   },
+
+  // 🍿 Combos
   async listCombos() {
-    const res = await axios.get(`${BASE_URL}/combos`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/combos`));
   },
+
+  // 👤 Users
   async listUsers() {
-    const res = await axios.get(`${BASE_URL}/users`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/users`));
   },
+
+  // 🎟️ Promos
   async listPromos() {
-    const res = await axios.get(`${BASE_URL}/promos`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/promos`));
   },
+
+  // 📰 Articles
   async listArticles() {
-    const res = await axios.get(`${BASE_URL}/articles`)
-    return res.data
+    return safeRequest(axios.get(`${BASE_URL}/articles`));
   },
+
+  // === CRUD generic ===
   async create<T>(collection: string, item: T) {
-    const res = await axios.post(`${BASE_URL}/${collection}`, item)
-    return res.data
+    return safeRequest(axios.post(`${BASE_URL}/${collection}`, item));
   },
   async update<T>(collection: string, id: string, item: T) {
-    const res = await axios.put(`${BASE_URL}/${collection}/${id}`, item)
-    return res.data
+    return safeRequest(axios.put(`${BASE_URL}/${collection}/${id}`, item));
   },
   async remove(collection: string, id: string) {
-    const res = await axios.delete(`${BASE_URL}/${collection}/${id}`)
-    return res.data
+    return safeRequest(axios.delete(`${BASE_URL}/${collection}/${id}`));
   },
-}
+
+  // === Generic GET ===
+  async getAll(collection: string) {
+    return safeRequest(axios.get(`${BASE_URL}/${collection}`));
+  },
+  async getOne(collection: string, id: string) {
+    return safeRequest(axios.get(`${BASE_URL}/${collection}/${id}`));
+  },
+  // Dùng name khác tránh trùng create()
+  async createItem(collection: string, data: any) {
+    return safeRequest(axios.post(`${BASE_URL}/${collection}`, data));
+  },
+};

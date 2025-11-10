@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+
 import toast from "react-hot-toast";
 
 export default function CheckIn() {
@@ -10,7 +10,7 @@ export default function CheckIn() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    seedAll();
+
     setTimeout(() => setReady(true), 200);
   }, []);
 

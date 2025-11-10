@@ -3,7 +3,7 @@ import { Star, Mail, Phone, Lock, Calendar } from "lucide-react";
 
 export default function Profile() {
   // ==============================
-  // MOCK DATA
+
   // ==============================
   const defaultUser = {
     name: "Nguyễn Quang Dũng",

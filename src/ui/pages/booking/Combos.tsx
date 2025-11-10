@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+
 
 export default function Combos(){
   const nav = useNavigate()

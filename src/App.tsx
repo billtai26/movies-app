@@ -29,6 +29,7 @@ import Profile from './ui/pages/user/Profile'
 import Reviews from './ui/pages/user/Reviews'
 import StaffDashboard from './ui/pages/staff/Dashboard'
 import CheckIn from './ui/pages/staff/CheckIn'
+import StaffBooking from './ui/pages/staff/StaffBooking'
 import SeatChange from './ui/pages/staff/SeatChange'
 import Combos from './ui/pages/staff/Combos'
 import Reports from './ui/pages/staff/Reports'
@@ -87,6 +88,7 @@ export default function App(){
         <Route element={<StaffLayout/>}>
           <Route index element={<StaffDashboard/>} />
           <Route path="checkin" element={<CheckIn/>} />
+          <Route path="booking" element={<StaffBooking/>} />
           <Route path="seat-change" element={<SeatChange/>} />
           <Route path="combos" element={<Combos/>} />
           <Route path="reports" element={<Reports/>} />

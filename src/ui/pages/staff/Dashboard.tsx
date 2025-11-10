@@ -1,4 +1,6 @@
 import React from "react";
+import { api } from "../../../lib/api";
+
 import {
   BarChart,
   Bar,
@@ -12,7 +14,7 @@ import {
   Cell,
 } from "recharts";
 import toast from "react-hot-toast";
-import { api } from "../../../lib/mockApi";
+
 
 const genWeek = () =>
   ["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => ({

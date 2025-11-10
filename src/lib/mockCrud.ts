@@ -1,128 +1,144 @@
-
 // src/lib/mockCrud.ts
-// Generic localStorage CRUD with namespaced collections.
-// Provides: getAll, create, update, remove, upsertMany, subscribe, seedIfEmpty.
-// Also exports React hooks: useCollection (list + create/update/delete), useDoc (by id).
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { BASE_URL } from "./config";
 
-import { useEffect, useMemo, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+type Id = string | number;
 
-const STORAGE_KEY = "cinesta_crud_v4";
-
-export type EntityRecord = { id: string; [k: string]: any };
-export type CollectionName =
-  | "movies" | "genres" | "theaters" | "rooms" | "seats"
-  | "showtimes" | "users" | "promotions" | "comments" | "notifications"
-  | "tickets" | "combos" | "orders";
-
-type DB = Record<CollectionName, EntityRecord[]>;
-
-const listeners = new Set<() => void>();
-
-function readDB(): DB {
+// 📆 Helper format thời gian đẹp
+function formatDateTime(dt: string | Date | undefined) {
+  if (!dt) return "";
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) throw new Error("empty");
-    const parsed = JSON.parse(raw);
-    return parsed;
+    const date = new Date(dt);
+
+    // ✅ Lấy theo UTC gốc (tránh cộng +7h)
+    const d = date.getUTCDate().toString().padStart(2, "0");
+    const m = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+    const y = date.getUTCFullYear();
+    const h = date.getUTCHours().toString().padStart(2, "0");
+    const mi = date.getUTCMinutes().toString().padStart(2, "0");
+
+    return `${h}:${mi} ${d}/${m}/${y}`;
   } catch {
-    const empty: DB = {
-      movies: [], genres: [], theaters: [], rooms: [], seats: [],
-      showtimes: [], users: [], promotions: [], comments: [], notifications: [],
-      tickets: [], combos: [], orders: []
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(empty));
-    return empty;
+    return String(dt);
   }
 }
 
-function writeDB(db: DB) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  listeners.forEach(l => l());
-}
 
-export function seedIfEmpty(seed: Partial<DB>) {
-  const db = readDB();
-  let changed = false;
-  (Object.keys(seed) as CollectionName[]).forEach(name => {
-    const arr = (db[name] || []) as EntityRecord[];
-    if (!arr || arr.length === 0) {
-      db[name] = (seed[name] as EntityRecord[]) || [];
-      changed = true;
+// 🧩 Chuẩn hóa dữ liệu nhận từ backend
+const norm = (x: any) => ({
+  ...x,
+
+  // ✅ ID luôn có
+  id: x?._id ?? x?.id,
+
+  // ✅ Phòng & Ghế
+  roomName: x?.roomName ?? x?.name ?? "",
+  theaterName: x?.theater?.name ?? x?.theaterName ?? "",
+  theater: x?.theater?._id ?? x?.theater ?? "",
+
+  // ✅ Lịch chiếu
+  movieTitle: x?.movie?.title ?? x?.movieTitle ?? "",
+  movie: typeof x?.movie === "object" ? x.movie.title : x.movie,
+
+  // ✅ Chuẩn hóa user / combo / ... (nếu có)
+  userName: x?.user?.name ?? x?.userName ?? "",
+  comboName: x?.combo?.name ?? x?.comboName ?? "",
+
+  // ✅ Format thời gian cho lịch chiếu
+  startTime: x?.startTime ? formatDateTime(x.startTime) : "",
+  endTime: x?.endTime ? formatDateTime(x.endTime) : "",
+});
+
+const normList = (arr: any[]) => (Array.isArray(arr) ? arr.map(norm) : []);
+
+// 🧠 Hook CRUD chính
+export function useCollection<T = any>(collectionName: string) {
+  const key = (collectionName || "").toLowerCase().trim();
+
+  // ✅ Ánh xạ tên chuẩn cho toàn bộ API
+  const pathMap: Record<string, string> = {
+    movies: "movies",
+    showtimes: "showtimes",
+    genres: "genres",
+    combos: "combos",
+    theaters: "theaters",
+    tickets: "tickets",
+    users: "users",
+    promotions: "promos",
+    "rooms-seats": "rooms-seats",
+    comments: "comments",
+    reports: "reports",
+  };
+
+  const path = pathMap[key] || key;
+  const base = `${BASE_URL}/${path}`;
+
+  const [rows, setRows] = useState<T[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<any>(null);
+
+  // 🔄 Load danh sách
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    axios
+      .get(base)
+      .then((r) => {
+        if (!mounted) return;
+        const payload = r.data?.data ?? r.data;
+        setRows(normList(payload) as any);
+      })
+      .catch((e) => {
+        if (mounted) setError(e);
+        console.error("❌ Load error:", e?.response?.data || e.message);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [base]);
+
+  // ➕ Create
+  const create = async (data: Partial<T>) => {
+    const res = await axios.post(base, data);
+    const item = norm(res.data) as any;
+    setRows((prev) => [...prev, item]);
+    return item;
+  };
+
+  // ✏️ Update
+  const update = async (id: Id | any, data: Partial<T>) => {
+    const realId = id?._id ?? id?.id ?? id;
+    if (!realId) {
+      console.error("❌ update() invalid id:", id);
+      return;
     }
-  });
-  if (changed) writeDB(db);
-}
+    const res = await axios.put(`${base}/${realId}`, data);
+    const item = norm(res.data) as any;
+    setRows((prev) =>
+      prev.map((r: any) =>
+        r._id === realId || r.id === realId ? item : r
+      )
+    );
+    return item;
+  };
 
-export function getAll<T extends EntityRecord>(name: CollectionName): T[] {
-  const db = readDB();
-  return (db[name] as T[]) || [];
-}
+  // ❌ Delete
+  const remove = async (id: Id | any) => {
+    const realId = id?._id ?? id?.id ?? id;
+    if (!realId) {
+      console.error("❌ remove() invalid id:", id);
+      return;
+    }
+    await axios.delete(`${base}/${realId}`);
+    setRows((prev) =>
+      prev.filter((r: any) => (r._id ?? r.id) != realId)
+    );
+  };
 
-export function getById<T extends EntityRecord>(name: CollectionName, id: string): T | undefined {
-  return getAll<T>(name).find(x => x.id === id);
-}
-
-export function create<T extends EntityRecord>(name: CollectionName, data: Omit<T, "id">): T {
-  const db = readDB();
-  const rec = { id: uuidv4(), ...data } as T;
-  (db[name] as T[]).push(rec);
-  writeDB(db);
-  return rec;
-}
-
-export function update<T extends EntityRecord>(name: CollectionName, id: string, patch: Partial<T>): T {
-  const db = readDB();
-  const list = db[name] as T[];
-  const idx = list.findIndex(x => x.id === id);
-  if (idx === -1) throw new Error("Not found");
-  list[idx] = { ...list[idx], ...patch, id };
-  writeDB(db);
-  return list[idx];
-}
-
-export function remove(name: CollectionName, id: string) {
-  const db = readDB();
-  db[name] = (db[name] as EntityRecord[]).filter(x => x.id !== id);
-  writeDB(db);
-}
-
-export function upsertMany<T extends EntityRecord>(name: CollectionName, rows: T[]) {
-  const db = readDB();
-  db[name] = rows;
-  writeDB(db);
-}
-
-// ---- React hooks ----
-export function useCollection<T extends EntityRecord>(name: CollectionName) {
-  const [rows, setRows] = useState<T[]>(() => getAll<T>(name));
-  useEffect(() => {
-    const l = () => setRows(getAll<T>(name));
-    listeners.add(l);
-    return () => { listeners.delete(l); };
-  }, [name]);
-
-  const actions = useMemo(() => ({
-    create: (data: Omit<T, "id">) => create<T>(name, data),
-    update: (id: string, patch: Partial<T>) => update<T>(name, id, patch),
-    remove: (id: string) => remove(name, id),
-    refresh: () => setRows(getAll<T>(name))
-  }), [name]);
-
-  return { rows, ...actions };
-}
-
-export function useDoc<T extends EntityRecord>(name: CollectionName, id: string | null) {
-  const [doc, setDoc] = useState<T | null>(() => (id ? (getById<T>(name, id) ?? null) : null));
-  useEffect(() => {
-    const l = () => setDoc(id ? (getById<T>(name, id) ?? null) : null);
-    listeners.add(l);
-    return () => { listeners.delete(l); };
-  }, [name, id]);
-  return doc;
-}
-
-// Small helper to reset DB while developing
-export function __resetAll() {
-  localStorage.removeItem(STORAGE_KEY);
+  return { rows, setRows, loading, error, create, update, remove };
 }

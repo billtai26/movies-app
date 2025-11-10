@@ -1,7 +1,9 @@
 import React from "react";
 import { FieldSchema } from "../../types/entities";
 import CustomSelect from "./CustomSelect";
-
+import LayoutEditor from "./LayoutEditor"; // 🟢 Dùng để chỉnh cấu hình hàng ghế
+import { toLocalInput } from "../../lib/datetime";
+import { formatVN } from "../../lib/datetime";
 export default function CrudModal({
   open,
   title,
@@ -25,15 +27,13 @@ export default function CrudModal({
   }, [value]);
   if (!open) return null;
 
-  const change = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  const change = (k: string, v: any) =>
+    setForm((f: any) => ({ ...f, [k]: v }));
 
-  // helper: lấy nhãn hiển thị cho select khi readOnly
   const getSelectLabel = (field: FieldSchema, v: any) => {
     const opts = field.options || [];
     if (Array.isArray(opts) && opts.length > 0) {
-      if (typeof opts[0] === "string") {
-        return String(v ?? "");
-      }
+      if (typeof opts[0] === "string") return String(v ?? "");
       const found = (opts as Array<{ label: string; value: string }>).find(
         (o) => o.value === v
       );
@@ -42,13 +42,12 @@ export default function CrudModal({
     return String(v ?? "");
   };
 
-  // helper: hiển thị ảnh preview nếu có
   const imageUrl =
     value?.imageUrl || value?.poster || value?.image || value?.avatar;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -65,7 +64,6 @@ export default function CrudModal({
         {/* ================== VIEW MODE ================== */}
         {readOnly ? (
           <div className="space-y-4 text-gray-800 dark:text-gray-200">
-            {/* Hiển thị ảnh nếu có */}
             {imageUrl && (
               <img
                 src={imageUrl}
@@ -74,18 +72,25 @@ export default function CrudModal({
               />
             )}
 
-            {/* Thông tin các trường */}
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               {fields.map((f) => (
                 <div key={f.key}>
                   <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
                     {f.label}
                   </p>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                  {f.type === "layout" ? (
+                    <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800 mt-1">
+                      <SeatPreview seats={form["seats"] || []} />
+                    </div>
+                  ) : (
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
                     {f.type === "select"
                       ? getSelectLabel(f, form[f.key])
+                       : f.type === "datetime"
+                      ? formatVN(form[f.key])
                       : String(form[f.key] ?? "—")}
                   </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -101,7 +106,7 @@ export default function CrudModal({
           </div>
         ) : (
           /* ================== EDIT/ADD MODE ================== */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[65vh] overflow-y-auto pr-1">
             {fields.map((f) => {
               const isDisabled = readOnly || (f as any).disabled;
               const common = {
@@ -112,26 +117,22 @@ export default function CrudModal({
               return (
                 <div
                   key={f.key}
-                  className={`${f.type === "textarea" ? "md:col-span-2" : ""}`}
+                  className={`${
+                    f.type === "textarea" || f.type === "layout"
+                      ? "md:col-span-2"
+                      : ""
+                  }`}
                 >
                   <label className="label">{f.label}</label>
 
                   {/* SELECT */}
                   {f.type === "select" ? (
-                    readOnly ? (
-                      <input
-                        className="input"
-                        value={getSelectLabel(f, form[f.key])}
-                        readOnly
-                      />
-                    ) : (
-                      <CustomSelect
-                        value={form[f.key] || ""}
-                        onChange={(v) => change(f.key, v)}
-                        options={f.options || []}
-                        placeholder="-- Chọn --"
-                      />
-                    )
+                    <CustomSelect
+                      value={form[f.key] || ""}
+                      onChange={(v) => change(f.key, v)}
+                      options={f.options || []}
+                      placeholder="-- Chọn --"
+                    />
                   ) : f.type === "textarea" ? (
                     <textarea
                       className="input h-28"
@@ -151,9 +152,14 @@ export default function CrudModal({
                     <input
                       type="datetime-local"
                       className="input"
-                      value={form[f.key] || ""}
+                      value={toLocalInput(form[f.key])} 
                       onChange={(e) => change(f.key, e.target.value)}
                       {...common}
+                    />
+                  ) : f.type === "layout" ? (
+                    <LayoutEditor
+                      value={form[f.key] || []}
+                      onChange={(v) => change(f.key, v)}
                     />
                   ) : (
                     <input
@@ -169,16 +175,57 @@ export default function CrudModal({
 
             {/* Footer */}
             <div className="md:col-span-2 text-right mt-2">
-              <button
-                className="btn-primary"
-                onClick={() => onSubmit(form)}
-              >
+              <button className="btn-primary" onClick={() => onSubmit(form)}>
                 Lưu
               </button>
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ======================================================
+   🎬 SeatPreview — hiển thị sơ đồ ghế khi xem chi tiết
+====================================================== */
+function SeatPreview({ seats }: { seats: any[] }) {
+  if (!seats || seats.length === 0)
+    return <p className="text-sm text-gray-400">Không có ghế nào.</p>;
+
+  // Gom ghế theo hàng (A, B, C...)
+  const grouped = seats.reduce((acc: any, s: any) => {
+    const row = s.seatNumber?.[0] || "?";
+    acc[row] = acc[row] || [];
+    acc[row].push(s);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-4 overflow-x-auto">
+      {Object.keys(grouped).map((row) => (
+        <div key={row}>
+          <p className="text-xs text-gray-500 mb-1 font-medium">Hàng {row}</p>
+          <div className="flex flex-wrap gap-1">
+            {grouped[row].map((seat: any) => (
+              <div
+                key={seat.seatNumber}
+                title={seat.seatNumber}
+                className={[
+                  "w-8 h-7 flex items-center justify-center text-[11px] font-mono rounded select-none",
+                  seat.type === "VIP"
+                    ? "bg-yellow-300 dark:bg-yellow-600/40 border border-yellow-500 text-yellow-900 dark:text-yellow-100"
+                    : seat.type === "COUPLE"
+                    ? "bg-pink-300 dark:bg-pink-700/50 border border-pink-500 text-pink-900 dark:text-pink-100"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100",
+                ].join(" ")}
+              >
+                {seat.seatNumber}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

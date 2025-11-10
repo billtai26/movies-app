@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+
 import CustomSelect from "../../../ui/components/CustomSelect";
 
 export default function OrderEdit() {
@@ -14,7 +14,7 @@ export default function OrderEdit() {
   const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
-    seedAll();
+
   }, []);
 
   const handleEdit = (order: any) => {
