@@ -5,7 +5,7 @@ export default function ForgotPassword() {
   const nav = useNavigate()
 
   return (
-    <div className="backdrop-blur-md bg-white/10 dark:bg-gray-800/40 p-8 rounded-2xl shadow-2xl text-white border border-white/20">
+    <div className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl text-white border border-white/20">
       <h2 className="text-3xl font-bold text-center mb-2 text-blue-400">Quên mật khẩu</h2>
       <p className="text-center text-sm text-gray-300 mb-6">Nhập email để nhận liên kết đặt lại mật khẩu</p>
 
@@ -18,6 +18,12 @@ export default function ForgotPassword() {
         </button>
         <button onClick={() => nav('/auth/register')} className="text-blue-400 hover:underline">
           Đăng ký
+        </button>
+      </div>
+      
+      <div className="text-center mt-4">
+        <button onClick={() => nav('/')} className="text-orange-400 hover:underline text-sm">
+          ← Về trang chính
         </button>
       </div>
     </div>

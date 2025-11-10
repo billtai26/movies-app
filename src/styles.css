@@ -4,11 +4,35 @@
 
 /* ========== 🎨 Theme & Components ========== */
 :root {
-  --brand: #0ea5e9; /* cyan/blue */
+  --brand: #f26b38; /* orange */
   color-scheme: light dark;
 }
 .dark {
   --brand: #f26b38; /* orange for dark mode */
+}
+
+/* ========== 🎬 Animations ========== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ========== 📱 Utility Classes ========== */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .btn {
@@ -21,8 +45,21 @@
 .btn-outline {
   @apply btn border border-gray-300 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
 }
+/* Booking flow buttons (Back / Next) consistent across pages */
+.btn-back {
+  @apply inline-flex items-center justify-center px-0 py-0 font-medium text-[15px];
+  color: var(--brand);
+  background: transparent;
+}
+.btn-back:hover { opacity: 0.85; }
+.dark .btn-back:hover { opacity: 0.9; }
+.btn-next {
+  @apply inline-flex items-center justify-center rounded-full px-8 py-2.5 font-semibold text-white shadow transition;
+  background: var(--brand);
+}
+.btn-next:hover { filter: brightness(0.97); }
 .card {
-  @apply rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-900 dark:text-gray-100;
+  @apply p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm;
 }
 .input {
   @apply w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
@@ -45,8 +82,67 @@
 body {
   @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
 }
+/* Hide accidental horizontal scroll caused by full-bleed sections */
+html, body { overflow-x: hidden; }
+/* Giữ không gian scrollbar dọc ổn định và luôn duy trì track scrollbar dọc */
+html { scrollbar-gutter: stable; overflow-y: scroll; }
+/* Áp dụng luôn scrollbar dọc cho body và hạn chế overscroll gây giật */
+body { overflow-y: scroll; overscroll-behavior-y: contain; }
 header.nav {
   @apply bg-white/70 backdrop-blur dark:bg-gray-900/70;
+}
+
+/* ========== 📜 Custom Scrollbar ========== */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800 rounded-full;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 hover:bg-gray-400;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+.dark .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 hover:bg-gray-500;
+}
+
+.dark .scrollbar-track-gray-800::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+/* Ẩn scrollbar ngang cho thanh tabs ngày trong lịch chiếu */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ========== 🎬 Hover Dropdown Animation ========== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
 }
 .link {
   color: var(--brand);
@@ -177,8 +273,64 @@ body.bg-cinema::before {
 
   /* Responsive section titles */
   .section-title { @apply text-lg sm:text-xl md:text-2xl font-bold; }
+
+  /* Full-bleed section: stretch to viewport width inside a centered container */
+  .full-bleed {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    width: 100vw;
+  }
 }
 
 /* Utility for responsive hero/banner heights */
 .banner-h { @apply h-48 sm:h-56 md:h-64 lg:h-80; }
 
+/* ============================ */
+/* FIX INPUT & SELECT BỊ ĐEN TRONG THEME SÁNG */
+/* ============================ */
+
+/* Bắt trình duyệt luôn render sáng cho input, select, textarea */
+input, select, textarea {
+  background-color: white !important;
+  color: #111827 !important; /* text-gray-900 */
+  border: 1px solid #d1d5db !important; /* border-gray-300 */
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+  color: white !important;
+  border-color: #374151 !important; /* border-gray-700 */
+}
+
+/* Loại bỏ màu nền mặc định do Windows 11 hoặc Chrome override */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+html.dark input:-webkit-autofill,
+html.dark textarea:-webkit-autofill,
+html.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  -webkit-text-fill-color: white !important;
+}
+
+/* Bắt trình duyệt không áp dụng theme hệ thống */
+input, select, textarea {
+  color-scheme: light !important;
+}
+html.dark input, html.dark select, html.dark textarea {
+  color-scheme: dark !important;
+}
+
+/* Ẩn thanh cuộn mọi trình duyệt */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE + Edge */
+  scrollbar-width: none; /* Firefox */
+}

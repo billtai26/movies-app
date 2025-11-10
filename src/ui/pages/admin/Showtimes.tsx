@@ -1,10 +1,52 @@
-
-import React, { useEffect } from "react";
 import CrudTable from "../../components/CrudTable";
-import { schemas } from "../../../types/entities";
-import { seedAll } from "../../../lib/seed";
 
-export default function AdminShowtimes() {
-  useEffect(() => { seedAll(); }, []);
-  return <CrudTable schema={schemas["showtimes"]} />;
+export default function Showtimes() {
+  const schema = {
+    name: "showtimes",
+    title: "Lịch chiếu",
+    columns: [
+      { key: "movie", label: "Phim" },
+      { key: "cinema", label: "Rạp" },
+      { key: "startTime", label: "Bắt đầu" },
+      { key: "endTime", label: "Kết thúc" },
+    ],
+    fields: [
+      {
+        key: "movie",
+        label: "Phim",
+        type: "select",
+        required: true,
+        options: [
+          { label: "Avatar 2", value: "Avatar 2" },
+          { label: "Tron Ares", value: "Tron Ares" },
+          { label: "Inside Out 2", value: "Inside Out 2" },
+        ],
+      },
+      {
+        key: "cinema",
+        label: "Rạp/Cụm",
+        type: "select",
+        required: true,
+        options: [
+          { label: "Only Cinema Q1", value: "Q1" },
+          { label: "Only Cinema Thủ Đức", value: "TD" },
+          { label: "Only Cinema Gò Vấp", value: "GV" },
+        ],
+      },
+      {
+        key: "startTime",
+        label: "Thời gian bắt đầu",
+        type: "datetime",
+        required: true,
+      },
+       {
+        key: "endTime",
+        label: "Thời gian kết thúc", // 🆕 thêm trường mới
+        type: "datetime",
+        required: true,
+      },
+    ],
+  };
+
+  return <CrudTable schema={schema} />;
 }

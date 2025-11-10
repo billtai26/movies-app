@@ -1,43 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react"
 
 export type WithId<T = any> = T & { id: string | number }
 
 /**
- * Generic CRUD state persisted to localStorage.
- * Each item must have an "id" field (string or number).
+ * Hook CRUD an toàn, tự sync localStorage, hỗ trợ seed ban đầu.
  */
-export function useLocalStorageCRUD<T extends WithId>(key: string, initial: T[] = []) {
-  const [data, setData] = useState<T[]>(() => {
+export function useLocalStorageCRUD<T extends WithId>(
+  key: string,
+  initial: T[] = []
+) {
+  const [data, setData] = useState<T[]>([])
+
+  // 🧠 Load dữ liệu khi mount
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(key)
-      return raw ? (JSON.parse(raw) as T[]) : initial
-    } catch {
-      return initial
+      if (raw) {
+        setData(JSON.parse(raw))
+      } else {
+        localStorage.setItem(key, JSON.stringify(initial))
+        setData(initial)
+      }
+    } catch (err) {
+      console.error("⚠️ Lỗi đọc localStorage:", err)
+      setData(initial)
     }
-  })
+  }, [key])
 
+  // 💾 Ghi dữ liệu mỗi khi thay đổi
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
+    try {
+      localStorage.setItem(key, JSON.stringify(data))
+    } catch (err) {
+      console.error("⚠️ Lỗi ghi localStorage:", err)
+    }
   }, [key, data])
 
-  const addItem = (item: Omit<T, 'id'> & Partial<Pick<T, 'id'>>) => {
+  // 🧩 CRUD methods
+  const addItem = (item: Omit<T, "id"> & Partial<Pick<T, "id">>) => {
     const id = (item as any).id ?? Date.now().toString()
-    setData(prev => [...prev, { ...(item as any), id }])
+    setData((prev) => [...prev, { ...(item as any), id }])
   }
 
   const updateItem = (id: string | number, patch: Partial<T>) => {
-    setData(prev => prev.map((it: any) => (it.id === id ? { ...it, ...patch } : it)))
-  }
-
-  const replaceItem = (id: string | number, next: T) => {
-    setData(prev => prev.map((it: any) => (it.id === id ? next : it)))
+    setData((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)))
   }
 
   const deleteItem = (id: string | number) => {
-    setData(prev => prev.filter((it: any) => it.id !== id))
+    setData((prev) => prev.filter((it) => it.id !== id))
+  }
+
+  const replaceItem = (id: string | number, next: T) => {
+    setData((prev) => prev.map((it) => (it.id === id ? next : it)))
   }
 
   const setAll = (next: T[]) => setData(next)
 
-  return { data, addItem, updateItem, replaceItem, deleteItem, setAll }
+  return { data, addItem, updateItem, deleteItem, replaceItem, setAll }
 }

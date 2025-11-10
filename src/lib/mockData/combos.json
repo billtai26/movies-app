@@ -1,20 +1,84 @@
 [
   {
     "id": "cb1",
-    "name": "Combo 1",
+    "name": "Capybara Set",
+    "imageUrl": "https://picsum.photos/seed/capybara-set/100/100",
     "items": [
-      "Popcorn",
-      "Soda"
+      "Bắp rang ngọt size L",
+      "2x Nước ngọt"
     ],
-    "price": 65000
+    "price": 350000
   },
   {
     "id": "cb2",
-    "name": "Combo 2",
+    "name": "Combo 2 Big",
+    "imageUrl": "https://picsum.photos/seed/combo-2-big/100/100",
     "items": [
-      "Caramel Popcorn",
-      "2x Soda"
+      "1 Bắp rang bơ size L",
+      "2 Pepsi lớn"
     ],
-    "price": 95000
+    "price": 109000
+  },
+  {
+    "id": "cb3",
+    "name": "Combo 2 Big Extra",
+    "imageUrl": "https://picsum.photos/seed/combo-2-big-extra/100/100",
+    "items": [
+      "2 Bắp rang bơ",
+      "2 Pepsi lớn",
+      "1 Snack"
+    ],
+    "price": 129000
+  },
+  {
+    "id": "cb4",
+    "name": "Combo Friends 1 Big",
+    "imageUrl": "https://picsum.photos/seed/combo-friends-1/100/100",
+    "items": [
+      "3 Bắp rang lớn",
+      "3 Pepsi lớn"
+    ],
+    "price": 149000
+  },
+  {
+    "id": "cb5",
+    "name": "Combo Friends 2 Big",
+    "imageUrl": "https://picsum.photos/seed/combo-friends-2/100/100",
+    "items": [
+      "4 Bắp rang lớn",
+      "2 Nước lớn"
+    ],
+    "price": 229000
+  },
+  {
+    "id": "cb6",
+    "name": "Combo 1 Big",
+    "imageUrl": "https://picsum.photos/seed/combo-1-big/100/100",
+    "items": [
+      "1 Bắp rang",
+      "1 Nước"
+    ],
+    "price": 62000
+  },
+  {
+    "id": "cb7",
+    "name": "Combo 2 Set",
+    "imageUrl": "https://picsum.photos/seed/combo-2-set/100/100",
+    "items": [
+      "2 Bắp rang",
+      "2 Nước"
+    ],
+    "price": 99000
+  },
+  {
+    "id": "cb8",
+    "name": "Combo Capybara Extra",
+    "imageUrl": "https://picsum.photos/seed/combo-capybara-extra/100/100",
+    "items": [
+      "Bắp ngọt",
+      "Trà sữa",
+      "Snack"
+    ],
+    "price": 199000
   }
 ]
