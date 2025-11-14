@@ -35,16 +35,8 @@ export default function AppSection() {
                 className="w-[120px] h-[120px]"
               />
               <div className="flex flex-col gap-3">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Available_on_the_App_Store_(black)_SVG.svg"
-                  alt="App Store"
-                  className="h-10"
-                />
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-                  alt="Google Play"
-                  className="h-10"
-                />
+                <img src="/appstore-badge.svg" alt="App Store" className="h-10"/>
+                <img src="/googleplay-badge.svg" alt="Google Play" className="h-10"/>
               </div>
             </div>
           </div>

@@ -55,7 +55,7 @@ export default function Footer() {
             <div className="flex items-center md:justify-end gap-3">
               <img
                 className="h-8"
-                src="https://upload.wikimedia.org/wikipedia/commons/2/2b/VN-ecommerce-registered.png"
+                src="/vn-ecommerce.svg"
                 alt="Đã thông báo"
               />
             </div>
