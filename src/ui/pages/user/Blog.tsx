@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
 const posts = [
   {
@@ -52,19 +51,15 @@ export default function Blog() {
             key={p.id}
             className="rounded-xl overflow-hidden border hover:shadow-md transition"
           >
-            <Link to={`/blogs/${p.id}`}>
-              <img
-                src={p.img}
-                alt={p.title}
-                className="w-full h-[220px] object-cover"
-              />
-            </Link>
+            <img
+              src={p.img}
+              alt={p.title}
+              className="w-full h-[220px] object-cover"
+            />
             <div className="p-3">
-              <Link to={`/blogs/${p.id}`}>
-                <p className="font-medium text-sm mb-2 leading-snug hover:text-blue-600 cursor-pointer">
-                  {p.title}
-                </p>
-              </Link>
+              <p className="font-medium text-sm mb-2 leading-snug hover:text-blue-600 cursor-pointer">
+                {p.title}
+              </p>
               <div className="flex items-center text-xs text-gray-500 gap-3">
                 <button className="bg-[#1877f2] text-white text-xs px-2 py-0.5 rounded">
                   👍 Thích
@@ -80,7 +75,7 @@ export default function Blog() {
       <div className="mt-12 border-t pt-6 text-gray-700 text-sm leading-relaxed">
         <h2 className="font-semibold mb-2">BLOG ĐIỆN ẢNH CINEMA</h2>
         <p>
-          Only Cinema mang đến cho bạn những bài viết phân tích, đánh giá, 
+          Cinesta mang đến cho bạn những bài viết phân tích, đánh giá, 
           và tin tức điện ảnh mới nhất trong nước và quốc tế. 
           Từ các bom tấn Hollywood đến điện ảnh Việt Nam, tất cả đều được chọn lọc và biên soạn kỹ lưỡng.
         </p>

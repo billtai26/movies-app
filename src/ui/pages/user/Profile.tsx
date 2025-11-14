@@ -1,37 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Star, Mail, Phone, Lock, Calendar, Check } from "lucide-react";
-import { useAuth } from "../../../store/auth";
+import { Star, Mail, Phone, Lock, Calendar } from "lucide-react";
 
 export default function Profile() {
-  const { updateAvatar, updateProfile, name: authName, avatar: authAvatar, email: authEmail } = useAuth();
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  
   // ==============================
-  // MOCK DATA
+
   // ==============================
   const defaultUser = {
-    name: authName || "Nguyễn Quang Dũng",
-    email: authEmail || "dungquangnguyen118@gmail.com",
+    name: "Nguyễn Quang Dũng",
+    email: "dungquangnguyen118@gmail.com",
     phone: "0786121131",
     dob: "2004-12-14",
     password: "********",
     spent: 2400000,
     goal: 6000000,
     rank: "Star",
-    avatar: authAvatar || "",
+    avatar: "",
   };
 
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("userProfile");
-    const savedUser = saved ? JSON.parse(saved) : defaultUser;
-    // Đồng bộ với auth store
-    return {
-      ...savedUser,
-      name: authName || savedUser.name,
-      email: authEmail || savedUser.email,
-      avatar: authAvatar || savedUser.avatar,
-    };
+    return saved ? JSON.parse(saved) : defaultUser;
   });
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -41,31 +29,12 @@ export default function Profile() {
     localStorage.setItem("userProfile", JSON.stringify(user));
   }, [user]);
 
-  // Đồng bộ với auth store khi auth state thay đổi
-  useEffect(() => {
-    setUser(prev => ({
-      ...prev,
-      name: authName || prev.name,
-      avatar: authAvatar || prev.avatar,
-    }));
-  }, [authName, authAvatar]);
-
-  const showSuccessToast = (message: string) => {
-    setToastMessage(message);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const newAvatar = reader.result as string;
-        setUser((prev: any) => ({ ...prev, avatar: newAvatar }));
-        // Cập nhật vào auth store để đồng bộ với NavBar
-        updateAvatar(newAvatar);
-        showSuccessToast("Cập nhật avatar thành công! 🎉");
+        setUser((prev: any) => ({ ...prev, avatar: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -78,13 +47,6 @@ export default function Profile() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUser((prev: any) => ({ ...prev, [name]: value }));
-  };
-
-  const handleUpdateProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Cập nhật vào auth store để đồng bộ với NavBar
-    updateProfile(user.name, user.avatar, user.email);
-    showSuccessToast("Cập nhật thông tin thành công! ✅");
   };
 
   const watched = [
@@ -136,7 +98,7 @@ export default function Profile() {
 
         {/* Info */}
         <h2 className="text-lg font-bold text-brand">{user.name}</h2>
-        <p className="text-sm text-gray-400 mb-3">🎬 Thành viên Only Cinema</p>
+        <p className="text-sm text-gray-400 mb-3">🎬 Thành viên Cinesta</p>
 
         {/* Rank Progress */}
         <div className="w-full max-w-sm mt-2 relative">
@@ -159,7 +121,7 @@ export default function Profile() {
             {rankMilestones.map((_, i) => (
               <div
                 key={i}
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-gray-300 rounded-full"
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-gray-300 dark:bg-gray-500 rounded-full"
                 style={{
                   left: `${(i / (rankMilestones.length - 1)) * 100}%`,
                   transform: "translate(-50%, -50%)",
@@ -182,16 +144,16 @@ export default function Profile() {
         {/* Rewards */}
         <div className="text-left w-full">
           <h3 className="font-semibold mb-1 text-pink-400">
-            💎 Chặng đường Only Cinema Rewards
+            💎 Chặng đường Cinesta Rewards
           </h3>
           <p className="text-sm text-gray-400 mb-3">
-            Chinh phục 4 cấp độ thành viên để nhận quà và quyền lợi đặc biệt từ Only Cinema!
+            Chinh phục 4 cấp độ thành viên để nhận quà và quyền lợi đặc biệt từ Cinesta!
           </p>
           <div className="grid grid-cols-4 gap-2">
             {rankMilestones.map((rank) => (
               <div
                 key={rank}
-                className="text-center border rounded-xl py-2"
+                className="text-center border rounded-xl py-2 dark:border-gray-600"
               >
                 <div className="text-lg">🏅</div>
                 <div className="text-sm">{rank}</div>
@@ -303,26 +265,11 @@ export default function Profile() {
             />
 
             <div className="text-right">
-              <button 
-                onClick={handleUpdateProfile}
-                className="btn-primary px-6"
-              >
-                Cập nhật
-              </button>
+              <button className="btn-primary px-6">Cập nhật</button>
             </div>
           </div>
         )}
       </div>
-
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-4 right-4 z-50 animate-fadeIn">
-          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
-            <Check size={20} />
-            <span>{toastMessage}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

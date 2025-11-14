@@ -1,12 +1,8 @@
 import React from "react";
 import { ThumbsUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCollection } from "../../../lib/mockCrud";
-import SidebarMovieCard from "../../components/SidebarMovieCard";
 
 export default function MovieBlog() {
-  const { rows: movies = [] } = useCollection<any>("movies");
-  
   const blogs = [
     {
       id: 1,
@@ -31,16 +27,26 @@ export default function MovieBlog() {
     },
   ];
 
-  // Lấy 3 phim đang chiếu từ dữ liệu thực
-  const nowPlaying = movies
-    .filter(m => m.status === 'now')
-    .slice(0, 3)
-    .map(m => ({
-      id: m.id,
-      name: m.title,
-      img: m.poster || "https://picsum.photos/300/200?random=10",
-      rating: m.rating || "8.0",
-    }));
+  const nowPlaying = [
+    {
+      id: 1,
+      name: "Phá Đám: Sinh Nhật Mẹ",
+      img: "https://picsum.photos/300/200?random=10",
+      rating: "8.2",
+    },
+    {
+      id: 2,
+      name: "Nhà Ma Xó",
+      img: "https://picsum.photos/300/200?random=11",
+      rating: "7.0",
+    },
+    {
+      id: 3,
+      name: "Cục Vàng Của Ngoại",
+      img: "https://picsum.photos/300/200?random=12",
+      rating: "8.4",
+    },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -52,23 +58,16 @@ export default function MovieBlog() {
 
         <div className="space-y-6">
           {blogs.map((b) => (
-            <div key={b.id} className="flex flex-col md:flex-row border-b border-gray-200 pb-4 gap-4">
-              <Link to={`/blogs/${b.id}`} className="md:mr-0 shrink-0">
-                {/* Fixed-size container to keep thumbnails perfectly uniform */}
-                <div className="w-full md:w-56 h-40 rounded-md overflow-hidden bg-gray-100">
-                  <img
-                    src={b.img}
-                    alt={b.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </Link>
+            <div key={b.id} className="flex flex-col md:flex-row border-b border-gray-200 pb-4">
+              <img
+                src={b.img}
+                alt={b.title}
+                className="w-full md:w-56 h-40 object-cover rounded-md mb-3 md:mb-0 md:mr-4"
+              />
               <div>
-                <Link to={`/blogs/${b.id}`}>
-                  <h3 className="font-semibold text-base text-gray-800 hover:text-blue-600 cursor-pointer leading-snug line-clamp-2">
-                    {b.title}
-                  </h3>
-                </Link>
+                <h3 className="font-semibold text-base text-gray-800 hover:text-blue-600 cursor-pointer">
+                  {b.title}
+                </h3>
                 <div className="flex items-center gap-3 text-xs mt-1">
                   <button className="flex items-center gap-1 bg-[#1877f2] text-white text-xs px-2 py-0.5 rounded">
                     <ThumbsUp size={12} /> Thích
@@ -112,7 +111,14 @@ export default function MovieBlog() {
           </h3>
           <div className="space-y-3">
             {nowPlaying.map((p) => (
-              <SidebarMovieCard key={p.id} movie={p} />
+              <div key={p.id}>
+                <img
+                  src={p.img}
+                  alt={p.name}
+                  className="rounded-lg w-full h-44 object-cover"
+                />
+                <p className="mt-1 text-sm text-gray-700">{p.name}</p>
+              </div>
             ))}
           </div>
 
