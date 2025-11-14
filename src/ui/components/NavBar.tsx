@@ -14,6 +14,7 @@ export default function NavBar() {
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -106,7 +107,7 @@ export default function NavBar() {
       <header className="bg-white -mb-px relative z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-onlycinema.png" alt="Only Cinema" className="h-12 w-auto" />
+            <img src="https://res.cloudinary.com/dyxvjfily/image/upload/v1762854706/Colorful_Retro_Illustrative_Tasty_Popcorn_Logo_qsnmkf.png" alt="Only Cinema" className="h-12 w-auto" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8 font-semibold text-base text-gray-800">
