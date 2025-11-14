@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 // Giả sử bạn dùng socket.io-client
 import { io, Socket } from 'socket.io-client' 
@@ -6,28 +6,31 @@ import { io, Socket } from 'socket.io-client'
 import { api } from '../../../lib/api' 
 import SeatMap from '../../components/SeatMap'
 import BookingBreadcrumb from '../../components/BookingBreadcrumb'
+import Countdown from '../../components/Countdown' // Component đã sửa
+import { useAuth } from '../../../store/auth' // Import store auth
 
 // --- Định nghĩa kiểu dữ liệu ---
-// Đảm bảo các kiểu này khớp với BE và SeatMap
 type SeatState = 'empty' | 'held' | 'booked' | 'selected'
 type Seat = { 
   id: string, 
   row: string, 
   col: number, 
   type: 'normal' | 'vip' | 'couple', 
-  state: SeatState 
-  // Thêm userId nếu BE dùng để phân biệt 'held' (người khác giữ)
-  // userId?: string 
+  state: SeatState,
+  userId?: string // Thêm userId để biết AI đang giữ
 }
 
-// Giả sử đây là thông tin user (bạn cần lấy từ context/store)
-const MY_USER_ID = "user-123-abc"; 
+// === CÀI ĐẶT TIMER ===
+const HOLD_DURATION_SECONDS = 420; // 7 phút (Tổng thời gian giữ ghế)
 
 export default function Seats(){
   // 1. HOOKS & STATE CƠ BẢN
-  const { id: showtimeId } = useParams() // Đổi tên 'id' thành 'showtimeId' cho rõ nghĩa
+  const { id: showtimeId } = useParams()
   const nav = useNavigate()
   
+  // Lấy userId thật từ store auth
+  const { email: myUserId } = useAuth(); // Dùng email hoặc ID nếu có
+
   // State cho dữ liệu (suất chiếu, phim, rạp...)
   const [st, setSt] = React.useState<any>(null)
   const [movie, setMovie] = React.useState<any>(null)
@@ -47,27 +50,28 @@ export default function Seats(){
   const [limitOpen, setLimitOpen] = React.useState(false)
   const [needSelectOpen, setNeedSelectOpen] = React.useState(false)
 
+  // === STATE MỚI CHO TIMER ===
+  const [secondsLeft, setSecondsLeft] = useState(HOLD_DURATION_SECONDS);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   // 2. LOGIC LOAD DỮ LIỆU BAN ĐẦU (API)
   useEffect(() => {
     if (!showtimeId) return;
 
-    // --- BẠN CHỈ CẦN MỘT LỜI GỌI API NÀY ---
+    // (Giữ nguyên logic fetch API của bạn)
     api.getShowtime(showtimeId).then((showtimeDetails) => {
-      // 1. Set thông tin suất chiếu
       setSt(showtimeDetails as any);
 
-      // 2. Set sơ đồ ghế TỪ KẾT QUẢ NÀY
-      // (Giả sử backend trả về mảng ghế trong thuộc tính `seats`)
-      // Nếu backend của bạn trả về tên khác, ví dụ `seatMap`, thì dùng showtimeDetails.seatMap
+      // Giả sử backend trả về mảng ghế trong thuộc tính `seats`
       if (showtimeDetails && showtimeDetails.seats) {
         setSeats(showtimeDetails.seats as Seat[]);
       } else {
-        // Có thể showtimeDetails không có 'seats' nếu có lỗi hoặc suất chiếu không tồn tại
-        console.error("Không tìm thấy thuộc tính 'seats' trong dữ liệu suất chiếu.");
-        setSeats([]); // Set mảng rỗng để tránh lỗi render
+        // Fallback nếu API không trả về seat map (có thể dùng data mock)
+        console.error("API không trả về 'seats'.");
+        setSeats([]); 
       }
 
-      // 3. Các logic fetch thông tin liên quan (giữ nguyên)
+      // Các logic fetch thông tin liên quan
       if (showtimeDetails) {
         api.getMovie(showtimeDetails.movieId).then(setMovie);
         api.listTheaters().then(ts => setTheater(ts.find(t => t.id === showtimeDetails.theaterId)));
@@ -76,12 +80,11 @@ export default function Seats(){
 
     }).catch(err => {
       console.error("Lỗi khi lấy chi tiết suất chiếu:", err);
-      // Xử lý lỗi chung ở đây
       setSt(null);
       setSeats([]);
     });
 
-  }, [showtimeId]) // Chạy lại khi đổi suất chiếu
+  }, [showtimeId])
 
   // Effect để cập nhật danh sách giờ chiếu (giữ nguyên)
   useEffect(()=>{
@@ -104,36 +107,31 @@ export default function Seats(){
 
   // 3. LOGIC KẾT NỐI WEBSOCKET
   useEffect(() => {
-    if (!showtimeId) return;
+    if (!showtimeId || !myUserId) return;
 
-    // 1. Khởi tạo kết nối (trỏ đến server BE của bạn)
-    const newSocket = io("http://localhost:4000"); 
+    // 1. Khởi tạo kết nối
+    const newSocket = io("http://localhost:4000"); // Trỏ đến server BE của bạn
     setSocket(newSocket);
 
-    // 2. Tham gia "phòng" của suất chiếu
+    // 2. Tham gia "phòng"
     newSocket.on('connect', () => {
       console.log('Socket.IO đã kết nối, id:', newSocket.id);
       newSocket.emit('join_room', showtimeId);
     });
 
-    // 3. Lắng nghe sự kiện cập nhật ghế (từ người khác)
-    // BE sẽ gửi 'seat:updated' khi có ai đó giữ/nhả ghế
+    // 3. Lắng nghe cập nhật ghế (từ người khác)
     newSocket.on('seat:updated', (updatedSeat: Seat) => {
       console.log('Nhận cập nhật ghế:', updatedSeat);
       setSeats(prevSeats => 
         prevSeats.map(s => {
           if (s.id !== updatedSeat.id) return s;
           
-          // Quan trọng: Nếu ghế được cập nhật là 'selected', 
-          // nhưng không phải do mình chọn (MY_USER_ID), 
-          // thì coi nó là 'held' (bị người khác giữ).
-          // (Logic này cần BE hỗ trợ bằng cách gửi `userId`)
-          
-          // if (updatedSeat.state === 'selected' && updatedSeat.userId !== MY_USER_ID) {
-          //   return { ...updatedSeat, state: 'held' };
-          // }
-
-          // Nếu BE chỉ gửi 'held' cho ghế người khác giữ thì đơn giản
+          // Xử lý logic nếu người khác giữ (held) hoặc chọn (selected)
+          // Giả định BE gửi 'held' nếu người khác giữ
+          if (updatedSeat.state === 'held' && updatedSeat.userId !== myUserId) {
+             return { ...updatedSeat, state: 'held' };
+          }
+          // Nếu ghế được cập nhật là của mình (ví dụ: được BE xác nhận)
           return updatedSeat;
         })
       );
@@ -155,41 +153,140 @@ export default function Seats(){
       newSocket.emit('leave_room', showtimeId);
       newSocket.disconnect();
     };
-  }, [showtimeId]); // Chạy lại khi đổi suất chiếu
+  }, [showtimeId, myUserId]); // Chạy lại khi đổi suất chiếu hoặc user
 
   // 4. HÀM XỬ LÝ SỰ KIỆN TOGGLE (gọi từ SeatMap)
-  const selectedSeats = useMemo(() => seats.filter(s => s.state === 'selected'), [seats]);
+  const mySelectedSeats = useMemo(() => {
+    // Ưu tiên lọc theo userId nếu BE trả về
+    if (seats.some(s => s.userId)) {
+      return seats.filter(s => s.state === 'selected' && s.userId === myUserId);
+    }
+    // Fallback: nếu không có userId, coi tất cả 'selected' là của mình
+    return seats.filter(s => s.state === 'selected');
+  }, [seats, myUserId]);
+  
+  const mySelectedSeatIds = useMemo(() => mySelectedSeats.map(s => s.id), [mySelectedSeats]);
 
+  // Hàm gọi BE để hủy TẤT CẢ các ghế đang giữ
+  const releaseAllMySeats = (notifyUser = true) => {
+    if (!socket || mySelectedSeatIds.length === 0) return;
+
+    console.log(`CLIENT: Tự động hủy ${mySelectedSeatIds.length} ghế...`);
+    
+    // Gửi 1 sự kiện duy nhất lên BE
+    socket.emit('seat:release_many', { 
+      showtimeId, 
+      seatIds: mySelectedSeatIds, 
+      userId: myUserId 
+    });
+
+    // Cập nhật UI ngay lập tức
+    setSeats(prev => 
+      prev.map(s => 
+        mySelectedSeatIds.includes(s.id) ? { ...s, state: 'empty', userId: undefined } : s
+      )
+    );
+    
+    if (notifyUser) {
+      alert("Đã hết thời gian giữ ghế. Vui lòng chọn lại.");
+    }
+  };
+
+  // === 5. LOGIC TIMER CHÍNH (ĐÃ BỎ GIA HẠN) ===
+  useEffect(() => {
+    // Chỉ chạy timer nếu đang giữ ít nhất 1 ghế
+    if (mySelectedSeats.length > 0) {
+      if (!timerRef.current) {
+        console.log("CLIENT: Bắt đầu timer giữ ghế...");
+        timerRef.current = setInterval(() => {
+          setSecondsLeft(prevSeconds => {
+            
+            // Logic HỦY (Khi còn 0 giây)
+            if (prevSeconds <= 1) {
+              clearInterval(timerRef.current!);
+              timerRef.current = null;
+              releaseAllMySeats(true); // Hủy ghế và thông báo
+              nav('/movies'); // Về trang chủ
+              return 0;
+            }
+            
+            // Logic GIA HẠN (ĐÃ BỎ)
+            
+            // Đếm ngược bình thường
+            return prevSeconds - 1;
+          });
+        }, 1000);
+      }
+    } else {
+      // Nếu không còn giữ ghế nào (đã tự tay bỏ chọn hết)
+      if (timerRef.current) {
+        console.log("CLIENT: Không còn ghế, dừng timer.");
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      // Reset thời gian
+      setSecondsLeft(HOLD_DURATION_SECONDS);
+    }
+
+    // Cleanup: Dọn dẹp timer khi component unmount
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [mySelectedSeats.length, socket, showtimeId, nav]); // Phụ thuộc vào số ghế đang giữ
+
+  // === 6. XỬ LÝ KHI RỜI TRANG (QUAN TRỌNG) ===
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Hàm này sẽ được gọi khi người dùng đóng tab/trình duyệt
+      releaseAllMySeats(false); // Hủy mà không thông báo
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Cũng hủy ghế khi component unmount (ví dụ: bấm Back, điều hướng)
+      // Chúng ta cần kiểm tra xem có phải đang điều hướng đến trang tiếp theo không
+      // Tạm thời, chúng ta sẽ dựa vào logic của nút "Tiếp tục"
+      // releaseAllMySeats(false); // Tạm thời vô hiệu hóa để tránh hủy khi bấm "Tiếp tục"
+    };
+  }, [socket, mySelectedSeatIds]); // Cần [mySelectedSeatIds] để hàm releaseAllMySeats luôn lấy được ds ghế mới nhất
+
+  // 7. HÀM XỬ LÝ CLICK CHỌN GHẾ
   const handleToggle = (seatId: string) => {
-    if (!socket) return; // Chưa kết nối socket
+    if (!socket || !myUserId) return; // Chưa kết nối socket hoặc chưa có user
 
     const seat = seats.find(s => s.id === seatId);
-    if (!seat || seat.state === 'booked' || seat.state === 'held') return;
+    if (!seat || seat.state === 'booked' || (seat.state === 'held' && seat.userId !== myUserId)) return;
 
     if (seat.state === 'empty') {
       // Kiểm tra giới hạn
-      if (selectedSeats.length >= 8) { // Giả sử maxSelected = 8
+      if (mySelectedSeats.length >= 8) { // Giả sử maxSelected = 8
         setLimitOpen(true);
         return;
       }
       // Optimistic update (cập nhật UI ngay lập tức)
-      setSeats(prev => prev.map(s => s.id === seatId ? {...s, state: 'selected'} : s));
+      setSeats(prev => prev.map(s => s.id === seatId ? {...s, state: 'selected', userId: myUserId} : s));
       // Gửi sự kiện lên server
-      socket.emit('seat:hold', { showtimeId, seatId, userId: MY_USER_ID });
+      socket.emit('seat:hold', { showtimeId, seatId, userId: myUserId });
     
     } else if (seat.state === 'selected') {
       // Optimistic update
-      setSeats(prev => prev.map(s => s.id === seatId ? {...s, state: 'empty'} : s));
+      setSeats(prev => prev.map(s => s.id === seatId ? {...s, state: 'empty', userId: undefined} : s));
       // Gửi sự kiện lên server
-      socket.emit('seat:release', { showtimeId, seatId, userId: MY_USER_ID });
+      socket.emit('seat:release', { showtimeId, seatId, userId: myUserId });
     }
   };
 
   const handleToggleMany = (seatIds: string[]) => {
-    if (!socket) return;
+    if (!socket || !myUserId) return;
     
     const seatsToToggle = seats.filter(s => seatIds.includes(s.id));
-    if (seatsToToggle.some(s => s.state === 'booked' || s.state === 'held')) return;
+    if (seatsToToggle.some(s => s.state === 'booked' || (s.state === 'held' && s.userId !== myUserId))) return;
 
     // Kiểm tra xem đang chọn hay bỏ chọn
     const isSelecting = seatsToToggle.some(s => s.state === 'empty');
@@ -197,32 +294,31 @@ export default function Seats(){
     if (isSelecting) {
       // Kiểm tra giới hạn
       const newSeatsCount = seatsToToggle.filter(s => s.state === 'empty').length;
-      if (selectedSeats.length + newSeatsCount > 8) { // Giả sử maxSelected = 8
+      if (mySelectedSeats.length + newSeatsCount > 8) { // Giả sử maxSelected = 8
         setLimitOpen(true);
         return;
       }
       // Optimistic update (chọn tất cả ghế hợp lệ)
-      setSeats(prev => prev.map(s => seatIds.includes(s.id) && s.state === 'empty' ? {...s, state: 'selected'} : s));
-      // Gửi sự kiện (có thể cần BE hỗ trợ `seat:hold_many`)
+      setSeats(prev => prev.map(s => seatIds.includes(s.id) && s.state === 'empty' ? {...s, state: 'selected', userId: myUserId} : s));
+      // Gửi sự kiện
       seatIds.forEach(seatId => {
         if (seats.find(s => s.id === seatId)?.state === 'empty') {
-          socket.emit('seat:hold', { showtimeId, seatId, userId: MY_USER_ID });
+          socket.emit('seat:hold', { showtimeId, seatId, userId: myUserId });
         }
       });
 
     } else {
       // Bỏ chọn (tất cả đều đang 'selected')
-      setSeats(prev => prev.map(s => seatIds.includes(s.id) && s.state === 'selected' ? {...s, state: 'empty'} : s));
+      setSeats(prev => prev.map(s => seatIds.includes(s.id) && s.state === 'selected' ? {...s, state: 'empty', userId: undefined} : s));
       // Gửi sự kiện
       seatIds.forEach(seatId => {
-        socket.emit('seat:release', { showtimeId, seatId, userId: MY_USER_ID });
+        socket.emit('seat:release', { showtimeId, seatId, userId: myUserId });
       });
     }
   };
 
-  // 5. LOGIC TÍNH TOÁN (giữ nguyên, nhưng sửa 'selected')
+  // 8. LOGIC TÍNH TOÁN (giữ nguyên)
   const formatDateLabel = (dateStr:string) => {
-    // ... (như cũ)
     const dt = new Date(dateStr)
     const weekdays = ['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy']
     const wd = weekdays[dt.getDay()]
@@ -232,20 +328,18 @@ export default function Seats(){
     return `${wd}, ${dd}/${mm}/${yyyy}`
   }
   const timeButtons = availableTimes
-  const aisleCols = [7] // (Truyền cho SeatMap)
-  const coupleRows = ["H"] // (Có thể bỏ nếu BE đã trả về `type: 'couple'`)
+  const aisleCols = [7]
   const basePrice = st?.price || 0
   const couplePrice = basePrice * 2 + 10000
 
-  // 'selected' giờ là state 'selectedSeats' đã tính ở trên
+  // 'selected' giờ là state 'mySelectedSeats' đã tính ở trên
   const summary = React.useMemo(() => {
-    // Dùng mảng 'selectedSeats' (chỉ chứa ghế state='selected')
-    const set = new Set(selectedSeats.map(s => s.id));
+    const set = new Set(mySelectedSeatIds);
     let singles = 0, couples = 0
     const singleIds:string[] = []
     const couplePairLabels:string[] = []
     
-    selectedSeats.forEach(seat => {
+    mySelectedSeats.forEach(seat => {
       const { id, row, col } = seat;
        if (row === 'H'){ // Giả định hàng H là ghế đôi
          if (col % 2 === 0) {
@@ -273,27 +367,24 @@ export default function Seats(){
      })
      const total = singles * basePrice + couples * couplePrice
     return { singles, couples, singleIds, couplePairLabels, total }
-  }, [selectedSeats, basePrice, couplePrice]) // Phụ thuộc vào selectedSeats
+  }, [mySelectedSeats, mySelectedSeatIds, basePrice, couplePrice]) // Phụ thuộc vào mySelectedSeats
 
-  // 1. SỬA ĐỔI TẠI ĐÂY
+  // 9. LOADING STATE
   if (!st || !seats.length) {
-    // Thay vì trả về text, trả về spinner đã được căn giữa
     return (
       <div className="flex items-center justify-center w-full h-96"> 
-        {/* Đây là code spinner của bạn */}
         <div role="status">
           <svg aria-hidden="true" className="w-8 h-8 text-neutral-tertiary animate-spin fill-brand" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
             <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
           </svg>
-          {/* 2. SỬA 'class' THÀNH 'className' */}
           <span className="sr-only">Loading...</span> 
         </div>
       </div>
     );
   }
 
-  // 6. RENDER
+  // 10. RENDER
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_1fr_400px]">
       <div className="md:col-span-3"><BookingBreadcrumb currentStep="seats"/></div>
@@ -337,6 +428,13 @@ export default function Seats(){
       {/* Cột phải - Tóm tắt */}
       <div className="space-y-4 md:sticky md:top-4">
         <div className="card p-5 space-y-4">
+          
+          {/* Component Countdown mới */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">Thời gian giữ ghế:</div>
+            <Countdown secondsLeft={secondsLeft} /> 
+          </div>
+
           {/* Thông tin phim */}
           <div className="flex gap-4">
             <img src={movie?.poster} className="h-48 w-32 rounded-lg object-cover"/>
@@ -375,7 +473,7 @@ export default function Seats(){
           {summary.couplePairLabels.length>0 && (
             <div className="text-xs opacity-80">Ghế: {summary.couplePairLabels.join(', ')}</div>
           )}
-          {selectedSeats.length === 0 && (
+          {mySelectedSeats.length === 0 && (
             <div className="text-xs opacity-60">Ghế: Chưa chọn</div>
           )}
           <hr className="border-dashed dark:border-gray-700"/>
@@ -390,12 +488,14 @@ export default function Seats(){
           <button
             className="btn-next"
             onClick={()=>{
-              if (selectedSeats.length === 0){
+              if (mySelectedSeats.length === 0){
                 setNeedSelectOpen(true)
                 return
               }
-              // Truyền ID suất chiếu và mảng ID ghế đã chọn
-              nav('/booking/combos',{ state:{ showtimeId, selectedIds: selectedSeats.map(s => s.id) }})
+              // Khi bấm "Tiếp tục", chúng ta *không* hủy ghế
+              // Logic cleanup trong useEffect(..., [socket, mySelectedSeatIds]) sẽ lo việc này
+              // nếu người dùng rời trang bằng cách khác.
+              nav('/booking/combos',{ state:{ id: showtimeId, selected: mySelectedSeatIds }})
             }}
           >Tiếp tục</button>
         </div>
@@ -404,7 +504,6 @@ export default function Seats(){
       {/* Các Modal (giữ nguyên) */}
       {limitOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          {/* ... (code modal max 8 ghế) ... */}
            <div className="bg-white rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.18)] w-[360px] px-6 pt-5 pb-4 text-center">
             <div className="mx-auto mb-3 h-10 w-10 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-10 w-10">
@@ -420,7 +519,6 @@ export default function Seats(){
       )}
       {needSelectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-           {/* ... (code modal vui lòng chọn ghế) ... */}
            <div className="bg-white rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.18)] w-[360px] px-6 pt-5 pb-4 text-center">
             <div className="mx-auto mb-3 h-10 w-10 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-10 w-10">
