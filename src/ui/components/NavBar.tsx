@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, User, Clock3, Search } from "lucide-react";
 import { useAuth } from "../../store/auth";
-import DarkToggle from "./DarkToggle";
+// import DarkToggle from "./DarkToggle";
 import HoverDropdown from "./HoverDropdown";
 import MovieDropdown from "./MovieDropdown";
 import AuthModals from "./AuthModals";
@@ -221,7 +221,7 @@ export default function NavBar() {
               )}
             </div>
 
-            <DarkToggle />
+            {/* <DarkToggle /> */}
 
             {!token ? (
               <>
