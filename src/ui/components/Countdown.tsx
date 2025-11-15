@@ -7,3 +7,4 @@ export default function Countdown({ seconds, onExpire }:{ seconds:number, onExpi
   const ss = String(left%60).padStart(2,'0')
   return <div className="rounded-xl bg-gray-900 px-3 py-1 text-white">Giữ ghế: {mm}:{ss}</div>
 }
+.

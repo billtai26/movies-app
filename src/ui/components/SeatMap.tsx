@@ -6,6 +6,24 @@ type Seat = {
   isBooked?: boolean;
 };
 
+export default function SeatMap({
+  seats,
+  aisleCols=[],
+  aisleRows=[],
+  maxSelected=Infinity,
+  onLimitExceeded,
+  onToggle,
+  onToggleMany,
+  re
+}: {
+  seats: Seat[], // <--- NHẬN MẢNG SEATS TỪ BÊN NGOÀI
+  aisleCols?:number[],
+  aisleRows?:string[],
+  maxSelected?:number,
+  onLimitExceeded?:()=>void,
+  onToggle: (id: string) => void, // <--- HÀM GỌI KHI NHẤN GHẾ ĐƠN
+  onToggleMany: (ids: string[]) => void, // <--- HÀM GỌI KHI NHẤN GHẾ ĐÔI
+}){
 type Props = {
   seats?: Seat[];
   onChange?: (selectedSeats: string[]) => void;

@@ -1,4 +1,15 @@
 
+// --- Định nghĩa kiểu dữ liệu ---
+type SeatState = 'empty' | 'held' | 'booked' | 'selected'
+type Seat = {
+  re,
+  id: string, 
+  row: string, 
+  col: number, 
+  type: 'normal' | 'vip' | 'couple', 
+  state: SeatState,
+  userId?: string // Thêm userId để biết AI đang giữ
+}
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
