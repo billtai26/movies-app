@@ -1,16 +1,18 @@
+import axios from "axios";
 import React from "react";
 import Slider from "react-slick";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { BASE_URL } from "../../lib/config";
 
 export default function Banner() {
-  const banners = [
-    "https://i.imgur.com/hK0M3Cg.jpg", // VISA
-    "https://i.imgur.com/wWvbrbX.jpg", // Liobank
-    "https://i.imgur.com/y0bW1Z2.jpg", // ZaloPay
-    "https://i.imgur.com/4K0M3Cg.jpg", // ShopeePay
-  ];
+  const [banners, setBanners] = React.useState<string[]>([]);
+React.useEffect(() => {
+  axios.get(`${BASE_URL}/api/vouchers`).then(res => {
+    setBanners(res.data.map((v: any) => v.image));
+  });
+}, []);
 
   const sliderRef = React.useRef<Slider>(null);
 
@@ -18,25 +20,22 @@ export default function Banner() {
     dots: true,
     infinite: true,
     centerMode: true,
-    centerPadding: "200px", // lộ 2 ảnh 2 bên (desktop)
+    centerPadding: "150px",
     slidesToShow: 1,
     autoplay: true,
     autoplaySpeed: 3000,
     speed: 800,
-    arrows: false, // ẩn mặc định, dùng custom
+    arrows: false,
     pauseOnHover: true,
     responsive: [
-      { breakpoint: 1536, settings: { centerPadding: "180px" } }, // xl
-      { breakpoint: 1280, settings: { centerPadding: "140px" } }, // lg
-      { breakpoint: 1024, settings: { centerPadding: "100px" } }, // md
-      { breakpoint: 768, settings: { centerPadding: "60px" } }, // sm
-      { breakpoint: 640, settings: { centerMode: false, centerPadding: "0px" } }, // mobile rất nhỏ
+      { breakpoint: 1024, settings: { centerPadding: "60px" } },
+      { breakpoint: 640, settings: { centerMode: false } },
     ],
     appendDots: (dots: React.ReactNode) => (
       <div
         style={{
           position: "absolute",
-          bottom: "14px",
+          bottom: "10px",
           width: "100%",
           display: "flex",
           justifyContent: "center",
@@ -51,7 +50,7 @@ export default function Banner() {
   };
 
   return (
-    <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] overflow-hidden mt-0">
+    <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] overflow-hidden">
       {/* Slider */}
       <Slider ref={sliderRef} {...settings}>
         {banners.map((b, i) => (
@@ -59,7 +58,8 @@ export default function Banner() {
             <img
               src={b}
               alt={`banner-${i}`}
-              className="w-full h-[260px] sm:h-[300px] md:h-[360px] lg:h-[480px] xl:h-[540px] 2xl:h-[580px] object-cover rounded-xl"
+              className="w-full h-[420px] object-cover rounded-xl"
+              loading="lazy"
             />
           </div>
         ))}
@@ -67,19 +67,18 @@ export default function Banner() {
 
       {/* Nút điều hướng trái phải */}
       <button
-        className="absolute left-4 md:left-6 lg:left-8 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full z-10"
+        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full z-10"
         onClick={() => sliderRef.current?.slickPrev()}
       >
         <ChevronLeft size={28} />
       </button>
 
       <button
-        className="absolute right-4 md:right-6 lg:right-8 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full z-10"
+        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full z-10"
         onClick={() => sliderRef.current?.slickNext()}
       >
         <ChevronRight size={28} />
       </button>
-
-      
-        </div>   );
+    </div>
+  );
 }

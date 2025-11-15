@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     // đảm bảo dữ liệu mock được nạp
     try {
-      seedAll();
+
       console.log("✅ Mock data seeded!");
     } catch (err) {
       console.error("❌ Seed error:", err);
@@ -32,7 +32,7 @@ export default function Home() {
       </div>
 
       {/* Phim */}
-      <div className="max-w-7xl mx-auto px-3 mt-10">
+      <div className="max-w-6xl mx-auto px-3 mt-10">
         <MovieTabs />
       </div>
 
@@ -52,4 +52,4 @@ export default function Home() {
       </div>
     </div>
   );
-};
+}

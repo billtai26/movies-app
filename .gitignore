@@ -1,17 +1,23 @@
 # dependencies
 node_modules/
 
-# build
+# build output
 dist/
-build/
 
 # environment
 .env
+.env.*
 
-# vscode
+# editor configs
 .vscode/
+.DS_Store
 
 # logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# temporary
+*.local
+*.lock
+*.tmp

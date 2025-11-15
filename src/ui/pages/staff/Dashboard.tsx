@@ -1,4 +1,6 @@
 import React from "react";
+import { api } from "../../../lib/api";
+
 import {
   BarChart,
   Bar,
@@ -12,7 +14,7 @@ import {
   Cell,
 } from "recharts";
 import toast from "react-hot-toast";
-import { api } from "../../../lib/mockApi";
+
 
 const genWeek = () =>
   ["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => ({
@@ -60,7 +62,7 @@ export default function StaffDashboard() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           Tổng quan
         </h1>
         <button className="btn-primary" onClick={refresh}>
@@ -70,19 +72,19 @@ export default function StaffDashboard() {
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card">
-          <div className="text-sm opacity-70 text-gray-800">
+          <div className="text-sm opacity-70 text-gray-800 dark:text-white">
             Vé đã check-in hôm nay
           </div>
           <div className="text-2xl font-bold">{today.checked}</div>
         </div>
         <div className="card">
-          <div className="text-sm opacity-70 text-gray-900">
+          <div className="text-sm opacity-70 text-gray-900 dark:text-gray-100">
             Combo đã giao
           </div>
           <div className="text-2xl font-bold">{today.combos}</div>
         </div>
         <div className="card">
-          <div className="text-sm opacity-70 text-gray-900">
+          <div className="text-sm opacity-70 text-gray-900 dark:text-gray-100">
             Sự cố mới
           </div>
           <div className="text-2xl font-bold">{today.incidents}</div>
@@ -91,7 +93,7 @@ export default function StaffDashboard() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card h-80">
-          <div className="mb-2 font-semibold text-gray-900">
+          <div className="mb-2 font-semibold text-gray-900 dark:text-gray-100">
             Tỷ lệ check-in tuần này
           </div>
           <ResponsiveContainer width="100%" height="100%">
@@ -129,7 +131,7 @@ export default function StaffDashboard() {
         </div>
 
         <div className="card h-80">
-          <div className="mb-2 font-semibold text-gray-900">
+          <div className="mb-2 font-semibold text-gray-900 dark:text-gray-100">
             Vé check-in theo ngày (7 ngày)
           </div>
           <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +154,7 @@ export default function StaffDashboard() {
       </div>
 
       <div className="card h-80">
-        <div className="mb-2 font-semibold text-gray-900">
+        <div className="mb-2 font-semibold text-gray-900 dark:text-gray-100">
           Doanh thu theo ngày (VND)
         </div>
         <ResponsiveContainer width="100%" height="100%">

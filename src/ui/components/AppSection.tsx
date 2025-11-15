@@ -30,7 +30,7 @@ export default function AppSection() {
 
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-4 mt-4">
               <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://onlycinema.vn"
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://cinesta.vn"
                 alt="QR code"
                 className="w-[120px] h-[120px]"
               />
@@ -59,7 +59,7 @@ export default function AppSection() {
           </h2>
 
           <p className="mb-3">
-            <a href="#" className="text-blue-600 font-medium hover:underline">Only Cinema</a> là một trong những công ty tư nhân đầu tiên về điện ảnh được thành lập từ năm 2003, đã khẳng định thương hiệu là một trong 10 địa điểm vui chơi giải trí được yêu thích nhất. Ngoài hệ thống rạp chiếu phim hiện đại, thu hút hàng triệu lượt người đến xem, <a href="#" className="text-blue-600 font-medium hover:underline">Only Cinema</a> còn hấp dẫn khán giả bởi không khí thân thiện cùng chất lượng dịch vụ hàng đầu.
+            <a href="#" className="text-blue-600 font-medium hover:underline">Galaxy Cinema</a> là một trong những công ty tư nhân đầu tiên về điện ảnh được thành lập từ năm 2003, đã khẳng định thương hiệu là một trong 10 địa điểm vui chơi giải trí được yêu thích nhất. Ngoài hệ thống rạp chiếu phim hiện đại, thu hút hàng triệu lượt người đến xem, <a href="#" className="text-blue-600 font-medium hover:underline">Galaxy Cinema</a> còn hấp dẫn khán giả bởi không khí thân thiện cùng chất lượng dịch vụ hàng đầu.
           </p>
 
           <p className="mb-3">
@@ -67,11 +67,11 @@ export default function AppSection() {
           </p>
 
           <p className="mb-3">
-            Giờ đây đặt vé tại <a href="#" className="text-blue-600 font-medium hover:underline">Only Cinema</a> càng thêm dễ dàng chỉ với vài thao tác vô cùng đơn giản. Để mua vé, quý khách chỉ cần chọn mục <strong>Mua Vé</strong> theo phim, theo rạp hoặc theo ngày. Sau đó, tiến hành mua vé theo các bước hướng dẫn. Chỉ trong vài phút, quý khách sẽ nhận được tin nhắn và email phản hồi "Đặt vé thành công" của <a href="#" className="text-blue-600 font-medium hover:underline">Only Cinema</a>. Quý khách có thể dùng tin nhắn lấy vé tại quầy hoặc quét mã QR để vào rạp mà không cần tốn thêm bất kỳ công đoạn nào nữa.
+            Giờ đây đặt vé tại <a href="#" className="text-blue-600 font-medium hover:underline">Galaxy Cinema</a> càng thêm dễ dàng chỉ với vài thao tác vô cùng đơn giản. Để mua vé, quý khách chỉ cần chọn mục <strong>Mua Vé</strong> theo phim, theo rạp hoặc theo ngày. Sau đó, tiến hành mua vé theo các bước hướng dẫn. Chỉ trong vài phút, quý khách sẽ nhận được tin nhắn và email phản hồi “Đặt vé thành công” của <a href="#" className="text-blue-600 font-medium hover:underline">Galaxy Cinema</a>. Quý khách có thể dùng tin nhắn lấy vé tại quầy hoặc quét mã QR để vào rạp mà không cần tốn thêm bất kỳ công đoạn nào nữa.
           </p>
 
           <p className="mb-3">
-            Nếu bạn đã chọn được <a href="#" className="text-blue-600 font-medium hover:underline">phim hay để xem</a>, hãy đặt vé cực nhanh bằng box <strong>Mua Vé Nhanh</strong> ngay tại <strong>Trang Chủ</strong>. Chỉ cần một phút, tin nhắn và email phản hồi của <a href="#" className="text-blue-600 font-medium hover:underline">Only Cinema</a> sẽ gửi ngay vào điện thoại và hộp mail của bạn.
+            Nếu bạn đã chọn được <a href="#" className="text-blue-600 font-medium hover:underline">phim hay để xem</a>, hãy đặt vé cực nhanh bằng box <strong>Mua Vé Nhanh</strong> ngay tại <strong>Trang Chủ</strong>. Chỉ cần một phút, tin nhắn và email phản hồi của <a href="#" className="text-blue-600 font-medium hover:underline">Galaxy Cinema</a> sẽ gửi ngay vào điện thoại và hộp mail của bạn.
           </p>
 
           <p>

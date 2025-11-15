@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+
 import SeatMap from '../../components/SeatMap'
 import Countdown from '../../components/Countdown'
 export default function Booking(){
