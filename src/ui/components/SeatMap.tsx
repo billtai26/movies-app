@@ -12,7 +12,6 @@ export default function SeatMap({
   onLimitExceeded,
   onToggle,
   onToggleMany,
-  re
 }: {
   seats: Seat[], // <--- NHẬN MẢNG SEATS TỪ BÊN NGOÀI
   aisleCols?:number[],

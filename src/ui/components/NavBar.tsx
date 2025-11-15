@@ -221,7 +221,7 @@ export default function NavBar() {
               )}
             </div>
 
-            {/* <DarkToggle /> */},
+            {/* <DarkToggle /> */}
 
             {!token ? (
               <>
