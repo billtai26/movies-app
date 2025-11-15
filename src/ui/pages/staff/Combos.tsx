@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import CrudTable from "../../components/CrudTable";
-import { seedAll } from "../../../lib/seed";
+
 import { useAuth } from "../../../store/auth";
 
 const schema = {

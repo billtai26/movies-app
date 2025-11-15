@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+
 import toast from "react-hot-toast";
 
 export default function CheckIn() {
@@ -10,7 +10,7 @@ export default function CheckIn() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    seedAll();
+
     setTimeout(() => setReady(true), 200);
   }, []);
 
@@ -46,7 +46,7 @@ export default function CheckIn() {
 
   if (!ready)
     return (
-      <div className="text-gray-400 p-4">
+      <div className="text-gray-400 dark:text-gray-500 p-4">
         Đang tải dữ liệu...
       </div>
     );
@@ -54,7 +54,7 @@ export default function CheckIn() {
   return (
     <div className="card space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-lg font-semibold text-gray-900">
+        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Quét vé / Check-in
         </div>
         <div className="flex flex-wrap gap-2">
@@ -63,12 +63,12 @@ export default function CheckIn() {
             placeholder="Tìm theo mã vé hoặc tên phim..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input border-gray-300 placeholder-gray-400"
+            className="input border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 placeholder-gray-400"
           />
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="input border-gray-300"
+            className="input border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="all">Tất cả</option>
             <option value="pending">Chưa check-in</option>
@@ -78,7 +78,7 @@ export default function CheckIn() {
       </div>
 
       {filteredTickets.length === 0 ? (
-        <div className="text-gray-500 text-sm">
+        <div className="text-gray-500 dark:text-gray-400 text-sm">
           Không có vé phù hợp.
         </div>
       ) : (
@@ -86,13 +86,13 @@ export default function CheckIn() {
           {filteredTickets.map((t) => (
             <div
               key={t.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-gray-200 bg-white p-3 transition"
+              className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 transition"
             >
               <div>
-                <div className="font-semibold text-gray-900">
+                <div className="font-semibold text-gray-900 dark:text-gray-100">
                   {t.code}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
                   {t.movie} — Ghế: {t.seats}
                 </div>
                 {t.checkinTime && (

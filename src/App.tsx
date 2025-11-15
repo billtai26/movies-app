@@ -15,28 +15,21 @@ import Blog from './ui/pages/user/Blog'
 import Account from './ui/pages/user/Account'
   import BookingSelect from './ui/pages/booking/Select'
   import BookingSeats from './ui/pages/booking/Seats'
-import BookingCombos from './ui/pages/booking/Combos'
-import BookingPayment from './ui/pages/booking/Payment'
-import BookingConfirm from './ui/pages/booking/Confirm'
+  import BookingCombos from './ui/pages/booking/Combos'
+  import BookingPayment from './ui/pages/booking/Payment'
+  import BookingConfirm from './ui/pages/booking/Confirm'
 import Movies from './ui/pages/user/Movies'
 import MovieDetail from './ui/pages/user/MovieDetail'
 import MovieBlog from './ui/pages/user/MovieBlog'
-import BlogDetail from './ui/pages/user/BlogDetail'
-import Directors from './ui/pages/user/Directors'
-import DirectorDetail from './ui/pages/user/DirectorDetail'
-import Actors from './ui/pages/user/Actors'
-import ActorDetail from './ui/pages/user/ActorDetail'
-import MovieGenres from './ui/pages/user/MovieGenres'
-import Monthly from './ui/pages/user/Monthly'
 
 import Booking from './ui/pages/user/Booking'
 import Checkout from './ui/pages/user/Checkout'
 import Tickets from './ui/pages/user/Tickets'
 import Profile from './ui/pages/user/Profile'
 import Reviews from './ui/pages/user/Reviews'
-import ReviewDetail from './ui/pages/user/ReviewDetail'
 import StaffDashboard from './ui/pages/staff/Dashboard'
 import CheckIn from './ui/pages/staff/CheckIn'
+import StaffBooking from './ui/pages/staff/StaffBooking'
 import SeatChange from './ui/pages/staff/SeatChange'
 import Combos from './ui/pages/staff/Combos'
 import Reports from './ui/pages/staff/Reports'
@@ -59,7 +52,8 @@ import AdminTickets from './ui/pages/admin/Tickets'
 import StaffReports from './ui/pages/admin/StaffReports'
 import AdminCombos from './ui/pages/admin/Combos'
 
-
+import Login from './ui/pages/auth/Login'
+import Register from './ui/pages/auth/Register'
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
 
@@ -70,7 +64,6 @@ export default function App(){
         <Route index element={<Home/>} />
           <Route path="cinemas" element={<Cinemas/>} />
           <Route path="offers" element={<Offers/>} />
-          <Route path="events/monthly" element={<Monthly/>} />
           <Route path="support" element={<Support/>} />
           <Route path="booking/select" element={<BookingSelect/>} />
           <Route path="booking/seats/:id" element={<BookingSeats/>} />
@@ -80,17 +73,10 @@ export default function App(){
         <Route path="movies" element={<Movies/>} />
         <Route path="movies/:id" element={<MovieDetail/>} />
           <Route path="reviews" element={<Reviews />} />
-          <Route path="reviews/:id" element={<ReviewDetail />} />
           <Route path="blogs" element={<Blog />} />
-          <Route path="blogs/:id" element={<BlogDetail />} />
           <Route path="movie-blog" element={<MovieBlog />} />
-          <Route path="blog/genres" element={<MovieGenres />} />
-          <Route path="blog/directors" element={<Directors />} />
-          <Route path="blog/directors/:id" element={<DirectorDetail />} />
-          <Route path="blog/actors" element={<Actors />} />
-          <Route path="blog/actors/:id" element={<ActorDetail />} />
         <Route path="booking/:showtimeId" element={<Booking/>} />
-<Route path="checkout" element={<Checkout/>} />
+        <Route path="checkout" element={<Checkout/>} />
         <Route element={<RequireAuth roles={['user']} />}>
           <Route path="tickets" element={<Tickets/>} />
           <Route path="profile" element={<Profile/>} />
@@ -102,6 +88,7 @@ export default function App(){
         <Route element={<StaffLayout/>}>
           <Route index element={<StaffDashboard/>} />
           <Route path="checkin" element={<CheckIn/>} />
+          <Route path="booking" element={<StaffBooking/>} />
           <Route path="seat-change" element={<SeatChange/>} />
           <Route path="combos" element={<Combos/>} />
           <Route path="reports" element={<Reports/>} />
@@ -119,7 +106,7 @@ export default function App(){
           <Route path="rooms-seats" element={<RoomsSeats/>} />
           <Route path="showtimes" element={<Showtimes/>} />
           <Route path="users" element={<Users/>} />
-          <Route path="promotions" element={<Promotions/>} />
+          <Route path="vouchers" element={<Promotions />} />
           <Route path="combos" element={<AdminCombos/>} />
           <Route path="comments" element={<Comments/>} />
           <Route path="notifications" element={<Notifications/>} />
@@ -130,7 +117,8 @@ export default function App(){
       </Route>
 
       <Route path="/auth" element={<AuthLayout/>}>
-
+        <Route path="login" element={<Login/>} />
+        <Route path="register" element={<Register/>} />
         <Route path="forgot-password" element={<ForgotPassword/>} />
         <Route path="reset-password" element={<ResetPassword/>} />
       </Route>
