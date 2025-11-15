@@ -2,8 +2,10 @@ import axios from 'axios'
 import { BASE_URL } from './config'
 
 export const api = {
-  async listMovies(status?: 'now' | 'coming') {
-    const res = await axios.get(`${BASE_URL}/movies`, { params: { status } })
+  // Đảm bảo hàm listMovies của bạn trông như thế này
+  // Sửa THÀNH (giống hệt mockApi):
+  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number }) {
+    const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },
   async getMovie(id: string) {

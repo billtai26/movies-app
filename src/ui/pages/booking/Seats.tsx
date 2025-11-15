@@ -11,7 +11,7 @@ import { useAuth } from '../../../store/auth' // Import store auth
 
 // --- Định nghĩa kiểu dữ liệu ---
 type SeatState = 'empty' | 'held' | 'booked' | 'selected'
-type Seat = { 
+type Seat = {
   id: string, 
   row: string, 
   col: number, 

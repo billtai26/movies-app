@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { useCollection } from "../../lib/mockCrud";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MovieCard from "./MovieCard";
+import { api } from "../../lib/api";
 
 export default function MovieTabs() {
-  const { rows: movies = [] } = useCollection<any>("movies" as any);
+  const [movies, setMovies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [tab, setTab] = useState<"now" | "coming" | "imax" | "all">("now");
 
   const tabs = [
@@ -14,9 +16,42 @@ export default function MovieTabs() {
     { key: "all", label: "Toàn quốc" },
   ];
 
-  // Lọc phim theo tab
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setLoading(true);
+      try {
+        let statusParam = undefined;
+        if (tab === 'now') {
+          statusParam = 'now_showing'; // Gửi 'now_showing' thay vì 'now'
+        } else if (tab === 'coming') {
+          statusParam = 'coming_soon'; // Gửi 'coming_soon' thay vì 'coming'
+        }
+        // Nếu tab là 'imax' hoặc 'all', statusParam vẫn là undefined (để backend tự xử lý)
+        
+        // Gọi API thật từ backendApi.ts
+        const data = await api.listMovies({ status: statusParam }); 
+
+        console.log('DỮ LIỆU API TRẢ VỀ:', JSON.stringify(data, null, 2));
+
+        setMovies(data.movies && Array.isArray(data.movies) ? data.movies : []); // Lưu kết quả vào state
+      } catch (err) {
+        console.error("Lỗi khi fetch phim:", err);
+        setMovies([]); // Đặt mảng rỗng nếu có lỗi
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, [tab]); // Phụ thuộc vào 'tab', khi tab thay đổi, gọi lại API
+
+  // Lọc phim theo tab (logic này giữ nguyên, nó sẽ lọc client-side)
+  // API đã lọc cho 'now' và 'coming' rồi.
+  // Chúng ta chỉ cần lọc client-side cho 'imax' (nếu cần).
   const filtered =
-    tab === "all" ? movies : movies.filter((m) => m.status === tab);
+    tab === 'imax'
+      ? movies.filter((m) => m.isImax) // Giả sử bạn có trường 'isImax'
+      : movies; // Đối với 'now', 'coming', 'all', chỉ cần dùng mảng 'movies' từ API
   // Giới hạn 8 phim ở tab "Đang chiếu"
   const visible = tab === "now" ? filtered.slice(0, 8) : filtered;
 
@@ -45,8 +80,12 @@ export default function MovieTabs() {
         </div>
       </div>
 
-      {/* Movie grid */}
-      {visible.length === 0 ? (
+      {/* 4. Thêm kiểm tra loading */}
+      {loading ? (
+        <p className="text-gray-500 text-sm text-center py-10">
+          Đang tải phim...
+        </p>
+      ) : visible.length === 0 ? (
         <p className="text-gray-500 text-sm text-center py-10">
           Hiện chưa có phim nào trong mục này.
         </p>
@@ -54,7 +93,7 @@ export default function MovieTabs() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {visible.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
+              <MovieCard key={movie._id} movie={movie} />
             ))}
           </div>
 
