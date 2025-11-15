@@ -1,8 +1,6 @@
 import React from "react";
 import { ThumbsUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import SidebarMovieCard from "../../components/SidebarMovieCard";
-import Dropdown from "../../components/Dropdown";
 
 export default function Reviews() {
   const reviews = [
@@ -60,31 +58,35 @@ export default function Reviews() {
           BÌNH LUẬN PHIM
         </h2>
 
-        {/* Bộ lọc: dropdown theo mẫu */}
-        <Filters />
+        {/* Bộ lọc */}
+        <div className="flex gap-3 mb-6">
+          <select className="border border-gray-300 text-sm rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500">
+            <option>Tất Cả</option>
+          </select>
+          <select className="border border-gray-300 text-sm rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500">
+            <option>Đang Chiếu/ Sắp Chiếu</option>
+          </select>
+          <select className="border border-gray-300 text-sm rounded-md px-3 py-1.5 focus:ring-1 focus:ring-blue-500">
+            <option>Mới Nhất</option>
+          </select>
+        </div>
 
         {/* Danh sách bài review */}
         <div className="space-y-6">
           {reviews.map((r) => (
             <div
               key={r.id}
-              className="flex flex-col md:flex-row items-start gap-4 border-b border-gray-200 pb-6"
+              className="flex flex-col md:flex-row border-b border-gray-200 pb-4"
             >
-              <Link to={`/reviews/${r.id}`}>
-                <div className="w-full h-44 md:w-[220px] md:h-[140px] rounded-md overflow-hidden">
-                  <img
-                    src={r.img}
-                    alt={r.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </Link>
-              <div className="flex-1">
-                <Link to={`/reviews/${r.id}`}>
-                  <h3 className="font-semibold text-base text-gray-800 hover:text-blue-600 cursor-pointer">
-                    {r.title}
-                  </h3>
-                </Link>
+              <img
+                src={r.img}
+                alt={r.title}
+                className="w-full md:w-52 h-40 object-cover rounded-md mb-3 md:mb-0 md:mr-4"
+              />
+              <div>
+                <h3 className="font-semibold text-base text-gray-800 hover:text-blue-600 cursor-pointer">
+                  {r.title}
+                </h3>
                 <div className="flex items-center gap-3 text-xs mt-1">
                   <button className="flex items-center gap-1 bg-[#1877f2] text-white text-xs px-2 py-0.5 rounded">
                     <ThumbsUp size={12} /> Thích
@@ -130,7 +132,14 @@ export default function Reviews() {
           </h3>
           <div className="space-y-3">
             {nowPlaying.map((p) => (
-              <SidebarMovieCard key={p.id} movie={p} />
+              <div key={p.id}>
+                <img
+                  src={p.img}
+                  alt={p.name}
+                  className="rounded-lg w-full h-44 object-cover"
+                />
+                <p className="mt-1 text-sm text-gray-700">{p.name}</p>
+              </div>
             ))}
           </div>
 
@@ -143,47 +152,6 @@ export default function Reviews() {
           </Link>
         </div>
       </aside>
-    </div>
-  );
-}
-
-function Filters() {
-  const [type, setType] = React.useState("all");
-  const [status, setStatus] = React.useState("soon");
-  const [sort, setSort] = React.useState("top");
-
-  return (
-    <div className="flex gap-3 mb-6">
-      <Dropdown
-        value={type}
-        onChange={setType}
-        options={[
-          { label: "Tất cả", value: "all" },
-          { label: "Review", value: "review" },
-          { label: "Preview", value: "preview" },
-        ]}
-        minWidth={150}
-      />
-      <Dropdown
-        value={status}
-        onChange={setStatus}
-        options={[
-          { label: "Đang chiếu/ Sắp chiếu", value: "all" },
-          { label: "Đang chiếu", value: "now" },
-          { label: "Sắp chiếu", value: "soon" },
-        ]}
-        minWidth={170}
-      />
-      <Dropdown
-        value={sort}
-        onChange={setSort}
-        options={[
-          { label: "Xem nhiều nhất", value: "views" },
-          { label: "Mới nhất", value: "new" },
-          { label: "Đánh giá tốt nhất", value: "top" },
-        ]}
-        minWidth={160}
-      />
     </div>
   );
 }

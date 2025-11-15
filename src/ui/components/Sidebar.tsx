@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 export default function Sidebar({ items }: { items:{to:string; label:string; icon?:React.ReactNode}[] }) {
   return (
     <div className="flex h-full flex-col border-r bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-4">
-      <div className="mb-4 text-xl font-bold text-brand dark:text-orange-400">Only Cinema Panel</div>
+      <div className="mb-4 text-xl font-bold text-brand dark:text-orange-400">Cinesta Panel</div>
       <nav className="space-y-1 flex-1">
         {items.map(i=>(
           <NavLink key={i.to} to={i.to}

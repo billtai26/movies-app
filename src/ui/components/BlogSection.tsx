@@ -79,7 +79,7 @@ export default function BlogSection() {
     <section className="mt-10">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           <span className="border-l-4 border-blue-600 pl-2">GÓC ĐIỆN ẢNH</span>
         </h2>
         <div className="flex gap-4 text-sm">
@@ -109,10 +109,7 @@ export default function BlogSection() {
       {/* Content grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Left big post */}
-        <Link
-          to={activeTab === "review" ? `/reviews/${content.main.id}` : `/blogs/${content.main.id}`}
-          className="col-span-2 rounded-xl overflow-hidden shadow-sm border"
-        >
+        <div className="col-span-2 rounded-xl overflow-hidden shadow-sm border">
           <img
             src={content.main.img}
             alt={content.main.title}
@@ -129,23 +126,19 @@ export default function BlogSection() {
               <span>👁 {content.main.likes}</span>
             </div>
           </div>
-        </Link>
+        </div>
 
         {/* Right small posts */}
         <div className="flex flex-col gap-3">
           {content.side.map((p) => (
-            <Link
-              key={p.id}
-              to={activeTab === "review" ? `/reviews/${p.id}` : `/blogs/${p.id}`}
-              className="flex items-center gap-3 border rounded-lg p-2 shadow-sm min-h-[84px]"
-            >
+            <div key={p.id} className="flex gap-3 border rounded-lg p-2 shadow-sm">
               <img
                 src={p.img}
                 alt={p.title}
                 className="w-28 h-20 object-cover rounded-md"
               />
-              <div className="flex-1">
-                <p className="text-sm font-medium leading-snug line-clamp-2">{p.title}</p>
+              <div>
+                <p className="text-sm font-medium leading-snug">{p.title}</p>
                 <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
                   <button className="flex items-center gap-1 bg-[#1877f2] text-white text-xs px-2 py-0.5 rounded">
                     <ThumbsUp size={12} /> Thích
@@ -153,7 +146,7 @@ export default function BlogSection() {
                   <span>👁 {p.likes}</span>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

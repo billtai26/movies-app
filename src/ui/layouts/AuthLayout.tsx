@@ -33,7 +33,7 @@ export default function AuthLayout() {
         >
           <div className="max-w-md space-y-4">
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-400 leading-tight">
-              {isLogin ? "Chào mừng trở lại 🎬" : "Tham gia Only Cinema 🌟"}
+              {isLogin ? "Chào mừng trở lại 🎬" : "Tham gia Cinesta 🌟"}
             </h1>
             <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
               {isLogin

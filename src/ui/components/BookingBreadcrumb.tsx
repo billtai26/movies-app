@@ -41,13 +41,8 @@ export default function BookingBreadcrumb({ currentStep }: BookingBreadcrumbProp
                 </span>
               ))}
             </div>
-            {/* Thanh tiến trình dưới hàng nhãn, dính sát chân */}
-            <div className="absolute -bottom-px left-0 right-0 h-[2px] bg-gray-200">
-              <div
-                className="h-[2px] bg-orange-500 transition-all"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
+            {/* Chỉ giữ đường kẻ xám, bỏ thanh chạy màu cam */}
+            <div className="absolute -bottom-px left-0 right-0 h-[2px] bg-gray-200" />
           </div>
         </div>
       </div>
