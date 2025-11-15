@@ -11,3 +11,4 @@ export default function Countdown({ secondsLeft }:{ secondsLeft: number }){
     </div>
   )
 }
+.
