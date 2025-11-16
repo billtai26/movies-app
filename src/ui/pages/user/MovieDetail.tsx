@@ -123,9 +123,9 @@ export default function MovieDetail() {
   const theaterSource = theaters
   const showtimesByTheater = theaterSource.map(theater => {
     const thId = String(theater.id || (theater as any)._id)
-    const byTheater = movieShowtimes.filter(s => String(s.theaterId || s.cinemaId) === thId)
+    const byTheater = movieShowtimes.filter(s => String(s.theaterId) === thId || String(s.cinemaId) === thId)
     const byDate = byTheater.filter(s => !!s.startTime && ddmmFromIso(s.startTime) === selectedDate)
-    return { ...theater, showtimes: byDate.length ? byDate : byTheater }
+    return { ...theater, showtimes: byDate }
   }).filter(theater => theater.showtimes.length > 0)
 
   const filteredTheaters = showtimesByTheater.filter(t => {
