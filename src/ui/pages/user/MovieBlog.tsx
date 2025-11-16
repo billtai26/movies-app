@@ -3,6 +3,7 @@ import { ThumbsUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCollection } from "../../../lib/mockCrud";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
+import QuickBooking from "../../components/QuickBooking";
 
 export default function MovieBlog() {
   const { rows: movies = [] } = useCollection<any>("movies");
@@ -87,22 +88,11 @@ export default function MovieBlog() {
       {/* Cột phải */}
       <aside className="space-y-6">
         <div className="border rounded-lg overflow-hidden shadow-sm">
-          <div className="bg-blue-800 text-white text-center py-2 font-medium">
+          <div className="bg-orange-500 text-white text-center py-2 font-medium">
             Mua Vé Nhanh
           </div>
-          <div className="p-3 space-y-3">
-            <select className="w-full border rounded-md text-sm px-3 py-1.5">
-              <option>Chọn phim</option>
-            </select>
-            <select className="w-full border rounded-md text-sm px-3 py-1.5">
-              <option>Chọn rạp</option>
-            </select>
-            <select className="w-full border rounded-md text-sm px-3 py-1.5">
-              <option>Chọn ngày</option>
-            </select>
-            <button className="w-full bg-orange-500 text-white rounded-md py-1.5 text-sm hover:bg-orange-600">
-              Mua Vé
-            </button>
+          <div className="p-3">
+            <QuickBooking stacked className="shadow-none border-none" />
           </div>
         </div>
 
