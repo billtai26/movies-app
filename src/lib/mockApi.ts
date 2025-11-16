@@ -11,7 +11,7 @@ import articles from './mockData/articles.json'
 const wait = (ms:number)=>new Promise(res=>setTimeout(res,ms))
 
 export const api = {
-  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number }) {
+  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number; q?: string }) {
     await wait(200);
 
     // Lấy toàn bộ phim từ mock
@@ -44,7 +44,7 @@ export const api = {
     };
   },
   async getMovie(id:string){ await wait(150); return movies.find(m=>m.id===id) },
-  async listShowtimesByMovie(movieId:string){ await wait(150); return showtimes.filter(s=>s.movieId===movieId) },
+  async listShowtimesByMovie(movieId:string, cinemaId?: string){ await wait(150); return showtimes.filter(s=> s.movieId===movieId && (!cinemaId || (s as any).cinemaId===cinemaId || (s as any).theaterId===cinemaId)) },
   async getShowtime(id:string){ await wait(120); return showtimes.find(s=>s.id===id) },
   async listCombos(){ await wait(100); return combos },
   async listUsers(){ await wait(120); return users },
@@ -53,6 +53,14 @@ export const api = {
   async listShowtimes(){ await wait(120); return showtimes },
   async listPromos(){ await wait(100); return promos },
   async listArticles(){ await wait(100); return articles },
+  async listComments(movieId?: string) {
+    await wait(100)
+    try{
+      const raw = movieId ? localStorage.getItem(`comments::${movieId}`) : null
+      const arr = raw ? JSON.parse(raw as any) : []
+      return { comments: Array.isArray(arr)? arr: [] }
+    }catch{ return { comments: [] } }
+  },
   
   async create<T>(collection: string, item: T) {
     await wait(500);

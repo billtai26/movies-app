@@ -62,11 +62,18 @@ export default function Seats(){
     api.getShowtime(showtimeId).then((showtimeDetails) => {
       setSt(showtimeDetails as any);
 
-      // Giả sử backend trả về mảng ghế trong thuộc tính `seats`
-      if (showtimeDetails && showtimeDetails.seats) {
-        setSeats(showtimeDetails.seats as Seat[]);
+      // Chuyển đổi seats từ định dạng backend về Seat[] cho SeatMap
+      if (showtimeDetails && Array.isArray(showtimeDetails.seats)) {
+        const toSeat = (sn:string, status:string, heldBy?:string): Seat => {
+          const row = sn.replace(/\d+/,'')
+          const colStr = sn.replace(/\D+/,'')
+          const col = Number(colStr)
+          const state: SeatState = status === 'booked' ? 'booked' : (heldBy ? 'held' : 'empty')
+          return { id: sn, row, col, type: 'normal', state, userId: heldBy || undefined }
+        }
+        const converted: Seat[] = showtimeDetails.seats.map((s:any)=> toSeat(s.seatNumber, s.status, s.heldBy))
+        setSeats(converted)
       } else {
-        // Fallback nếu API không trả về seat map (có thể dùng data mock)
         console.error("API không trả về 'seats'.");
         setSeats([]); 
       }
@@ -74,8 +81,8 @@ export default function Seats(){
       // Các logic fetch thông tin liên quan
       if (showtimeDetails) {
         api.getMovie(showtimeDetails.movieId).then(setMovie);
-        api.listTheaters().then(ts => setTheater(ts.find(t => t.id === showtimeDetails.theaterId)));
-        api.listRooms().then(rs => setRoom(rs.find((r: any) => r.id === showtimeDetails.roomId)));
+        api.listTheaters().then(ts => setTheater(ts.find((t: any) => (t.id || t._id) === (showtimeDetails.theaterId || showtimeDetails.cinemaId))));
+        api.listRooms().then(rs => setRoom(rs.find((r: any) => (r.id || r._id) === showtimeDetails.roomId)));
       }
 
     }).catch(err => {
@@ -88,21 +95,21 @@ export default function Seats(){
 
   // Effect để cập nhật danh sách giờ chiếu (giữ nguyên)
   useEffect(()=>{
+    const parseIsoWall = (iso?:string)=>{
+      if(!iso) return null; const m = (iso as string).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/); if(m) return {dd:m[3],mm:m[2],hh:m[4],min:m[5]}; const d=new Date(iso as string); return {dd:String(d.getDate()).padStart(2,'0'), mm:String(d.getMonth()+1).padStart(2,'0'), hh:String(d.getHours()).padStart(2,'0'), min:String(d.getMinutes()).padStart(2,'0')}; }
     if (st?.startTime) {
-      const hhmm = st?.time || (()=>{ const dt = new Date(st.startTime); return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` })()
+      const base = parseIsoWall(st.startTime)!; const hhmm = `${base.hh}:${base.min}`
       setSelectedTime(hhmm)
       ;(async () => {
         const all = await api.listShowtimes()
-        const sameDay = (a:string,b:string) => {
-          const da = new Date(a), db = new Date(b)
-          return da.getFullYear()===db.getFullYear() && da.getMonth()===db.getMonth() && da.getDate()===db.getDate()
-        }
-        const filtered = all.filter((x:any)=> x.movieId===st.movieId && x.theaterId===st.theaterId && sameDay(x.startTime, st.startTime))
+        const dayMM = (iso:string)=>{ const p=parseIsoWall(iso)!; return `${p.dd}/${p.mm}` }
+        const filtered = all.filter((x:any)=> x.movieId===st.movieId && ((x.theaterId===st.theaterId) || (x.cinemaId===st.theaterId) || (x.theaterId===st.cinemaId) || (x.cinemaId===st.cinemaId)) && dayMM(x.startTime)===dayMM(st.startTime))
         setAvailableShows(filtered)
-        const times = Array.from(new Set(filtered.map((x:any)=> x.time))).sort()
+        const toHHmm = (iso?:string)=>{ if(!iso) return null; const p=parseIsoWall(iso)!; return `${p.hh}:${p.min}` }
+        const times = Array.from(new Set(filtered.map((x:any)=> x.time || toHHmm(x.startTime)).filter(Boolean))) as string[]
         setAvailableTimes(times.length?times:[hhmm])
-      })()
-    }
+        })()
+      }
   }, [st])
 
   // 3. LOGIC KẾT NỐI WEBSOCKET

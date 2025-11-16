@@ -6,8 +6,7 @@ import { useAuth } from "../../store/auth";
 import HoverDropdown from "./HoverDropdown";
 import MovieDropdown from "./MovieDropdown";
 import AuthModals from "./AuthModals";
-import { useCollection } from "../../lib/mockCrud";
-import { api } from "../../lib/api"; // <-- Import API thật
+import { api } from "../../lib/api";
 import { useDebounce } from "../../lib/useDebounce";
 
 // ----- Navbar Chính -----
@@ -26,7 +25,8 @@ export default function NavBar() {
   // --- THAY ĐỔI 1: State cho kết quả API ---
   const [searchResults, setSearchResults] = useState<any[]>([]); // State cho kết quả từ API
   const [isSearching, setIsSearching] = useState(false); // State cho biết đang tải
-  const { rows: theaters = [] } = useCollection<any>("theaters");
+  const [theaters, setTheaters] = useState<any[]>([]);
+  useEffect(() => { api.listTheaters().then(setTheaters).catch(()=>setTheaters([])); }, []);
   
   // --- THAY ĐỔI 2: Xóa useCollection cho 'movies' ---
   // const { rows: movies = [] } = useCollection<any>("movies"); // <-- XÓA DÒNG NÀY
@@ -112,7 +112,7 @@ export default function NavBar() {
   // Lấy danh sách rạp từ collection của ứng dụng
   const cinemasDropdownItems = (
     theaters.length > 0
-      ? theaters.map((t: any) => ({ label: t.name, to: `/cinemas?theater=${t.id}` }))
+      ? theaters.map((t: any) => ({ label: t.name, to: `/cinemas?theater=${t._id || t.id}` }))
       : [
           { label: "Danh Sách Rạp", to: "/cinemas" },
         ]

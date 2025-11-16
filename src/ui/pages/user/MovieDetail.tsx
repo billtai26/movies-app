@@ -1,9 +1,9 @@
 
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { seedAll } from '../../../lib/seed'
-import { useCollection } from '../../../lib/mockCrud'
+import { api } from '../../../lib/api'
 import SidebarMovieCard from '../../components/SidebarMovieCard'
+import CommentsSection from '../../components/CommentsSection'
 
 export default function MovieDetail() {
   const { id } = useParams()
@@ -20,21 +20,90 @@ export default function MovieDetail() {
   const [region, setRegion] = React.useState('all')
   const [theaterFilter, setTheaterFilter] = React.useState('all')
 
-  React.useEffect(() => { seedAll(); }, [])
+  const [movie, setMovie] = React.useState<any | null>(null)
+  const [nowMovies, setNowMovies] = React.useState<any[]>([])
+  const [movieShowtimes, setMovieShowtimes] = React.useState<any[]>([])
+  const [theaters, setTheaters] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const tabsRef = React.useRef<HTMLDivElement>(null)
+  const dates = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    const label = i === 0 ? 'Hôm Nay' : weekdayVi[d.getDay()]
+    return { label, value: formatShortDate(d) }
+  })
+  const currentDateIndex = React.useMemo(() => {
+    return dates.findIndex(d => d.value === selectedDate)
+  }, [selectedDate])
+  const parseIsoWallTime = (iso?: string) => {
+    if (!iso) return null
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    if (m) return { y: m[1], mm: m[2], dd: m[3], hh: m[4], min: m[5] }
+    const d = new Date(iso)
+    return { y: String(d.getFullYear()), mm: String(d.getMonth()+1).padStart(2,'0'), dd: String(d.getDate()).padStart(2,'0'), hh: String(d.getHours()).padStart(2,'0'), min: String(d.getMinutes()).padStart(2,'0') }
+  }
+  const fmtHHmm = (iso?: string) => {
+    const p = parseIsoWallTime(iso)
+    if (!p) return '—'
+    return `${p.hh}:${p.min}`
+  }
+  const ddmmFromIso = (iso?: string) => {
+    const p = parseIsoWallTime(iso)
+    if (!p) return ''
+    return `${p.dd}/${p.mm}`
+  }
 
-  const { rows: movies = [] } = useCollection<any>('movies')
-  const { rows: showtimes = [] } = useCollection<any>('showtimes')
-  const { rows: theaters = [] } = useCollection<any>('theaters')
-
-  const movie = movies.find(m => m.id === id)
-  const nowMovies = movies.filter(m => m.status === 'now').slice(0, 3)
-  const movieShowtimes = showtimes.filter(s => s.movieId === id)
+  React.useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    const cinemaId = theaterFilter !== 'all' ? theaterFilter : undefined
+    Promise.allSettled([
+      api.getMovie(id),
+      api.listShowtimesByMovie(id, cinemaId),
+      api.listTheaters(),
+      api.listMovies({ status: 'now_showing', limit: 3 })
+    ])
+      .then((results: PromiseSettledResult<any>[]) => {
+        const mRes = results[0] as PromiseSettledResult<any>
+        const stRes = results[1] as PromiseSettledResult<any>
+        const thRes = results[2] as PromiseSettledResult<any>
+        const nowRes = results[3] as PromiseSettledResult<any>
+        if (mRes.status === 'fulfilled') {
+          setMovie(mRes.value || null)
+        } else {
+          setMovie(null)
+        }
+        if (stRes.status === 'fulfilled') {
+          const raw = stRes.value as any
+          const arr = Array.isArray(raw) ? raw : (raw?.showtimes || [])
+          const filtered = Array.isArray(arr) ? arr.filter((s:any) => ((s.movieId === id) || (s.movie?._id === id))) : []
+          setMovieShowtimes(filtered)
+        } else {
+          setMovieShowtimes([])
+        }
+        if (thRes.status === 'fulfilled') {
+          const raw = thRes.value as any
+          const arr = Array.isArray(raw) ? raw : (raw?.cinemas || raw?.theaters || [])
+          setTheaters(Array.isArray(arr) ? arr : [])
+        } else {
+          setTheaters([])
+        }
+        if (nowRes.status === 'fulfilled') {
+          const val:any = nowRes.value
+          const list = val?.movies || val || []
+          setNowMovies(Array.isArray(list) ? list : [])
+        } else {
+          setNowMovies([])
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [id, theaterFilter])
 
   const handleShowtimeSelect = (showtimeId: string) => {
     navigate(`/booking/seats/${showtimeId}`)
   }
 
-  if (!movie) return (
+  if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#f58a1f] mx-auto"></div>
@@ -43,28 +112,27 @@ export default function MovieDetail() {
     </div>
   )
 
-  const dates = Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    const label = i === 0 ? 'Hôm Nay' : weekdayVi[d.getDay()]
-    return { label, value: formatShortDate(d) }
-  })
-
-  const showtimesByTheater = theaters.map(theater => ({
-    ...theater,
-    showtimes: movieShowtimes.filter(s => s.theaterId === theater.id)
-  })).filter(theater => theater.showtimes.length > 0)
+  if (!movie) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="mt-4 text-gray-600">Không tìm thấy phim này.</p>
+        <a href="/movies" className="mt-3 inline-block px-4 py-2 bg-orange-500 text-white rounded-md">Quay lại danh sách</a>
+      </div>
+    </div>
+  )
+  const theaterSource = theaters
+  const showtimesByTheater = theaterSource.map(theater => {
+    const thId = String(theater.id || (theater as any)._id)
+    const byTheater = movieShowtimes.filter(s => String(s.theaterId || s.cinemaId) === thId)
+    const byDate = byTheater.filter(s => !!s.startTime && ddmmFromIso(s.startTime) === selectedDate)
+    return { ...theater, showtimes: byDate.length ? byDate : byTheater }
+  }).filter(theater => theater.showtimes.length > 0)
 
   const filteredTheaters = showtimesByTheater.filter(t => {
     const okRegion = region === 'all' ? true : (t.city || 'only') === region
-    const okTheater = theaterFilter === 'all' ? true : t.id === theaterFilter
+    const okTheater = theaterFilter === 'all' ? true : ((t.id || (t as any)._id) === theaterFilter)
     return okRegion && okTheater
   })
-
-  // Index ngày hiện tại để điều hướng trái/phải
-  const currentDateIndex = React.useMemo(() => {
-    return dates.findIndex(d => d.value === selectedDate)
-  }, [selectedDate])
 
   const goPrevDate = () => {
     if (currentDateIndex > 0) setSelectedDate(dates[currentDateIndex - 1].value)
@@ -76,7 +144,6 @@ export default function MovieDetail() {
   // (Loại bỏ thanh tiến trình động dưới tabs, sẽ dùng đường cố định)
 
   // Ref để cuộn thanh tabs bằng mũi tên (không đổi ngày)
-  const tabsRef = React.useRef<HTMLDivElement>(null)
   const scrollTabs = (dir: 'prev' | 'next') => {
     const el = tabsRef.current
     if (!el) return
@@ -111,7 +178,7 @@ export default function MovieDetail() {
             <div className="flex-1 text-gray-800 mt-10 md:mt-14">
               {/* Tiêu đề + badge độ tuổi theo mẫu */}
               <div className="flex items-start gap-3">
-                <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">{movie.title}</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">{movie.title || (movie as any)?.name}</h1>
                 <span className="mt-1 inline-block bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-md">{movie.ageRating || 'T13'}</span>
               </div>
 
@@ -124,7 +191,7 @@ export default function MovieDetail() {
               {/* Rating theo mẫu: sao + điểm + số votes */}
               <div className="mt-2 flex items-center gap-2 text-gray-800">
                 <span className="text-yellow-500">⭐</span>
-                <span className="font-semibold text-lg">{typeof movie.rating === 'number' ? movie.rating.toFixed(1) : (movie.rating || '8.2')}</span>
+                <span className="font-semibold text-lg">{typeof (movie as any)?.averageRating === 'number' ? (movie as any).averageRating.toFixed(1) : (movie as any)?.averageRating || (typeof movie.rating === 'number' ? movie.rating.toFixed(1) : (movie.rating || '8.2'))}</span>
                 <span className="text-sm text-gray-500">({movie.votes || '173'} votes)</span>
               </div>
 
@@ -138,7 +205,7 @@ export default function MovieDetail() {
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <span className="text-gray-700">Thể loại:</span>
                 <div className="flex gap-1.5 flex-wrap">
-                  {(Array.isArray((movie as any)?.genre) ? (movie as any).genre : ['Gia Đình']).map((g:string) => (
+                  {(Array.isArray((movie as any)?.genre) ? (movie as any).genre : Array.isArray((movie as any)?.genres) ? (movie as any).genres : ['Gia Đình']).map((g:string) => (
                     <span key={g} className="px-2.5 py-1 rounded-full border text-sm bg-white">{g}</span>
                   ))}
                 </div>
@@ -213,7 +280,7 @@ export default function MovieDetail() {
                 </select>
                 <select className="px-3 py-2 border rounded-md text-sm" value={theaterFilter} onChange={e=>setTheaterFilter(e.target.value)}>
                   <option value="all">Tất cả rạp</option>
-                  {theaters.map(t=> <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {theaterSource.map(t=> <option key={(t as any)._id || t.id} value={(t as any)._id || t.id}>{t.name}</option>)}
                 </select>
               </div>
             </div>
@@ -227,11 +294,11 @@ export default function MovieDetail() {
                   <div className="flex flex-wrap gap-2">
                     {t.showtimes.map(s => (
                       <button
-                        key={s.id}
+                        key={s.id || (s as any)._id}
                         className="w-16 h-10 flex items-center justify-center rounded-md border text-sm bg-white hover:bg-blue-50 shadow-sm"
-                        onClick={()=>handleShowtimeSelect(s.id)}
+                        onClick={()=>handleShowtimeSelect(s.id || (s as any)._id)}
                       >
-                        {s.time || '18:30'}
+                        {fmtHHmm((s as any).startTime || s.time)}
                       </button>
                     ))}
                     {t.showtimes.length===0 && (
@@ -245,6 +312,8 @@ export default function MovieDetail() {
               )}
             </div>
           </div>
+
+          <CommentsSection movieId={id as string} />
         </div>
         {/* Cột phải: PHIM ĐANG CHIẾU dạng dọc */}
         <aside className="space-y-6 md:ml-[3cm]">
@@ -252,9 +321,9 @@ export default function MovieDetail() {
             <h3 className="text-base font-semibold border-l-4 border-blue-600 pl-2 mb-3">PHIM ĐANG CHIẾU</h3>
             <div className="space-y-3">
               {nowMovies.map((p) => (
-                <div key={p.id} className="md:w-[calc(100%+2cm)]">
+                <div key={(p as any)._id || p.id} className="md:w-[calc(100%+2cm)]">
                   <SidebarMovieCard 
-                    movie={{ id: p.id, name: p.title, img: p.poster, rating: p.rating }} 
+                    movie={{ id: (p as any)._id || p.id, name: p.title || (p as any).name, img: p.poster, rating: (p as any).averageRating ?? p.rating }} 
                     styleHeight="calc(12rem + 0.5cm)" 
                   />
                 </div>

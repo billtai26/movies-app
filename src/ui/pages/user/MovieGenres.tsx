@@ -1,13 +1,22 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+import { api } from "../../../lib/api";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
 import QuickBooking from "../../components/QuickBooking";
 
 export default function MovieGenres() {
-  React.useEffect(() => { seedAll(); }, []);
-  const { rows: movies = [] } = useCollection<any>("movies");
+  const [movies, setMovies] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  React.useEffect(() => {
+    setLoading(true);
+    api.listMovies()
+      .then((data: any) => {
+        const arr = data?.movies || data || [];
+        setMovies(Array.isArray(arr) ? arr : []);
+      })
+      .catch(() => setMovies([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const [genre, setGenre] = React.useState<string>("Tất cả");
   const [country, setCountry] = React.useState<string>("Tất cả");
@@ -15,11 +24,15 @@ export default function MovieGenres() {
   const [status, setStatus] = React.useState<string>("now");
   const [sort, setSort] = React.useState<string>("Xem Nhiều Nhất");
 
-  const filtered = movies.filter((m) =>
-    status === "all" ? true : m.status === status
-  );
+  const filtered = movies.filter((m: any) => {
+    if (status === "all") return true;
+    const s = m.status;
+    if (status === "now") return s === "now_showing" || s === "now";
+    if (status === "coming") return s === "coming_soon" || s === "coming";
+    return true;
+  });
 
-  const nowPlaying = movies.filter((m) => m.status === "now").slice(0, 3);
+  const nowPlaying = movies.filter((m: any) => (m.status === "now_showing" || m.status === "now")).slice(0, 3);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -61,25 +74,29 @@ export default function MovieGenres() {
         </div>
 
         {/* Movie list like sample */}
-        <div className="space-y-4">
-          {filtered.map((m, idx) => (
-            <div key={m.id} className="grid grid-cols-[220px_1fr] gap-4 p-3 border rounded">
-              <Link to={`/movies/${m.id}`} className="block w-[220px] h-[140px] rounded overflow-hidden bg-gray-100">
-                <img src={m.poster} alt={m.title} className="w-full h-full object-cover" />
-              </Link>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Link to={`/movies/${m.id}`} className="text-[#1a6aff] hover:underline font-semibold">
-                    {m.title}
-                  </Link>
-                  <span className="inline-flex items-center gap-1 text-xs bg-[#1a6aff] text-white px-2 py-0.5 rounded">+ Thích</span>
-                  <span className="text-xs text-gray-600">{(idx + 1) * 1234} lượt xem</span>
+        {loading ? (
+          <p className="text-gray-500 text-sm text-center py-10">Đang tải phim...</p>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((m: any, idx: number) => (
+              <div key={m._id || m.id} className="grid grid-cols-[220px_1fr] gap-4 p-3 border rounded">
+                <Link to={`/movies/${m._id || m.id}`} className="block w-[220px] h-[140px] rounded overflow-hidden bg-gray-100">
+                  <img src={m.poster} alt={m.title || m.name} className="w-full h-full object-cover" />
+                </Link>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Link to={`/movies/${m._id || m.id}`} className="text-[#1a6aff] hover:underline font-semibold">
+                      {m.title || m.name}
+                    </Link>
+                    <span className="inline-flex items-center gap-1 text-xs bg-[#1a6aff] text-white px-2 py-0.5 rounded">+ Thích</span>
+                    <span className="text-xs text-gray-600">{(idx + 1) * 1234} lượt xem</span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{m.description || m.desc || "Đang cập nhật mô tả"}</p>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{m.desc || "Đang cập nhật mô tả"}</p>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Right - Sidebar */}
@@ -97,10 +114,10 @@ export default function MovieGenres() {
           <h3 className="text-base font-semibold border-l-4 border-blue-600 pl-2 mb-3">PHIM ĐANG CHIẾU</h3>
           <div className="space-y-3">
             {nowPlaying.length > 0 && (
-              <SidebarMovieCard movie={nowPlaying[0]} size="large" />
+              <SidebarMovieCard movie={{ id: (nowPlaying[0] as any)._id || nowPlaying[0].id, title: nowPlaying[0].title || (nowPlaying[0] as any).name, img: nowPlaying[0].poster, rating: (nowPlaying[0] as any).averageRating || nowPlaying[0].rating }} size="large" />
             )}
-            {nowPlaying.slice(1).map((p) => (
-              <SidebarMovieCard key={p.id} movie={p} size="default" />
+            {nowPlaying.slice(1).map((p: any) => (
+              <SidebarMovieCard key={p._id || p.id} movie={{ id: p._id || p.id, title: p.title || p.name, img: p.poster, rating: p.averageRating || p.rating }} size="default" />
             ))}
           </div>
           <Link to="/movies" className="block mx-auto mt-4 w-fit border border-orange-500 text-orange-500 px-5 py-2 rounded-lg text-sm font-medium hover:bg-orange-500 hover:text-white transition">

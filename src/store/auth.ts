@@ -13,6 +13,7 @@ type AuthState = {
   // 1) login(role, name?, avatar?)
   // 2) login(email, password, role?)
   login: (...args: any[]) => void
+  setSession: (payload: { token: string; name?: string; email?: string; avatar?: string; role?: Role }) => void
   logout: () => void
   updateAvatar: (avatar: string) => void
   updateProfile: (payload: { name?: string; email?: string; avatar?: string }) => void
@@ -71,6 +72,10 @@ export const useAuth = create<AuthState>((set, get) => {
 
       const token = 'mock-token'
       persist({ token, role, name, email, avatar })
+    },
+
+    setSession: ({ token, name, email, avatar, role }: { token: string; name?: string; email?: string; avatar?: string; role?: Role }) => {
+      persist({ token, role: role ?? 'user', name: name ?? get().name, email: email ?? get().email, avatar: avatar ?? get().avatar })
     },
 
     logout: () => {

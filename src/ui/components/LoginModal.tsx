@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAuth } from '../../store/auth'
+import { api } from '../../lib/api'
 import { Eye, EyeOff, X } from 'lucide-react'
 
 interface Props {
@@ -20,13 +21,19 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
     if(!open){ setEmail(''); setPassword(''); setShowPwd(false) }
   },[open])
 
-  const handleSubmit = (e:React.FormEvent)=>{
+  const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault()
     if(!email || !password){ alert('⚠️ Vui lòng nhập email và mật khẩu'); return }
-    const name = email.split('@')[0]
-    // Sử dụng avatar cố định dựa trên email để đảm bảo nhất quán
-    const avatarUrl = `https://i.pravatar.cc/150?u=${email}`
-    login('user', name, avatarUrl, email)
+    try{
+      const data = await api.login(email, password)
+      if (!data || !data.token){ throw new Error('Đăng nhập thất bại') }
+      const name = data.user?.name || email.split('@')[0]
+      const avatarUrl = data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`
+      useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user' })
+    }catch(err){
+      alert('Đăng nhập thất bại. Vui lòng kiểm tra tài khoản hoặc thử lại sau.')
+      return
+    }
     onClose()
     // Gọi callback sau khi đăng nhập thành công
     onLoginSuccess?.()
