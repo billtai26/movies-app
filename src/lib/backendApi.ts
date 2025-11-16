@@ -3,8 +3,13 @@ import { BASE_URL } from './config'
 
 export const api = {
   // Đảm bảo hàm listMovies của bạn trông như thế này
-  // Sửa THÀNH (giống hệt mockApi):
-  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number }) {
+  // Sửa lại type của params trong hàm listMovies
+  async listMovies(params?: { 
+    status?: 'now_showing' | 'coming_soon'; 
+    limit?: number; 
+    page?: number;
+    q?: string; // <-- THÊM DÒNG NÀY
+  }) {
     const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },

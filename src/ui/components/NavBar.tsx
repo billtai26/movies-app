@@ -7,6 +7,8 @@ import HoverDropdown from "./HoverDropdown";
 import MovieDropdown from "./MovieDropdown";
 import AuthModals from "./AuthModals";
 import { useCollection } from "../../lib/mockCrud";
+import { api } from "../../lib/api"; // <-- Import API thật
+import { useDebounce } from "../../lib/useDebounce";
 
 // ----- Navbar Chính -----
 export default function NavBar() {
@@ -21,8 +23,16 @@ export default function NavBar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   
-  const { rows: movies = [] } = useCollection<any>("movies");
+  // --- THAY ĐỔI 1: State cho kết quả API ---
+  const [searchResults, setSearchResults] = useState<any[]>([]); // State cho kết quả từ API
+  const [isSearching, setIsSearching] = useState(false); // State cho biết đang tải
   const { rows: theaters = [] } = useCollection<any>("theaters");
+  
+  // --- THAY ĐỔI 2: Xóa useCollection cho 'movies' ---
+  // const { rows: movies = [] } = useCollection<any>("movies"); // <-- XÓA DÒNG NÀY
+
+  // --- THAY ĐỔI 3: Thêm useDebounce ---
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms delay
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -38,6 +48,34 @@ export default function NavBar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // --- THAY ĐỔI 4: useEffect mới để gọi API tìm kiếm ---
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      setIsSearching(true);
+      setShowSearchResults(true); // Hiển thị dropdown khi bắt đầu tìm
+      
+      api.listMovies({ q: debouncedSearchQuery, limit: 5 }) // Gọi API với query và giới hạn 5
+        .then((data) => {
+          // API trả về { movies: [...] }
+          if (data.movies && Array.isArray(data.movies)) {
+            setSearchResults(data.movies);
+          } else {
+            setSearchResults([]);
+          }
+        })
+        .catch((err) => {
+          console.error("Lỗi khi tìm kiếm phim:", err);
+          setSearchResults([]);
+        })
+        .finally(() => {
+          setIsSearching(false);
+        });
+    } else {
+      setShowSearchResults(false); // Ẩn nếu không có query
+      setSearchResults([]);
+    }
+  }, [debouncedSearchQuery]); // Chạy lại khi query đã "debounce" thay đổi
 
   // Dropdown items cho menu Phim
   const movieDropdownItems = [
@@ -81,14 +119,14 @@ export default function NavBar() {
   );
 
   // Logic tìm kiếm phim
-  const filteredMovies = movies.filter(movie =>
-    movie.title.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 5); // Chỉ hiển thị tối đa 5 kết quả
+  // const filteredMovies = movies.filter(movie =>
+  //   movie.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // ).slice(0, 5); // Chỉ hiển thị tối đa 5 kết quả
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    setShowSearchResults(value.length > 0);
+    // setShowSearchResults(value.length > 0);
   };
 
   const handleMovieClick = (movieId: string) => {
@@ -177,30 +215,50 @@ export default function NavBar() {
                 </div>
               )}
               
-              {/* Search Results Dropdown */}
+              {/* --- THAY ĐỔI 5: Cập nhật Dropdown kết quả --- */}
               {showSearchInput && showSearchResults && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-                  {filteredMovies.length > 0 ? (
+                  
+                  {/* --- Hiển thị loading --- */}
+                  {isSearching && (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
+                      Đang tìm kiếm...
+                    </div>
+                  )}
+
+                  {/* --- Hiển thị khi không có kết quả --- */}
+                  {!isSearching && searchResults.length === 0 && (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
+                      Không tìm thấy phim nào
+                    </div>
+                  )}
+
+                  {/* --- Hiển thị kết quả (thay 'filteredMovies' bằng 'searchResults') --- */}
+                  {!isSearching && searchResults.length > 0 && (
                     <>
-                      {filteredMovies.map((movie) => (
+                      {/* Thay 'filteredMovies' bằng 'searchResults' và key dùng _id */}
+                      {searchResults.map((movie) => (
                         <button
-                          key={movie.id}
-                          onClick={() => handleMovieClick(movie.id)}
+                          key={movie._id} // <-- Dùng _id từ MongoDB
+                          onClick={() => handleMovieClick(movie._id)} // <-- Dùng _id
                           className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0 flex items-center gap-3"
                         >
                           <img
-                            src={movie.poster || "/placeholder-movie.jpg"}
+                            src={movie.posterUrl || movie.poster || "/placeholder-movie.jpg"} // <-- Dùng posterUrl
                             alt={movie.title}
                             className="w-10 h-14 object-cover rounded"
                           />
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white">{movie.title}</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {Array.isArray(movie.genre) ? movie.genre.join(", ") : movie.genre}
+                              {/* Đảm bảo genre là mảng string */}
+                              {Array.isArray(movie.genre) ? movie.genre.join(", ") : (typeof movie.genre === 'string' ? movie.genre : '')}
                             </div>
                           </div>
                         </button>
                       ))}
+                      
+                      {/* Nút này đã đúng, nó điều hướng tới trang /movies với query */}
                       <button
                         onClick={() => {
                           setShowSearchResults(false);
@@ -212,10 +270,6 @@ export default function NavBar() {
                         Xem tất cả kết quả cho "{searchQuery}"
                       </button>
                     </>
-                  ) : (
-                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
-                      Không tìm thấy phim nào
-                    </div>
                   )}
                 </div>
               )}
