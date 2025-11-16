@@ -15,14 +15,19 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
     }
   }, [open])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) {
       alert('⚠️ Vui lòng nhập email')
       return
     }
-    alert('✅ Liên kết đặt lại mật khẩu đã được gửi đến email của bạn!')
-    onClose()
+    try{
+      const res = await api.requestPasswordReset(email)
+      alert(res?.message || '✅ Liên kết đặt lại mật khẩu đã được gửi đến email của bạn!')
+      onClose()
+    }catch(err:any){
+      alert(`Gửi yêu cầu thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+    }
   }
 
   if (!open) return null
@@ -103,3 +108,4 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
     </div>
   )
 }
+import { api } from '../../lib/api'

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BASE_URL } from './config'
+import { BASE_URL, AUTH_ENDPOINTS } from './config'
 
 // --- THÊM HÀM TRỢ GIÚP NÀY ---
 // Hàm này đọc token từ localStorage.
@@ -129,14 +129,48 @@ export const api = {
     return res.data; 
   },
   async login(email: string, password: string){
-    const tryPost = async (path:string) => {
-      try { const r = await axios.post(`${BASE_URL}${path}`, { email, password }); return r.data } catch { return null }
+    for (const path of AUTH_ENDPOINTS.login){
+      try {
+        const url = `${BASE_URL}${path}`
+        const form = new URLSearchParams({ email, password })
+        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
+        return r1.data
+      } catch {}
+      try {
+        const r2 = await axios.post(`${BASE_URL}${path}`, { email, password })
+        return r2.data
+      } catch {}
     }
-    // Try common login endpoints
-    return (
-      await tryPost('/auth/login') ||
-      await tryPost('/users/login') ||
-      await tryPost('/login')
-    )
+    throw new Error('Login endpoint not found')
+  },
+  async register(payload: { name?: string; email: string; password: string }){
+    for (const path of AUTH_ENDPOINTS.register){
+      try {
+        const url = `${BASE_URL}${path}`
+        const form = new URLSearchParams(payload as any)
+        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
+        return r1.data
+      } catch {}
+      try {
+        const r2 = await axios.post(`${BASE_URL}${path}`, payload)
+        return r2.data
+      } catch {}
+    }
+    throw new Error('Register endpoint not found')
+  },
+  async requestPasswordReset(email: string){
+    for (const path of AUTH_ENDPOINTS.forgotPassword){
+      try {
+        const url = `${BASE_URL}${path}`
+        const form = new URLSearchParams({ email })
+        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
+        return r1.data
+      } catch {}
+      try {
+        const r2 = await axios.post(`${BASE_URL}${path}`, { email })
+        return r2.data
+      } catch {}
+    }
+    throw new Error('Forgot password endpoint not found')
   },
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAuth } from '../../store/auth'
+import { api } from '../../lib/api'
 import { Eye, EyeOff, X, Calendar } from 'lucide-react'
 
 export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:()=>void }){
@@ -34,7 +35,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
     }
   },[open])
 
-  const handleSubmit = (e:React.FormEvent)=>{
+  const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault()
     
     // Validate required fields
@@ -126,11 +127,25 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       return 
     }
 
-    // Mock registration success
-    alert('🎉 Đăng ký thành công!')
-    const avatarUrl = `https://i.pravatar.cc/150?u=${formData.email}`
-    login('user', formData.fullName, avatarUrl, formData.email)
-    onClose()
+    try{
+      const payload = {
+        username: formData.fullName,
+        email: formData.email,
+        password: formData.password
+      }
+      const res:any = await api.register(payload as any)
+      const token = res?.token
+      const user = res?.user || res?.data || undefined
+      if (token){
+        const name = user?.name || formData.fullName
+        const avatarUrl = user?.avatar || `https://i.pravatar.cc/150?u=${formData.email}`
+        useAuth.getState().setSession({ token, name, email: formData.email, avatar: avatarUrl, role: 'user' })
+      }
+      alert(res?.message || '🎉 Đăng ký thành công!')
+      onClose()
+    }catch(err:any){
+      alert(`Đăng ký thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+    }
   }
 
   if(!open) return null

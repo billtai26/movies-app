@@ -26,12 +26,12 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
     if(!email || !password){ alert('⚠️ Vui lòng nhập email và mật khẩu'); return }
     try{
       const data = await api.login(email, password)
-      if (!data || !data.token){ throw new Error('Đăng nhập thất bại') }
+      if (!data || !data.token){ throw new Error((data && data.message) || 'Đăng nhập thất bại') }
       const name = data.user?.name || email.split('@')[0]
       const avatarUrl = data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`
       useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user' })
-    }catch(err){
-      alert('Đăng nhập thất bại. Vui lòng kiểm tra tài khoản hoặc thử lại sau.')
+    }catch(err:any){
+      alert(`Đăng nhập thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
       return
     }
     onClose()
