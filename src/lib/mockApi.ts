@@ -53,7 +53,46 @@ export const api = {
   async listShowtimes(){ await wait(120); return showtimes },
   async listPromos(){ await wait(100); return promos },
   async listArticles(){ await wait(100); return articles },
-  async create<T>(collection:string,item:T){ await wait(200); return { ok:true, id:Math.random().toString(36).slice(2), item } },
-  async update<T>(collection:string,id:string,item:T){ await wait(200); return { ok:true, id, item } },
-  async remove(collection:string,id:string){ await wait(200); return { ok:true, id } },
+  
+  async create<T>(collection: string, item: T) {
+    await wait(500);
+    console.log(`MOCK CREATE in ${collection}:`, item);
+    return Promise.resolve({ ...item, id: `mock_${Math.random()}` });
+  },
+  async update<T>(collection: string, id: string, item: T) {
+    await wait(500);
+    console.log(`MOCK UPDATE in ${collection} (id: ${id}):`, item);
+    return Promise.resolve({ ...item, id });
+  },
+  async remove(collection: string, id: string) {
+    await wait(500);
+    console.log(`MOCK REMOVE in ${collection} (id: ${id})`);
+    return Promise.resolve({ message: 'Mock delete successful' });
+  },
+
+  // --- HÀM MỚI QUAN TRỌNG (ĐỂ SỬA LỖI TYPESCRIPT) ---
+  async applyVoucher(code: string, total: number) {
+    console.log('MOCK API: Applying voucher', { code, total });
+    await wait(1000); // Giả lập 1 giây chờ
+    
+    if (code === 'MOCK10') {
+      const discountAmount = Math.floor(total * 0.1); // Giảm 10%
+      return Promise.resolve({
+        discountAmount: discountAmount,
+        finalAmount: total - discountAmount,
+        message: 'Áp dụng mã MOCK10 thành công (giảm 10%)'
+      });
+    }
+    if (code === 'SHIP30K' && total >= 100000) {
+      const discountAmount = 30000;
+      return Promise.resolve({
+        discountAmount: discountAmount,
+        finalAmount: total - discountAmount,
+        message: 'Áp dụng mã SHIP30K thành công (giảm 30.000đ)'
+      });
+    }
+
+    // Giả lập lỗi
+    return Promise.reject({ response: { data: { message: 'Mã voucher không hợp lệ hoặc đã hết hạn' } } });
+  }
 }

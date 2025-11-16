@@ -1,8 +1,7 @@
-
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import BookingBreadcrumb from '../../components/BookingBreadcrumb'
-import { api } from '../../../lib/mockApi'
+import { api } from "../../../lib/api"; // Đảm bảo đường dẫn này đúng
 
 export default function Payment(){
   const nav = useNavigate()
@@ -13,6 +12,15 @@ export default function Payment(){
   const [theater, setTheater] = React.useState<any>(null)
   const [room, setRoom] = React.useState<any>(null)
   const [items, setItems] = React.useState<any[]>([])
+
+  const [voucherCode, setVoucherCode] = useState(""); // Lưu mã từ input
+  const [isLoading, setIsLoading] = useState(false); // Trạng thái chờ API
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Báo lỗi
+  const [discountInfo, setDiscountInfo] = useState<{
+    discountAmount: number;
+    finalAmount: number;
+    message: string;
+  } | null>(null); // Lưu kết quả giảm giá thành công
 
   const selected:string[] = state?.selected || []
   const qty:Record<string,number> = state?.qty || {}
@@ -85,7 +93,41 @@ export default function Payment(){
     },0)
   }, [qty, items])
 
-  const grandTotal = seatSummary.ticketTotal + comboTotal
+  // --- SỬA TÍNH TOÁN TỔNG TIỀN ---
+  // Đổi tên 'grandTotal' thành 'originalTotal' để rõ ràng
+  const originalTotal = seatSummary.ticketTotal + comboTotal
+  
+  // Tính toán tổng tiền cuối cùng dựa trên thông tin giảm giá
+  const finalTotal = discountInfo ? discountInfo.finalAmount : originalTotal;
+  const discountAmount = discountInfo ? discountInfo.discountAmount : 0;
+  // --- KẾT THÚC SỬA ---
+
+  // --- THÊM HÀM XỬ LÝ VOUCHER ---
+  const handleApplyVoucher = async () => {
+    if (!voucherCode) {
+      setErrorMessage("Vui lòng nhập mã voucher.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage(null);
+    setDiscountInfo(null); // Xóa thông tin giảm giá cũ (nếu có)
+
+    try {
+      // Gọi API với mã voucher và tổng tiền GỐC
+      const data = await api.applyVoucher(voucherCode, originalTotal);
+      
+      // API thành công, lưu kết quả
+      setDiscountInfo(data);
+
+    } catch (err: any) {
+      // Xử lý lỗi từ API (ví dụ: mã hết hạn, không hợp lệ, không đủ ĐK)
+      const msg = err.response?.data?.message || "Mã voucher không hợp lệ hoặc đã hết hạn.";
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
@@ -93,13 +135,35 @@ export default function Payment(){
 
       {/* Cột trái: Khuyến mãi + phương thức thanh toán */}
       <div className="md:col-span-2 space-y-4">
+        
+        {/* --- SỬA KHUNG KHUYẾN MÃI --- */}
         <div className="card space-y-3">
           <div className="text-base font-semibold">Khuyến mãi</div>
           <div className="flex gap-2">
-            <input className="input flex-1" placeholder="Mã khuyến mãi" />
-            <button className="btn-outline">Áp dụng</button>
+            <input 
+              className="input flex-1" 
+              placeholder="Mã khuyến mãi" 
+              value={voucherCode}
+              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())} // Tự động viết hoa
+              disabled={!!discountInfo} // Vô hiệu hóa nếu đã áp dụng
+            />
+            <button 
+              className="btn-outline" 
+              onClick={handleApplyVoucher}
+              disabled={isLoading || !!discountInfo} // Vô hiệu hóa khi đang tải hoặc đã áp dụng
+            >
+              {isLoading ? "Đang..." : "Áp dụng"}
+            </button>
           </div>
-          <div className="text-xs text-gray-500">Lưu ý: demo, không trừ tiền thực.</div>
+          {/* Hiển thị thông báo Lỗi (nếu có) */}
+          {errorMessage && (
+            <p className="text-sm text-red-600">{errorMessage}</p>
+          )}
+          
+          {/* Hiển thị thông báo Thành công (nếu có) */}
+          {discountInfo && (
+            <p className="text-sm text-green-600">{discountInfo.message}</p>
+          )}
         </div>
 
         <div className="card space-y-3">
@@ -156,24 +220,54 @@ export default function Payment(){
           </div>
 
           {/* Ngăn giữa phần ghế và combo */}
-          <hr className="my-3 border-t border-dashed border-gray-300 dark:border-gray-700" />
-          {Object.entries(qty).filter(([_,n])=> (n||0)>0).map(([id,n])=>{
-            const cb = items.find(i=>i.id===id)
-            const subtotal = (cb?.price||0) * (n||0)
-            return (
-              <div key={id} className="flex items-center justify-between">
-                <span className="text-base">{n}x {cb?.name||'Combo'}</span>
-                <b className="text-lg">{subtotal.toLocaleString()} đ</b>
+          {/* --- SỬA HIỂN THỊ TỔNG TIỀN --- */}
+          {/* Hiển thị Tạm tính và Giảm giá CHỈ KHI đã áp dụng voucher */}
+          {discountInfo && (
+            <>
+              <hr className="my-3 border-t border-dashed border-gray-300 dark:border-gray-700" />
+              <div className="flex items-center justify-between text-base">
+                <span>Tạm tính</span>
+                <b className="text-lg">{originalTotal.toLocaleString()} đ</b>
               </div>
-            )
-          })}
+              <div className="flex items-center justify-between text-base text-green-600">
+                <span>Giảm giá</span>
+                <b className="text-lg">- {discountAmount.toLocaleString()} đ</b>
+              </div>
+            </>
+          )}
+
+          {/* Dòng này luôn hiển thị tổng tiền CUỐI CÙNG */}
           <hr className="my-3 border-t border-dashed border-gray-300 dark:border-gray-700" />
-          <div className="flex items-center justify-between text-xl font-bold"><span>Tổng cộng</span><b className="text-2xl text-orange-600">{grandTotal.toLocaleString()} đ</b></div>
+          <div className="flex items-center justify-between text-xl font-bold">
+            <span>Tổng cộng</span>
+            {/* SỬA: Hiển thị 'finalTotal' thay vì 'grandTotal' */}
+            <b className="text-2xl text-orange-600">{finalTotal.toLocaleString()} đ</b>
+          </div>
+          {/* --- KẾT THÚC SỬA TỔNG TIỀN --- */}
         </div>
 
         <div className="flex justify-between">
           <button className="btn-back" onClick={()=>nav('/booking/combos',{ state })}>Quay lại</button>
-          <button className="btn-next" onClick={()=>nav('/booking/confirm',{ state:{ ...state, method, ticketTotal: seatSummary.ticketTotal, comboTotal, grandTotal }})}>Thanh toán (mock)</button>
+          
+          {/* --- SỬA NÚT THANH TOÁN --- */}
+          {/* Gửi 'finalTotal' (là grandTotal) và 'discountAmount' sang trang confirm */}
+          <button 
+            className="btn-next" 
+            onClick={()=>nav('/booking/confirm',{ 
+              state:{ 
+                ...state, 
+                method, 
+                ticketTotal: seatSummary.ticketTotal, 
+                comboTotal, 
+                originalTotal: originalTotal,
+                discountAmount: discountAmount,
+                grandTotal: finalTotal // Trang confirm sẽ nhận 'grandTotal' là số tiền cuối cùng
+              }
+            })}
+          >
+            Thanh toán (mock)
+          </button>
+          {/* --- KẾT THÚC SỬA NÚT --- */}
         </div>
       </div>
     </div>
