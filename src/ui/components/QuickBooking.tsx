@@ -1,20 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CustomSelect from "./CustomSelect";
-import { useCollection } from "../../lib/mockCrud";
+import { api } from "../../lib/api";
 import AuthModals from "./AuthModals";
 import { useAuth } from "../../store/auth";
 import { DropdownProvider } from "./DropdownContext";
 
-type Movie = { id: string | number; title: string };
-type Cinema = { id: string | number; name: string; city?: string };
-type Showtime = {
-  id: string | number;
-  movieId: string | number;
-  cinemaId: string | number;
-  start?: string; // ISO
-  end?: string; // ISO
-};
+type Movie = { _id?: string; id?: string | number; title?: string; name?: string; poster?: string };
+type Cinema = { _id?: string; id?: string | number; name: string; city?: string };
+type Showtime = { _id?: string; id?: string | number; movieId: string; theaterId?: string; cinemaId?: string; startTime?: string; time?: string; end?: string };
 
 function next7Days() {
   const list: { value: string; label: string }[] = [];
@@ -40,9 +34,27 @@ type Props = {
 
 export default function QuickBooking({ stacked = false, className = "" }: Props) {
   const nav = useNavigate();
-  const { rows: movieRows = [] } = useCollection<Movie>("movies" as any);
-  const { rows: cinemaRows = [] } = useCollection<Cinema>("cinemas" as any);
-  const { rows: showtimeRows = [] } = useCollection<Showtime>("showtimes" as any);
+  const [movieRows, setMovieRows] = React.useState<Movie[]>([]);
+  const [cinemaRows, setCinemaRows] = React.useState<Cinema[]>([]);
+  const [showtimeRows, setShowtimeRows] = React.useState<Showtime[]>([]);
+  React.useEffect(() => {
+    Promise.allSettled([
+      api.listMovies({ status: 'now_showing' }),
+      api.listTheaters(),
+      api.listShowtimes()
+    ]).then(([mRes, cRes, sRes]) => {
+      if (mRes.status === 'fulfilled') {
+        const arr = (mRes.value as any)?.movies || mRes.value || [];
+        setMovieRows(arr as Movie[]);
+      }
+      if (cRes.status === 'fulfilled') {
+        setCinemaRows(cRes.value as Cinema[]);
+      }
+      if (sRes.status === 'fulfilled') {
+        setShowtimeRows(sRes.value as Showtime[]);
+      }
+    });
+  }, []);
 
   const movies = (movieRows.length
     ? movieRows
@@ -62,7 +74,7 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
         { id: 13, title: "Mục Sư, Thầy Đồng Và Con Quỷ Ám Trí" },
         { id: 14, title: "Bịt Mắt Bắt Nai" },
       ]
-  ).map((m) => ({ value: String(m.id), label: m.title }));
+  ).map((m) => ({ value: String((m as any)._id ?? m.id), label: String(m.title ?? (m as any).name ?? '') }));
 
   const cinemas = (cinemaRows.length
     ? cinemaRows
@@ -78,7 +90,7 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
         { id: 9, name: "Beta Cinemas Thảo Điền" },
         { id: 10, name: "Platinum Cineplex" },
       ]
-  ).map((c) => ({ value: String(c.id), label: c.name }));
+  ).map((c) => ({ value: String((c as any)._id ?? c.id), label: c.name }));
 
   const [movieId, setMovieId] = useState("");
   const [cinemaId, setCinemaId] = useState("");
@@ -91,23 +103,18 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
     // Chỉ hiển thị danh sách suất khi đã chọn đủ movie, cinema, date
     if (!movieId || !cinemaId || !date) return [];
 
-    const base = showtimeRows.length
-      ? showtimeRows
-      : [
-          { id: 11, movieId: "1", cinemaId: "1", start: `${date}T19:00:00` },
-          { id: 12, movieId: "1", cinemaId: "1", start: `${date}T21:15:00` },
-          { id: 13, movieId: "2", cinemaId: "2", start: `${date}T20:00:00` },
-        ];
+    const base = showtimeRows.length ? showtimeRows : [];
 
     const filtered = base
       .filter((s) => {
-        if (!s || !s.start) return false;
-        return String(s.movieId) === movieId && String(s.cinemaId) === cinemaId && s.start.startsWith(date);
+        const startIso = (s as any).start ?? s.startTime ?? '';
+        const theater = s.cinemaId ?? s.theaterId ?? '';
+        return String(s.movieId) === movieId && String(theater) === cinemaId && startIso.startsWith(date);
       })
       .map((s) => ({
-        value: String(s.id),
+        value: String((s as any)._id ?? s.id),
         label:
-          new Date(s.start!).toLocaleTimeString("vi-VN", {
+          new Date(((s as any).start ?? s.startTime)!).toLocaleTimeString("vi-VN", {
             hour: "2-digit",
             minute: "2-digit",
           }) +
@@ -133,8 +140,8 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
     }
 
     // Luôn điều hướng vào trang chọn ghế
-    const realShow = showtimeRows.find((s:any) => String(s?.id) === String(showId));
-    const targetShowId = realShow ? showId : 's2';
+    const realShow = showtimeRows.find((s:any) => String((s?._id ?? s?.id)) === String(showId));
+    const targetShowId = realShow ? showId : String(showId);
     
     nav(`/booking/seats/${targetShowId}`);
   };
@@ -154,8 +161,8 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
 
     // Luôn điều hướng vào trang chọn ghế
     // Nếu showId là thật thì dùng, không thì dùng một ID mặc định
-    const realShow = showtimeRows.find((s:any) => String(s?.id) === String(showId));
-    const targetShowId = realShow ? showId : 's2'; // s2 là ID mặc định có sẵn trong mock data
+    const realShow = showtimeRows.find((s:any) => String((s?._id ?? s?.id)) === String(showId));
+    const targetShowId = realShow ? showId : String(showId);
     
     nav(`/booking/seats/${targetShowId}`);
   };

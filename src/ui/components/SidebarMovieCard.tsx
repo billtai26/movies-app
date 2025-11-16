@@ -2,13 +2,14 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 type MovieMini = {
-  id: string | number;
+  id?: string | number;
+  _id?: string;
   name?: string;
   title?: string;
   img: string;
   poster?: string;
-  rating?: string | number; // numeric score e.g. 8.3
-  ageRating?: string; // e.g. T18, C16
+  rating?: string | number;
+  ageRating?: string;
 };
 
 export default function SidebarMovieCard({ movie, size = "default", styleHeight }: { movie: MovieMini; size?: "default" | "compact" | "large"; styleHeight?: string }) {
@@ -21,8 +22,9 @@ export default function SidebarMovieCard({ movie, size = "default", styleHeight 
       ? movie.rating
       : "8.3";
 
+  const linkId = (movie as any)._id ?? movie.id;
   return (
-    <Link to={`/movies/${movie.id}`} className="block">
+    <Link to={`/movies/${linkId}`} className="block">
       <div
         className={`relative rounded-lg overflow-hidden w-full ${
           size === "compact" ? "h-36" : size === "large" ? "h-72 md:h-80" : "h-44 md:h-48"
