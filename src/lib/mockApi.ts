@@ -61,6 +61,24 @@ export const api = {
       return { comments: Array.isArray(arr)? arr: [] }
     }catch{ return { comments: [] } }
   },
+
+  async login(email: string, password: string){
+    await wait(200)
+    if (!email || !password) return Promise.reject({ response: { data: { message: 'Email/Mật khẩu không hợp lệ' } } })
+    const user = { name: email.split('@')[0], email, avatar: `https://i.pravatar.cc/150?u=${email}` }
+    return { token: 'mock-token', user }
+  },
+  async register(payload: { name?: string; email: string; password: string }){
+    await wait(250)
+    if (!payload?.email || !payload?.password) return Promise.reject({ response: { data: { message: 'Thiếu email/mật khẩu' } } })
+    const user = { name: payload.name || payload.email.split('@')[0], email: payload.email, avatar: `https://i.pravatar.cc/150?u=${payload.email}` }
+    return { token: 'mock-token', user }
+  },
+  async requestPasswordReset(email: string){
+    await wait(200)
+    if (!email) return Promise.reject({ response: { data: { message: 'Thiếu email' } } })
+    return { message: 'Liên kết đặt lại mật khẩu đã được gửi tới email của bạn.' }
+  },
   
   async create<T>(collection: string, item: T) {
     await wait(500);
