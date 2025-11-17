@@ -129,48 +129,92 @@ export const api = {
     return res.data; 
   },
   async login(email: string, password: string){
-    for (const path of AUTH_ENDPOINTS.login){
-      try {
-        const url = `${BASE_URL}${path}`
-        const form = new URLSearchParams({ email, password })
-        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
-        return r1.data
-      } catch {}
-      try {
-        const r2 = await axios.post(`${BASE_URL}${path}`, { email, password })
-        return r2.data
-      } catch {}
+    // 1. Chỉ lấy 1 endpoint
+    const path = AUTH_ENDPOINTS.login[0]
+    if (!path) {
+      throw new Error('Login endpoint not configured')
     }
-    throw new Error('Login endpoint not found')
+
+    const url = `${BASE_URL}${path}`
+    const payload = { email, password } // Backend mong đợi JSON {email, password}
+
+    try {
+      // 2. GỌI API 1 LẦN DUY NHẤT bằng JSON
+      //    Bỏ qua cách gửi "form-urlencoded" rắc rối
+      const res = await axios.post(url, payload)
+      
+      // 3. Thành công thì trả về data
+      return res.data
+    } catch (err: any) {
+      // 4. THẤT BẠI thì ném lỗi ra ngoài
+      //    để LoginModal.tsx bắt được
+      console.error('Lỗi khi gọi API đăng nhập:', err.response?.data || err.message)
+      throw err
+    }
   },
-  async register(payload: { name?: string; email: string; password: string }){
-    for (const path of AUTH_ENDPOINTS.register){
-      try {
-        const url = `${BASE_URL}${path}`
-        const form = new URLSearchParams(payload as any)
-        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
-        return r1.data
-      } catch {}
-      try {
-        const r2 = await axios.post(`${BASE_URL}${path}`, payload)
-        return r2.data
-      } catch {}
+  async register(payload: { username: string; email: string; password: string }){
+    // 1. Đảm bảo signature của hàm có 'username' (như bạn đã sửa)
+
+    // 2. Chúng ta sẽ không dùng vòng lặp 'for' nữa,
+    //    chỉ gọi 1 endpoint duy nhất bằng JSON.
+    const path = AUTH_ENDPOINTS.register[0] // Lấy endpoint đầu tiên
+    if (!path) {
+      throw new Error('Register endpoint not configured')
     }
-    throw new Error('Register endpoint not found')
+
+    const url = `${BASE_URL}${path}`
+
+    try {
+      // 3. Gọi API 1 LẦN DUY NHẤT bằng JSON
+      //    (axios mặc định gửi JSON)
+      const res = await axios.post(url, payload as any)
+      
+      // 4. Thành công thì trả về data
+      return res.data
+    } catch (err: any) {
+      // 5. Nếu THẤT BẠI, ném lỗi ra ngoài.
+      //    Lỗi này sẽ được bắt bởi try...catch trong RegisterModal.tsx
+      console.error('Lỗi khi gọi API đăng ký:', err.response?.data || err.message)
+      throw err // Ném lỗi này ra để modal bắt được
+    }
   },
   async requestPasswordReset(email: string){
-    for (const path of AUTH_ENDPOINTS.forgotPassword){
-      try {
-        const url = `${BASE_URL}${path}`
-        const form = new URLSearchParams({ email })
-        const r1 = await axios.post(url, form.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }})
-        return r1.data
-      } catch {}
-      try {
-        const r2 = await axios.post(`${BASE_URL}${path}`, { email })
-        return r2.data
-      } catch {}
+    // 1. Chỉ lấy 1 endpoint
+    const path = AUTH_ENDPOINTS.forgotPassword[0]
+    if (!path) {
+      throw new Error('Forgot password endpoint not configured')
     }
-    throw new Error('Forgot password endpoint not found')
+
+    const url = `${BASE_URL}${path}`
+    const payload = { email } // Backend validation mong đợi {email}
+
+    try {
+      // 2. GỌI API 1 LẦN DUY NHẤT bằng JSON
+      const res = await axios.post(url, payload)
+      
+      // 3. Thành công thì trả về data
+      return res.data
+    } catch (err: any) {
+      // 4. THẤT BẠI thì ném lỗi ra ngoài
+      //    để ForgotPasswordModal.tsx bắt được
+      console.error('Lỗi khi gọi API quên mật khẩu:', err.response?.data || err.message)
+      throw err
+    }
+  },
+  // --- THÊM HÀM MỚI NÀY VÀO ---
+  async resetPassword(token: string, password: string) {
+    // Backend API mong đợi một { password } trong body
+    // Và dùng 'PUT'
+    const path = `/v1/users/reset-password/${token}` //
+    const url = `${BASE_URL}${path}`
+    const payload = { password }
+
+    try {
+      const res = await axios.put(url, payload)
+      return res.data
+    } catch (err: any) {
+      console.error('Lỗi khi gọi API đặt lại mật khẩu:', err.response?.data || err.message)
+      throw err
+    }
   },
 }
