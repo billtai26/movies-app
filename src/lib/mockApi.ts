@@ -74,10 +74,19 @@ export const api = {
     const user = { name: payload.name || payload.email.split('@')[0], email: payload.email, avatar: `https://i.pravatar.cc/150?u=${payload.email}` }
     return { token: 'mock-token', user }
   },
-  async requestPasswordReset(email: string){
-    await wait(200)
-    if (!email) return Promise.reject({ response: { data: { message: 'Thiếu email' } } })
-    return { message: 'Liên kết đặt lại mật khẩu đã được gửi tới email của bạn.' }
+  async requestPasswordReset(email: string) {
+    console.log('Mock API: Requesting password reset for', email)
+    return { message: '✅ Mock: Nếu email tồn tại, link reset đã được gửi!' }
+  },
+
+  // --- THÊM HÀM MỚI NÀY VÀO ---
+  async resetPassword(token: string, password: string) {
+    console.log('Mock API: Resetting password with token', token)
+    if (!token || !password) {
+      throw new Error('Mock: Token và mật khẩu là bắt buộc')
+    }
+    // Trả về một thông báo thành công giả
+    return { message: '✅ Mock: Đặt lại mật khẩu thành công!' }
   },
   
   async create<T>(collection: string, item: T) {

@@ -49,7 +49,7 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           <X />
         </button>
         <div className="flex flex-col items-center gap-3">
-          <img src="/images/login-banner.png" alt="banner" className="w-40 h-32 object-contain" />
+          {/* <img src="/images/login-banner.png" alt="banner" className="w-40 h-32 object-contain" /> */}
           <h3 className="text-lg font-semibold">Đăng Nhập Tài Khoản</h3>
         </div>
 
