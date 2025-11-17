@@ -34,7 +34,8 @@ export default function ResetPassword() {
 
     try {
       // 3. Gọi API
-      const res = await api.resetPassword(token, password)
+      // (Giả sử bạn đã thêm hàm 'resetPassword' vào 'api' như các bước trước)
+      const res = await api.resetPassword(token, password) 
       alert(res?.message || '✅ Đặt lại mật khẩu thành công!')
       // 4. Chuyển về trang đăng nhập
       nav('/auth/login') 
@@ -45,6 +46,7 @@ export default function ResetPassword() {
 
   return (
     // 5. Dùng layout và style giống các trang auth khác
+    // (Lớp CSS ở đây đã gần giống với ForgotPassword)
     <div className="auth-card backdrop-blur-md bg-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl text-white border border-white/20">
       <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2 text-blue-400">
         Đặt Lại Mật Khẩu
@@ -74,6 +76,23 @@ export default function ResetPassword() {
           XÁC NHẬN
         </button>
       </form>
+      
+      {/* --- PHẦN THÊM VÀO CHO GIỐNG VỚI FORGOTPASSWORD --- */}
+      <div className="flex justify-between text-sm">
+        <button onClick={() => nav('/auth/login')} className="text-blue-400 hover:underline">
+          Đăng nhập
+        </button>
+        <button onClick={() => nav('/auth/register')} className="text-blue-400 hover:underline">
+          Đăng ký
+        </button>
+      </div>
+      
+      <div className="text-center mt-4">
+        <button onClick={() => nav('/')} className="text-orange-400 hover:underline text-sm">
+          ← Về trang chính
+        </button>
+      </div>
+      {/* --- KẾT THÚC PHẦN THÊM VÀO --- */}
     </div>
   )
 }

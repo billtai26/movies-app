@@ -106,7 +106,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
             <h2 className="text-xl font-semibold text-gray-800 mb-2">Quên Mật Khẩu?</h2>
             <p className="text-sm text-gray-600 text-center leading-relaxed">
               Vui lòng cung cấp email đăng nhập, chúng tôi sẽ gửi<br />
-              link kích hoạt cho bạn.
+              link khôi phục cho bạn.
             </p>
           </div>
 

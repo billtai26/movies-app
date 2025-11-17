@@ -89,9 +89,9 @@ export default function App(){
           <Route path="blog/directors/:id" element={<DirectorDetail />} />
           <Route path="blog/actors" element={<Actors />} />
           <Route path="blog/actors/:id" element={<ActorDetail />} />
-        <Route path="booking/:showtimeId" element={<Booking/>} />
-<Route path="checkout" element={<Checkout/>} />
-        <Route element={<RequireAuth roles={['user']} />}>
+          <Route path="booking/:showtimeId" element={<Booking/>} />
+          <Route path="checkout" element={<Checkout/>} />
+          <Route element={<RequireAuth roles={['user']} />}>
           <Route path="tickets" element={<Tickets/>} />
           <Route path="profile" element={<Profile/>} />
           
@@ -130,9 +130,9 @@ export default function App(){
       </Route>
 
       <Route path="/auth" element={<AuthLayout/>}>
-
         <Route path="forgot-password" element={<ForgotPassword/>} />
-        <Route path="reset-password" element={<ResetPassword/>} />
+        <Route path="reset-password/:token" element={<ResetPassword />} />
+        {/* <Route path="reset-password" element={<ResetPassword/>} /> */}
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace/>} />
