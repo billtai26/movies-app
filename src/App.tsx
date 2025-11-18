@@ -131,9 +131,10 @@ export default function App(){
 
       <Route path="/auth" element={<AuthLayout/>}>
         <Route path="forgot-password" element={<ForgotPassword/>} />
-        <Route path="reset-password/:token" element={<ResetPassword />} />
-        {/* <Route path="reset-password" element={<ResetPassword/>} /> */}
       </Route>
+
+      {/* Đưa reset-password ra ngoài AuthLayout để tránh flash layout cũ */}
+      <Route path="/auth/reset-password/:token" element={<ResetPassword />} />
 
       <Route path="*" element={<Navigate to="/" replace/>} />
     </Routes>
