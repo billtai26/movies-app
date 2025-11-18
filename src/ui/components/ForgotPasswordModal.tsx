@@ -12,12 +12,14 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [email, setEmail] = React.useState('')
   // 2. Thêm state mới để quản lý màn hình "Thành công"
   const [isSuccess, setIsSuccess] = React.useState(false)
+  const [error, setError] = React.useState('')
 
   React.useEffect(() => {
     if (!open) {
       setEmail('')
       // 3. Reset state thành công khi modal đóng
       setIsSuccess(false)
+      setError('')
     }
   }, [open])
 
@@ -35,7 +37,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       setIsSuccess(true) 
       
     }catch(err:any){
-      alert(`Gửi yêu cầu thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+      setError(err?.response?.data?.message || err?.message || 'Vui lòng thử lại.')
     }
   }
 
@@ -112,6 +114,11 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
 
           {/* Form (Giữ nguyên) */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="text-center text-red-600 text-sm">
+                {error}
+              </p>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input 

@@ -2,14 +2,18 @@ import React from 'react'
 import LoginModal from './LoginModal'
 import RegisterModal from './RegisterModal'
 import ForgotPasswordModal from './ForgotPasswordModal'
+import ResetPasswordModal from './ResetPasswordModal'
 
 interface Props {
   loginOpen: boolean
   onLoginClose: () => void
   onLoginSuccess?: () => void
+  resetOpen?: boolean
+  resetToken?: string | null
+  onResetClose?: () => void
 }
 
-export default function AuthModals({ loginOpen, onLoginClose, onLoginSuccess }: Props) {
+export default function AuthModals({ loginOpen, onLoginClose, onLoginSuccess, resetOpen = false, resetToken = null, onResetClose }: Props) {
   const [showRegister, setShowRegister] = React.useState(false)
   const [showForgotPassword, setShowForgotPassword] = React.useState(false)
 
@@ -39,6 +43,12 @@ export default function AuthModals({ loginOpen, onLoginClose, onLoginSuccess }: 
       <ForgotPasswordModal 
         open={showForgotPassword} 
         onClose={() => setShowForgotPassword(false)} 
+      />
+      <ResetPasswordModal
+        open={!!resetOpen}
+        token={resetToken || undefined}
+        onClose={onResetClose || (()=>{})}
+        onLoginOpen={onLoginClose}
       />
     </>
   )

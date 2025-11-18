@@ -18,6 +18,41 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
   })
   const [showPwd, setShowPwd] = React.useState(false)
   const [showConfirmPwd, setShowConfirmPwd] = React.useState(false)
+  const [composingPwd, setComposingPwd] = React.useState(false)
+  const [composingConfirm, setComposingConfirm] = React.useState(false)
+  const normalizeNoAccent = (s:string)=> s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d')
+  const toTelex = (s:string)=>{
+    let out = ''
+    let tonePending = ''
+    const flushTone = () => { if (tonePending) { out += tonePending; tonePending=''; } }
+    const isLetter = (c:string)=> /[A-Za-z]/.test(c)
+    for (const ch of s){
+      const isBoundary = !(isLetter(ch) || ch === 'đ' || ch === 'Đ')
+      if (isBoundary){ flushTone(); out += ch; continue }
+      if (ch === 'đ') { out += 'dd'; continue }
+      if (ch === 'Đ') { out += 'DD'; continue }
+      const d = ch.normalize('NFD')
+      const base = d[0]
+      let add = ''
+      let tone = ''
+      for (let i=1;i<d.length;i++){
+        const m = d[i]
+        if (m==='\u0301') tone='s'
+        else if (m==='\u0300') tone='f'
+        else if (m==='\u0309') tone='r'
+        else if (m==='\u0303') tone='x'
+        else if (m==='\u0323') tone='j'
+        else if (m==='\u0302'){ if (/^[aAeEoO]$/.test(base)) add += base.toLowerCase() }
+        else if (m==='\u0306'){ if (/^[aA]$/.test(base)) add += 'w' }
+        else if (m==='\u031B'){ if (/^[oOuU]$/.test(base)) add += 'w' }
+      }
+      out += base.replace(/[ÂÊÔƠƯĂ]/g, c=>c.toLowerCase()) + add
+      if (tone) tonePending = tone
+    }
+    flushTone()
+    return out
+  }
+  
 
   // 2. Thêm state mới để quản lý màn hình "Thành công"
   const [isSuccess, setIsSuccess] = React.useState(false)
@@ -126,12 +161,16 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       alert('⚠️ Mật khẩu phải có ít nhất 6 ký tự')
       return
     }
+    const sp = toTelex(formData.password)
+    if (sp !== formData.password){ setFormData(d=>({...d, password: sp})); alert('⚠️ Mật khẩu không được chứa dấu'); return }
     
     // Confirm password validation
     if(!formData.confirmPassword){
       alert('⚠️ Vui lòng nhập lại mật khẩu')
       return
     }
+    const scp = toTelex(formData.confirmPassword)
+    if (scp !== formData.confirmPassword){ setFormData(d=>({...d, confirmPassword: scp})); alert('⚠️ Mật khẩu không được chứa dấu'); return }
     
     if(formData.password !== formData.confirmPassword){
       alert('⚠️ Mật khẩu nhập lại không khớp')
@@ -303,7 +342,20 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   <input
                     type={showPwd ? 'text' : 'password'}
                     value={formData.password}
-                    onChange={e=>setFormData(d=>({...d, password: e.target.value}))}
+                    onCompositionStart={()=>setComposingPwd(true)}
+                    onCompositionEnd={()=> setComposingPwd(false)}
+                    onKeyDown={e=>{
+                      if (!composingPwd) return
+                      const k = e.key
+                      const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
+                      if (accentKeys.includes(k)){
+                        e.preventDefault()
+                        setFormData(d=>({...d, password: d.password + k}))
+                      }
+                    }}
+                    onBeforeInput={(e:any)=>{ const t=e?.nativeEvent?.data; if(typeof t==='string'&&t.length>0){ e.preventDefault(); setFormData(d=>({...d, password: d.password + toTelex(t)})) } }}
+                    onPaste={(e:any)=>{ const txt=e.clipboardData?.getData?.('text')||''; if(txt){ e.preventDefault(); setFormData(d=>({...d, password: d.password + toTelex(txt)})) } }}
+                    onChange={e=> setFormData(d=>({...d, password: e.target.value}))}
                     className="w-full rounded border px-3 h-9 pr-9"
                     placeholder="Nhập Mật khẩu"
                   />
@@ -311,8 +363,9 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                     type="button"
                     onClick={()=>setShowPwd(s=>!s)}
                     className="absolute right-2 top-[7px] text-gray-500"
+                    title={showPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
-                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPwd ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
                 </div>
               </div>
@@ -323,7 +376,20 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   <input
                     type={showConfirmPwd ? 'text' : 'password'}
                     value={formData.confirmPassword}
-                    onChange={e=>setFormData(d=>({...d, confirmPassword: e.target.value}))}
+                    onCompositionStart={()=>setComposingConfirm(true)}
+                    onCompositionEnd={()=> setComposingConfirm(false)}
+                    onKeyDown={e=>{
+                      if (!composingConfirm) return
+                      const k = e.key
+                      const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
+                      if (accentKeys.includes(k)){
+                        e.preventDefault()
+                        setFormData(d=>({...d, confirmPassword: d.confirmPassword + k}))
+                      }
+                    }}
+                    onBeforeInput={(e:any)=>{ const t=e?.nativeEvent?.data; if(typeof t==='string'&&t.length>0){ e.preventDefault(); setFormData(d=>({...d, confirmPassword: d.confirmPassword + toTelex(t)})) } }}
+                    onPaste={(e:any)=>{ const txt=e.clipboardData?.getData?.('text')||''; if(txt){ e.preventDefault(); setFormData(d=>({...d, confirmPassword: d.confirmPassword + toTelex(txt)})) } }}
+                    onChange={e=> setFormData(d=>({...d, confirmPassword: e.target.value}))}
                     className="w-full rounded border px-3 h-9 pr-9"
                     placeholder="Nhập lại mật khẩu"
                   />
@@ -331,8 +397,9 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                     type="button"
                     onClick={()=>setShowConfirmPwd(s=>!s)}
                     className="absolute right-2 top-[7px] text-gray-500"
+                    title={showConfirmPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
-                    {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showConfirmPwd ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
                 </div>
               </div>
