@@ -145,16 +145,12 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       setError('Mật khẩu phải có ít nhất 6 ký tự')
       return
     }
-    const sp = toTelex(formData.password)
-    if (sp !== formData.password){ setFormData(d=>({...d, password: sp})); alert('⚠️ Mật khẩu không được chứa dấu'); return }
     
     // Confirm password validation
     if(!formData.confirmPassword){
       setError('Vui lòng nhập lại mật khẩu')
       return
     }
-    const scp = toTelex(formData.confirmPassword)
-    if (scp !== formData.confirmPassword){ setFormData(d=>({...d, confirmPassword: scp})); alert('⚠️ Mật khẩu không được chứa dấu'); return }
     
     if(formData.password !== formData.confirmPassword){
       setError('Mật khẩu nhập lại không khớp')
@@ -356,7 +352,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                     onClick={()=>setShowPwd(s=>!s)}
                     className="absolute right-2 top-[7px] text-gray-500 hover:text-gray-700"
                   >
-                    {showPwd ? <Eye size={16} /> : <EyeOff size={16} />}
+                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
@@ -376,7 +372,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                     onClick={()=>setShowConfirmPwd(s=>!s)}
                     className="absolute right-2 top-[7px] text-gray-500 hover:text-gray-700"
                   >
-                    {showConfirmPwd ? <Eye size={16} /> : <EyeOff size={16} />}
+                    {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>

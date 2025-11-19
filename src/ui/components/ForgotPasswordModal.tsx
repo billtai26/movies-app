@@ -21,7 +21,6 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       setEmail('')
       // 3. Reset state thành công khi modal đóng
       setIsSuccess(false)
-      setError('')
     }
   }, [open])
 
@@ -118,11 +117,6 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
 
           {/* Form (Giữ nguyên) */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <p className="text-center text-red-600 text-sm">
-                {error}
-              </p>
-            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input 

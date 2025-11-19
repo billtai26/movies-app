@@ -22,7 +22,7 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
   const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(()=>{
-    if(!open){ setEmail(''); setPassword(''); setShowPwd(false); setError(''); setPwdFieldError('') }
+    if(!open){ setEmail(''); setPassword(''); setShowPwd(false) }
   },[open])
 
   const handleSubmit = async (e:React.FormEvent)=>{
@@ -88,11 +88,6 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           {/* <img src="/images/login-banner.png" alt="banner" className="w-40 h-32 object-contain" /> */}
           <h3 className="text-lg font-semibold">Đăng Nhập Tài Khoản</h3>
         </div>
-        {error && (
-          <p className="mt-3 text-center text-red-600 text-sm">
-            {error}
-          </p>
-        )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
@@ -101,33 +96,13 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           </div>
           <div>
             <label className="text-sm text-gray-700">Mật khẩu</label>
-              <div className="mt-1 relative">
-              <input
-                type={showPwd? 'text':'password'}
-                value={password}
-                onCompositionStart={()=>setComposing(true)}
-                onCompositionEnd={()=>setComposing(false)}
-                onKeyDown={e=>{
-                  if (!composing) return
-                  const k = e.key
-                  const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
-                  if (accentKeys.includes(k)){
-                    e.preventDefault()
-                    setPassword(p=> p + k)
-                  }
-                }}
-                onBeforeInput={handlePwdBeforeInput}
-                onPaste={handlePwdPaste}
-                onChange={e=> { setPassword(e.target.value); if (pwdFieldError && e.target.value) setPwdFieldError('') }}
-                className={`w-full rounded border px-3 py-2 pr-10 ${pwdFieldError? 'border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="Nhập Mật khẩu"
-              />
-              <button type="button" onClick={()=>setShowPwd(s=>!s)} className="absolute right-2 top-2 text-gray-500" title={showPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
-                {showPwd? <Eye size={18} /> : <EyeOff size={18} />}
+            <div className="mt-1 relative">
+              <input type={showPwd? 'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} className="w-full rounded border px-3 py-2 pr-10" placeholder="Nhập Mật khẩu" />
+              <button type="button" onClick={()=>setShowPwd(s=>!s)} className="absolute right-2 top-2 text-gray-500">
+                {showPwd? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-              </div>
-              {pwdFieldError && <p className="text-xs text-red-600 mt-1">{pwdFieldError}</p>}
             </div>
+          </div>
           <div>
             <button type="submit" className="w-full bg-[#f58a1f] hover:bg-[#f07a00] text-white font-medium px-4 py-2 rounded">ĐĂNG NHẬP</button>
           </div>
