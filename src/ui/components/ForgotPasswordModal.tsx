@@ -20,7 +20,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
     if (!open) {
       setEmail('')
       // 3. Reset state thành công khi modal đóng
-      setIsSuccess(false);
+      setIsSuccess(false)
     }
   }, [open])
 
