@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import UserLayout from './ui/layouts/UserLayout'
@@ -6,15 +5,14 @@ import StaffLayout from './ui/layouts/StaffLayout'
 import AdminLayout from './ui/layouts/AdminLayout'
 import AuthLayout from './ui/layouts/AuthLayout'
 import { RequireAuth } from './router'
-
 import Home from './ui/pages/user/Home'
-  import Cinemas from './ui/pages/user/Cinemas'
-  import Offers from './ui/pages/user/Offers'
-  import Support from './ui/pages/user/Support'
+import Cinemas from './ui/pages/user/Cinemas'
+import Offers from './ui/pages/user/Offers'
+import Support from './ui/pages/user/Support'
 import Blog from './ui/pages/user/Blog'
 import Account from './ui/pages/user/Account'
-  import BookingSelect from './ui/pages/booking/Select'
-  import BookingSeats from './ui/pages/booking/Seats'
+import BookingSelect from './ui/pages/booking/Select'
+import BookingSeats from './ui/pages/booking/Seats'
 import BookingCombos from './ui/pages/booking/Combos'
 import BookingPayment from './ui/pages/booking/Payment'
 import BookingConfirm from './ui/pages/booking/Confirm'
@@ -28,7 +26,6 @@ import Actors from './ui/pages/user/Actors'
 import ActorDetail from './ui/pages/user/ActorDetail'
 import MovieGenres from './ui/pages/user/MovieGenres'
 import Monthly from './ui/pages/user/Monthly'
-
 import Booking from './ui/pages/user/Booking'
 import Checkout from './ui/pages/user/Checkout'
 import Tickets from './ui/pages/user/Tickets'
@@ -42,8 +39,6 @@ import Combos from './ui/pages/staff/Combos'
 import Reports from './ui/pages/staff/Reports'
 import OrderEdit from './ui/pages/staff/OrderEdit'
 import PromoControl from './ui/pages/staff/PromoControl'
-
-
 import AdminDashboard from './ui/pages/admin/Dashboard'
 import AdminMovies from './ui/pages/admin/Movies'
 import Genres from './ui/pages/admin/Genres'
@@ -58,13 +53,28 @@ import Revenue from './ui/pages/admin/Revenue'
 import AdminTickets from './ui/pages/admin/Tickets'
 import StaffReports from './ui/pages/admin/StaffReports'
 import AdminCombos from './ui/pages/admin/Combos'
-
-
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
+// --- 1. Import ToastContainer và CSS ---
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 export default function App(){
   return (
+     <>
+      {/* --- 2. Đặt ToastContainer ở đây --- */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     <Routes>
       <Route path="/" element={<UserLayout/>}>
         <Route index element={<Home/>} />
@@ -138,5 +148,6 @@ export default function App(){
 
       <Route path="*" element={<Navigate to="/" replace/>} />
     </Routes>
+  </>
   )
 }

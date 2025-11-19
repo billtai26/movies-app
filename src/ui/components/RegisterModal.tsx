@@ -1,11 +1,14 @@
-import React from 'react'
-import { useAuth } from '../../store/auth'
-import { api } from '../../lib/api'
-import { Eye, EyeOff, X, Calendar, CheckCircle2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../store/auth' //
+import { api } from '../../lib/api' //
+import { Eye, EyeOff, X, Calendar, CheckCircle2, AlertCircle } from 'lucide-react' // Thêm AlertCircle
+import LoadingOverlay from "./LoadingOverlay";
 
 export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:()=>void }){
-  const login = useAuth(s=>s.login)
-  const [formData, setFormData] = React.useState({
+  // const login = useAuth(s=>s.login) // (Không dùng dòng này thì có thể bỏ)
+  
+  // 1. State quản lý dữ liệu form
+  const [formData, setFormData] = useState({
     fullName: '',
     userName: '',
     email: '',
@@ -16,48 +19,20 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
     confirmPassword: '',
     agreeToTerms: false
   })
-  const [showPwd, setShowPwd] = React.useState(false)
-  const [showConfirmPwd, setShowConfirmPwd] = React.useState(false)
-  const [composingPwd, setComposingPwd] = React.useState(false)
-  const [composingConfirm, setComposingConfirm] = React.useState(false)
-  const normalizeNoAccent = (s:string)=> s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d')
-  const toTelex = (s:string)=>{
-    let out = ''
-    let tonePending = ''
-    const flushTone = () => { if (tonePending) { out += tonePending; tonePending=''; } }
-    const isLetter = (c:string)=> /[A-Za-z]/.test(c)
-    for (const ch of s){
-      const isBoundary = !(isLetter(ch) || ch === 'đ' || ch === 'Đ')
-      if (isBoundary){ flushTone(); out += ch; continue }
-      if (ch === 'đ') { out += 'dd'; continue }
-      if (ch === 'Đ') { out += 'DD'; continue }
-      const d = ch.normalize('NFD')
-      const base = d[0]
-      let add = ''
-      let tone = ''
-      for (let i=1;i<d.length;i++){
-        const m = d[i]
-        if (m==='\u0301') tone='s'
-        else if (m==='\u0300') tone='f'
-        else if (m==='\u0309') tone='r'
-        else if (m==='\u0303') tone='x'
-        else if (m==='\u0323') tone='j'
-        else if (m==='\u0302'){ if (/^[aAeEoO]$/.test(base)) add += base.toLowerCase() }
-        else if (m==='\u0306'){ if (/^[aA]$/.test(base)) add += 'w' }
-        else if (m==='\u031B'){ if (/^[oOuU]$/.test(base)) add += 'w' }
-      }
-      out += base.replace(/[ÂÊÔƠƯĂ]/g, c=>c.toLowerCase()) + add
-      if (tone) tonePending = tone
-    }
-    flushTone()
-    return out
-  }
-  
 
-  // 2. Thêm state mới để quản lý màn hình "Thành công"
-  const [isSuccess, setIsSuccess] = React.useState(false)
+  // State hiển thị mật khẩu
+  const [showPwd, setShowPwd] = useState(false)
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false)
 
-  React.useEffect(()=>{
+  // State quản lý màn hình "Thành công" & "Loading"
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 2. THÊM STATE MỚI ĐỂ QUẢN LÝ LỖI
+  const [error, setError] = useState<string>('');
+
+  // Reset form khi đóng modal
+  useEffect(()=>{
     if(!open){ 
       setFormData({
         fullName: '',
@@ -72,68 +47,77 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       })
       setShowPwd(false)
       setShowConfirmPwd(false)
-      // 3. Reset lại state "Thành công" khi modal đóng
       setIsSuccess(false)
+      setError('') // Reset lỗi khi đóng modal
     }
   },[open])
 
+  // Hàm xử lý khi người dùng thay đổi input (để xóa lỗi cũ đi cho đỡ rối)
+  const handleChangeRaw = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (error) setError(''); // Người dùng nhập lại thì ẩn lỗi đi
+  }
+
   const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault()
+    setError('') // Reset lỗi mỗi khi bấm submit
     
+    // --- VALIDATION (Thay alert bằng setError) ---
+
     // Validate required fields
     if(!formData.fullName.trim()){
-      alert('⚠️ Vui lòng nhập họ và tên')
+      setError('Vui lòng nhập họ và tên')
       return
     }
     
     if(formData.fullName.trim().length < 2){
-      alert('⚠️ Họ và tên phải có ít nhất 2 ký tự')
+      setError('Họ và tên phải có ít nhất 2 ký tự')
       return
     }
 
     if(!formData.userName.trim()){
-      alert('⚠️ Vui lòng nhập username')
+      setError('Vui lòng nhập username')
       return
     }
     
     if(formData.userName.trim().length < 3){
-      alert('⚠️ Username phải có ít nhất 3 ký tự')
+      setError('Username phải có ít nhất 3 ký tự')
       return
     }
     
     // Email validation
     if(!formData.email.trim()){
-      alert('⚠️ Vui lòng nhập email')
+      setError('Vui lòng nhập email')
       return
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if(!emailRegex.test(formData.email)){
-      alert('⚠️ Email không đúng định dạng')
+      setError('Email không đúng định dạng')
       return
     }
     
     // Phone validation
     if(!formData.phone.trim()){
-      alert('⚠️ Vui lòng nhập số điện thoại')
+      setError('Vui lòng nhập số điện thoại')
       return
     }
     
     const phoneRegex = /^0[0-9]{9,10}$/
     if(!phoneRegex.test(formData.phone)){
-      alert('⚠️ Số điện thoại phải có 10-11 số và bắt đầu bằng số 0')
+      setError('Số điện thoại phải có 10-11 số và bắt đầu bằng số 0')
       return
     }
     
     // Gender validation
     if(!formData.gender){
-      alert('⚠️ Vui lòng chọn giới tính')
+      setError('Vui lòng chọn giới tính')
       return
     }
     
     // Birth date validation
     if(!formData.birthDate){
-      alert('⚠️ Vui lòng chọn ngày sinh')
+      setError('Vui lòng chọn ngày sinh')
       return
     }
     
@@ -142,23 +126,23 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
     const age = currentYear - birthYear
     
     if(age < 13){
-      alert('⚠️ Bạn phải từ 13 tuổi trở lên để đăng ký')
+      setError('Bạn phải từ 13 tuổi trở lên để đăng ký')
       return
     }
     
     if(age > 100){
-      alert('⚠️ Ngày sinh không hợp lệ')
+      setError('Ngày sinh không hợp lệ')
       return
     }
     
     // Password validation
     if(!formData.password){
-      alert('⚠️ Vui lòng nhập mật khẩu')
+      setError('Vui lòng nhập mật khẩu')
       return
     }
     
     if(formData.password.length < 6){
-      alert('⚠️ Mật khẩu phải có ít nhất 6 ký tự')
+      setError('Mật khẩu phải có ít nhất 6 ký tự')
       return
     }
     const sp = toTelex(formData.password)
@@ -166,24 +150,26 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
     
     // Confirm password validation
     if(!formData.confirmPassword){
-      alert('⚠️ Vui lòng nhập lại mật khẩu')
+      setError('Vui lòng nhập lại mật khẩu')
       return
     }
     const scp = toTelex(formData.confirmPassword)
     if (scp !== formData.confirmPassword){ setFormData(d=>({...d, confirmPassword: scp})); alert('⚠️ Mật khẩu không được chứa dấu'); return }
     
     if(formData.password !== formData.confirmPassword){
-      alert('⚠️ Mật khẩu nhập lại không khớp')
+      setError('Mật khẩu nhập lại không khớp')
       return
     }
-    
-    // Terms agreement validation
-    // if(!formData.agreeToTerms){
-    //   alert('⚠️ Vui lòng đồng ý với điều khoản dịch vụ')
-    //   return 
-    // }
 
+    // Terms check
+    if(!formData.agreeToTerms){
+        setError('Vui lòng đồng ý với điều khoản dịch vụ')
+        return
+    }
+
+    // --- CALL API ---
     try{
+      setIsLoading(true);
       const payload = {
         username: formData.userName,
         email: formData.email,
@@ -192,42 +178,53 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       const res:any = await api.register(payload as any)
       const token = res?.token
       const user = res?.user || res?.data || undefined
+      
       if (token){
         const name = user?.name || formData.fullName
         const avatarUrl = user?.avatar || `https://i.pravatar.cc/150?u=${formData.email}`
         useAuth.getState().setSession({ token, name, email: formData.email, avatar: avatarUrl, role: 'user' })
       }
-      // 4. Thay vì alert và close, hãy set state "Thành công"
+      
       setIsSuccess(true)
-    }catch(err:any){
-      alert(`Đăng ký thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+    }catch (err: any) {
+      console.error("Lỗi đăng ký:", err);
+      
+      // 1. Lấy dữ liệu lỗi từ Backend trả về
+      const responseData = err?.response?.data;
+
+      // 2. Ưu tiên lấy trường 'errors' (vì backend của bạn trả về field này)
+      // Nếu không có thì mới tìm 'message', cuối cùng là lỗi mặc định
+      const errorMessage = 
+        responseData?.errors ||      // <-- QUAN TRỌNG: Đây là cái backend bạn đang trả về
+        responseData?.message ||     // Fallback nếu backend đổi cấu trúc
+        err?.message ||              // Fallback lỗi HTTP
+        'Đăng ký thất bại. Vui lòng thử lại.';
+
+      // 3. Hiển thị chuỗi lỗi đã lọc sạch
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   }
 
   if(!open) return null
 
-  // 5. Render có điều kiện: Hoặc màn hình thành công, hoặc form đăng ký
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       <div 
         className="absolute inset-0 bg-black/50" 
-        // Không cho bấm ra ngoài để đóng khi màn hình thành công hiện ra
         onClick={isSuccess ? undefined : onClose} 
       />
 
       {isSuccess ? (
-        // --- NẾU THÀNH CÔNG: HIỂN THỊ MÀN HÌNH NÀY ---
-        <div className="relative z-10 w-[480px] bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center">
+        // --- MÀN HÌNH THÀNH CÔNG ---
+        <div className="relative z-10 w-[480px] bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center animate-fadeIn">
           <CheckCircle2 size={64} className="text-green-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">Đăng Ký Thành Công!</h3>
-          
-          {/* 6. Hiển thị nội dung thông báo từ code FE (fallback) */}
           <p className="text-sm text-gray-700 mb-6">
-            🎉 Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản!
+            🎉 Tài khoản đã được tạo.
           </p>
-
           <button
-            // Nút này sẽ đóng modal
             onClick={onClose} 
             className="w-full bg-[#f58a1f] hover:bg-[#f07a00] text-white font-medium h-10 rounded transition-colors"
           >
@@ -236,24 +233,33 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
         </div>
 
       ) : (
-        // --- NẾU CHƯA THÀNH CÔNG: HIỂN THỊ FORM NHƯ CŨ ---
-        <div className="relative z-10 w-[480px] bg-white rounded-lg shadow-lg p-6">
-          <button className="absolute right-3 top-3 text-gray-500" onClick={onClose} aria-label="close">
+        // --- FORM ĐĂNG KÝ ---
+        <div className="relative z-10 w-[480px] bg-white rounded-lg shadow-lg p-6 animate-fadeIn">
+          <button className="absolute right-3 top-3 text-gray-500 hover:text-gray-800" onClick={onClose} aria-label="close">
             <X />
           </button>
+          
           <div className="flex flex-col items-center mb-4">
-            {/* <img src="/images/login-banner.png" alt="banner" className="w-40 h-32 object-contain" /> */}
             <h3 className="text-lg font-semibold">Đăng Ký Tài Khoản</h3>
           </div>
 
+          {/* 3. KHUNG HIỂN THỊ LỖI (Render có điều kiện) */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start gap-3 text-red-600 text-sm">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              
               <div className="col-span-2">
                 <label className="text-sm text-gray-700 block mb-1">Họ và tên</label>
                 <input 
                   value={formData.fullName} 
-                  onChange={e=>setFormData(d=>({...d, fullName: e.target.value}))}
-                  className="w-full rounded border px-3 h-9" 
+                  onChange={e => handleChangeRaw('fullName', e.target.value)}
+                  className={`w-full rounded border px-3 h-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f] ${error && !formData.fullName ? 'border-red-500' : ''}`}
                   placeholder="Nhập Họ và tên" 
                 />
               </div>
@@ -262,8 +268,8 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                 <label className="text-sm text-gray-700 block mb-1">Username</label>
                 <input 
                   value={formData.userName} 
-                  onChange={e=>setFormData(d=>({...d, userName: e.target.value}))}
-                  className="w-full rounded border px-3 h-9" 
+                  onChange={e => handleChangeRaw('userName', e.target.value)}
+                  className="w-full rounded border px-3 h-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]" 
                   placeholder="Nhập username" 
                 />
               </div>
@@ -273,8 +279,8 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                 <input 
                   type="email"
                   value={formData.email}
-                  onChange={e=>setFormData(d=>({...d, email: e.target.value}))}
-                  className="w-full rounded border px-3 h-9"
+                  onChange={e => handleChangeRaw('email', e.target.value)}
+                  className="w-full rounded border px-3 h-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]"
                   placeholder="Nhập Email"
                 />
               </div>
@@ -286,35 +292,35 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   value={formData.phone}
                   onChange={e=>{
                     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
-                    setFormData(d=>({...d, phone: value}))
+                    handleChangeRaw('phone', value)
                   }}
-                  className="w-full rounded border px-3 h-9"
-                  placeholder="Nhập Số điện thoại (VD: 0901234567)"
+                  className="w-full rounded border px-3 h-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]"
+                  placeholder="Nhập Số điện thoại"
                   maxLength={11}
                 />
               </div>
 
               <div>
                 <label className="text-sm text-gray-700 block mb-1">Giới tính</label>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2">
+                <div className="flex gap-6 mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
                       value="Nam"
                       checked={formData.gender === 'Nam'}
-                      onChange={e=>setFormData(d=>({...d, gender: e.target.value}))}
+                      onChange={e => handleChangeRaw('gender', e.target.value)}
                       className="text-[#f58a1f] focus:ring-[#f58a1f]"
                     />
                     <span className="text-sm">Nam</span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
                       value="Nữ"
                       checked={formData.gender === 'Nữ'}
-                      onChange={e=>setFormData(d=>({...d, gender: e.target.value}))}
+                      onChange={e => handleChangeRaw('gender', e.target.value)}
                       className="text-[#f58a1f] focus:ring-[#f58a1f]"
                     />
                     <span className="text-sm">Nữ</span>
@@ -328,11 +334,10 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   <input
                     type="date"
                     value={formData.birthDate}
-                    onChange={e=>setFormData(d=>({...d, birthDate: e.target.value}))}
-                    className="w-full rounded border px-3 h-9 pr-9"
-                    placeholder="Ngày/Tháng/Năm"
+                    onChange={e => handleChangeRaw('birthDate', e.target.value)}
+                    className="w-full rounded border px-3 h-9 pr-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]"
                   />
-                  <Calendar className="absolute right-2 top-[7px] text-gray-400" size={18} />
+                  <Calendar className="absolute right-2 top-[7px] text-gray-400 pointer-events-none" size={18} />
                 </div>
               </div>
 
@@ -342,28 +347,14 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   <input
                     type={showPwd ? 'text' : 'password'}
                     value={formData.password}
-                    onCompositionStart={()=>setComposingPwd(true)}
-                    onCompositionEnd={()=> setComposingPwd(false)}
-                    onKeyDown={e=>{
-                      if (!composingPwd) return
-                      const k = e.key
-                      const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
-                      if (accentKeys.includes(k)){
-                        e.preventDefault()
-                        setFormData(d=>({...d, password: d.password + k}))
-                      }
-                    }}
-                    onBeforeInput={(e:any)=>{ const t=e?.nativeEvent?.data; if(typeof t==='string'&&t.length>0){ e.preventDefault(); setFormData(d=>({...d, password: d.password + toTelex(t)})) } }}
-                    onPaste={(e:any)=>{ const txt=e.clipboardData?.getData?.('text')||''; if(txt){ e.preventDefault(); setFormData(d=>({...d, password: d.password + toTelex(txt)})) } }}
-                    onChange={e=> setFormData(d=>({...d, password: e.target.value}))}
-                    className="w-full rounded border px-3 h-9 pr-9"
+                    onChange={e => handleChangeRaw('password', e.target.value)}
+                    className="w-full rounded border px-3 h-9 pr-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]"
                     placeholder="Nhập Mật khẩu"
                   />
                   <button 
                     type="button"
                     onClick={()=>setShowPwd(s=>!s)}
-                    className="absolute right-2 top-[7px] text-gray-500"
-                    title={showPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    className="absolute right-2 top-[7px] text-gray-500 hover:text-gray-700"
                   >
                     {showPwd ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
@@ -376,28 +367,14 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
                   <input
                     type={showConfirmPwd ? 'text' : 'password'}
                     value={formData.confirmPassword}
-                    onCompositionStart={()=>setComposingConfirm(true)}
-                    onCompositionEnd={()=> setComposingConfirm(false)}
-                    onKeyDown={e=>{
-                      if (!composingConfirm) return
-                      const k = e.key
-                      const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
-                      if (accentKeys.includes(k)){
-                        e.preventDefault()
-                        setFormData(d=>({...d, confirmPassword: d.confirmPassword + k}))
-                      }
-                    }}
-                    onBeforeInput={(e:any)=>{ const t=e?.nativeEvent?.data; if(typeof t==='string'&&t.length>0){ e.preventDefault(); setFormData(d=>({...d, confirmPassword: d.confirmPassword + toTelex(t)})) } }}
-                    onPaste={(e:any)=>{ const txt=e.clipboardData?.getData?.('text')||''; if(txt){ e.preventDefault(); setFormData(d=>({...d, confirmPassword: d.confirmPassword + toTelex(txt)})) } }}
-                    onChange={e=> setFormData(d=>({...d, confirmPassword: e.target.value}))}
-                    className="w-full rounded border px-3 h-9 pr-9"
+                    onChange={e => handleChangeRaw('confirmPassword', e.target.value)}
+                    className="w-full rounded border px-3 h-9 pr-9 focus:outline-none focus:ring-1 focus:ring-[#f58a1f]"
                     placeholder="Nhập lại mật khẩu"
                   />
                   <button
                     type="button"
                     onClick={()=>setShowConfirmPwd(s=>!s)}
-                    className="absolute right-2 top-[7px] text-gray-500"
-                    title={showConfirmPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    className="absolute right-2 top-[7px] text-gray-500 hover:text-gray-700"
                   >
                     {showConfirmPwd ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
@@ -405,18 +382,18 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
               </div>
 
               <div className="col-span-2">
-                <label className="flex items-start gap-2">
+                <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.agreeToTerms}
-                    onChange={e=>setFormData(d=>({...d, agreeToTerms: e.target.checked}))}
+                    onChange={e => handleChangeRaw('agreeToTerms', e.target.checked)}
                     className="mt-1 text-[#f58a1f] focus:ring-[#f58a1f] rounded"
                   />
-                  <span className="text-sm">
+                  <span className="text-sm select-none">
                     Bằng việc đăng ký tài khoản, tôi đồng ý với{' '}
-                    <a href="#" className="text-[#f58a1f]">Điều khoản dịch vụ</a>
+                    <a href="#" className="text-[#f58a1f] hover:underline">Điều khoản dịch vụ</a>
                     {' '}và{' '}
-                    <a href="#" className="text-[#f58a1f]">Chính sách bảo mật</a>
+                    <a href="#" className="text-[#f58a1f] hover:underline">Chính sách bảo mật</a>
                     {' '}của Only Cinema.
                   </span>
                 </label>
@@ -425,12 +402,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
               <div className="col-span-2 pt-2">
                 <button
                   type="submit"
-                  disabled={!formData.agreeToTerms}
-                  className={`w-full font-medium h-10 rounded transition-colors ${
-                    formData.agreeToTerms 
-                      ? 'bg-[#f58a1f] hover:bg-[#f07a00] text-white cursor-pointer' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className="w-full bg-[#f58a1f] hover:bg-[#f07a00] text-white font-medium h-10 rounded transition-colors disabled:opacity-50"
                 >
                   HOÀN THÀNH
                 </button>
@@ -438,7 +410,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
 
               <div className="col-span-2 text-center">
                 <span className="text-sm">Bạn đã có tài khoản?{' '}</span>
-                <button type="button" onClick={onClose} className="text-[#f58a1f] text-sm">
+                <button type="button" onClick={onClose} className="text-[#f58a1f] text-sm hover:underline">
                   Đăng nhập
                 </button>
               </div>
@@ -446,6 +418,7 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
           </form>
         </div>
       )}
+       <LoadingOverlay isLoading={isLoading} message="Đang tạo tài khoản..." />
     </div>
   )
 }
