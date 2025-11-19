@@ -2,6 +2,9 @@ import React from 'react'
 import { useAuth } from '../../store/auth'
 import { api } from '../../lib/api'
 import { Eye, EyeOff, X } from 'lucide-react'
+import LoadingOverlay from "./LoadingOverlay";
+import { useState } from "react";
+import { toast } from 'react-toastify';
 
 interface Props {
   open: boolean
@@ -12,10 +15,11 @@ interface Props {
 }
 
 export default function LoginModal({ open, onClose, onRegisterClick, onForgotPasswordClick, onLoginSuccess }: Props) {
-  const login = useAuth(s=>s.login)
+  // const login = useAuth(s=>s.login)
   const [email,setEmail] = React.useState('')
   const [password,setPassword] = React.useState('')
   const [showPwd,setShowPwd] = React.useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(()=>{
     if(!open){ setEmail(''); setPassword(''); setShowPwd(false) }
@@ -23,20 +27,52 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
 
   const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault()
-    if(!email || !password){ alert('⚠️ Vui lòng nhập email và mật khẩu'); return }
-    try{
-      const data = await api.login(email, password)
-      if (!data || !data.token){ throw new Error((data && data.message) || 'Đăng nhập thất bại') }
-      const name = data.user?.name || email.split('@')[0]
-      const avatarUrl = data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`
-      useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user' })
-    }catch(err:any){
-      alert(`Đăng nhập thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
-      return
+    if(!email || !password){  
+      // ❌ Bỏ alert('⚠️ Vui lòng nhập email và mật khẩu'); 
+      toast.warning('⚠️ Vui lòng nhập email và mật khẩu!'); // ✅ Thay bằng toast
+      return 
     }
-    onClose()
-    // Gọi callback sau khi đăng nhập thành công
-    onLoginSuccess?.()
+    try{
+      setIsLoading(true);
+      const data = await api.login(email, password)
+      // Kiểm tra xem có token không
+      if (!data || !data.token) { 
+        throw new Error((data && data.message) || 'Đăng nhập thất bại') 
+      }
+
+      // --- SỬA ĐOẠN NÀY ---
+      
+      // 1. Log ra xem backend thực sự trả về cái gì (F12 -> Console)
+      console.log("Login Response Data:", data);
+
+      // 2. Mapping lại tên trường cho đúng với Backend (username & avatarUrl)
+      // Ưu tiên lấy data.user.username trước, nếu không có mới lấy data.user.name
+      const name = data.user?.username || data.user?.name || email.split('@')[0];
+      
+      // Ưu tiên lấy data.user.avatarUrl trước (đây là cái Backend của bạn trả về)
+      const avatarUrl = data.user?.avatarUrl || data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`;
+
+      // 3. Lưu vào session
+      useAuth.getState().setSession({ 
+        token: data.token, 
+        name: name, 
+        email: email, 
+        avatar: avatarUrl, 
+        role: data.user?.role || 'user' 
+      })
+       // ✅ QUAN TRỌNG: Đã di chuyển vào đây (chỉ chạy khi thành công)
+      toast.success('Đăng nhập thành công!')
+      setTimeout(() => {
+        onClose()
+        onLoginSuccess?.()
+      }, 1500)
+    }catch(err:any){
+      // --- HIỂN THỊ LỖI ---
+      const errorMsg = err?.response?.data?.errors || err?.response?.data?.message || err?.message || 'Vui lòng thử lại.';
+      toast.error(`${errorMsg}`);
+    } finally {
+      setIsLoading(false); // Tắt loading
+    }
   }
 
   if(!open) return null
@@ -84,6 +120,8 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           </div>
         </form>
       </div>
+      {/* Đặt LoadingOverlay ở đây */}
+      <LoadingOverlay isLoading={isLoading} message="Đang đăng nhập..." />
     </div>
   )
 }

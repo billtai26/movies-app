@@ -2,6 +2,8 @@ import React from 'react'
 // 1. Di chuyển import 'api' lên đầu và thêm 'AlertCircle'
 import { api } from '../../lib/api' 
 import { X, AlertCircle } from 'lucide-react'
+import { useState } from "react";
+import LoadingOverlay from "./LoadingOverlay";
 
 interface Props {
   open: boolean
@@ -12,6 +14,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [email, setEmail] = React.useState('')
   // 2. Thêm state mới để quản lý màn hình "Thành công"
   const [isSuccess, setIsSuccess] = React.useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     if (!open) {
@@ -28,14 +31,16 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       return
     }
     try{
-      //
+      setIsLoading(true);
       const res = await api.requestPasswordReset(email) 
       
       // 4. Thay vì alert và close, set state "Thành công"
       setIsSuccess(true) 
       
-    }catch(err:any){
+    } catch(err:any){
       alert(`Gửi yêu cầu thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -142,7 +147,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
           </div>
         </div>
       )}
+      <LoadingOverlay isLoading={isLoading} message="Đang gửi email..." />
     </div>
   )
 }
-// 8. Xóa import 'api' thừa ở cuối file

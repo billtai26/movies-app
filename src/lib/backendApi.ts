@@ -217,4 +217,37 @@ export const api = {
       throw err
     }
   },
+  // 1. Lấy thông tin cá nhân (GET /v1/users/profile)
+  async getProfile() {
+    const token = getAuthToken();
+    if (!token) return null;
+    const res = await axios.get(`${BASE_URL}/users/profile`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
+  // 2. Cập nhật thông tin text (PUT /v1/users/profile)
+  async updateProfileUser(data: { username?: string; phone?: string; dob?: string }) {
+    const token = getAuthToken();
+    const res = await axios.put(`${BASE_URL}/users/profile`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
+  // 3. Upload Avatar (PATCH /v1/users/profile/avatar)
+  async updateAvatarUser(file: File) {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('avatar', file); // Key phải là 'avatar' trùng với upload.single('avatar') bên backend
+
+    const res = await axios.patch(`${BASE_URL}/users/profile/avatar`, formData, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    return res.data;
+  },
 }
