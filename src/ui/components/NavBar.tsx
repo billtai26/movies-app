@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, LogOut, User, Clock3, Search } from "lucide-react";
 import { useAuth } from "../../store/auth";
 // import DarkToggle from "./DarkToggle";
@@ -13,9 +13,12 @@ import { useDebounce } from "../../lib/useDebounce";
 export default function NavBar() {
   const { token, role, logout, avatar } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -48,6 +51,21 @@ export default function NavBar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Tự động mở popup reset khi điều hướng có state (từ route reset-password)
+  useEffect(() => {
+    const st: any = location.state as any;
+    if (st && st.openReset && st.resetToken) {
+      setResetToken(st.resetToken);
+      setShowReset(true);
+    }
+  }, [location]);
+
+  const closeResetAndCleanUrl = () => {
+    setShowReset(false);
+    setResetToken(null);
+    nav({ pathname: location.pathname }, { replace: true });
+  };
 
   // --- THAY ĐỔI 4: useEffect mới để gọi API tìm kiếm ---
   useEffect(() => {
@@ -351,6 +369,9 @@ export default function NavBar() {
           setShowLogin(false);
           window.location.reload();
         }}
+        resetOpen={showReset}
+        resetToken={resetToken}
+        onResetClose={closeResetAndCleanUrl}
       />
     </>
   );

@@ -52,17 +52,8 @@ export const api = {
     return res.data
   },
   async listShowtimesByMovie(movieId: string, cinemaId?: string) {
-    if (!cinemaId) {
-      const res = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId } })
-      return res.data
-    }
-    try {
-      const r1 = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId, cinemaId } })
-      return r1.data
-    } catch {
-      const r2 = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId, theaterId: cinemaId } })
-      return r2.data
-    }
+    const res = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId, cinemaId } })
+    return res.data
   },
   async getShowtime(id: string) {
     const res = await axios.get(`${BASE_URL}/showtimes/${id}`)
@@ -85,15 +76,8 @@ export const api = {
     return res.data
   },
   async listComments(movieId?: string) {
-    const tryGet = async (url: string, params?: any) => {
-      try { const r = await axios.get(url, params?{ params }: undefined); return r.data } catch { return null }
-    }
-    const a = await tryGet(`${BASE_URL}/comments`, movieId?{ movieId }: undefined)
-    if (a) return a
-    const b = movieId ? await tryGet(`${BASE_URL}/movies/${movieId}/comments`) : null
-    if (b) return b
-    const c = await tryGet(`${BASE_URL}/comments/list`, movieId?{ movieId }: undefined)
-    return c ?? { comments: [] }
+    const res = await axios.get(`${BASE_URL}/comments`, movieId ? { params: { movieId } } : undefined)
+    return res.data
   },
    // --- CẬP NHẬT CÁC HÀM NÀY ĐỂ GỬI TOKEN ---
   async create<T>(collection: string, item: T) {
@@ -203,19 +187,10 @@ export const api = {
   },
   // --- THÊM HÀM MỚI NÀY VÀO ---
   async resetPassword(token: string, password: string) {
-    // Backend API mong đợi một { password } trong body
-    // Và dùng 'PUT'
-    const path = `/v1/users/reset-password/${token}` //
-    const url = `${BASE_URL}${path}`
-    const payload = { password }
-
-    try {
-      const res = await axios.put(url, payload)
-      return res.data
-    } catch (err: any) {
-      console.error('Lỗi khi gọi API đặt lại mật khẩu:', err.response?.data || err.message)
-      throw err
-    }
+    const url = `${BASE_URL}/users/reset-password`
+    const payload = { token, password }
+    const res = await axios.put(url, payload)
+    return res.data
   },
   // 1. Lấy thông tin cá nhân (GET /v1/users/profile)
   async getProfile() {
