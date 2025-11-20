@@ -4,6 +4,7 @@ import { create } from 'zustand'
 export type Role = 'user' | 'staff' | 'admin' | null
 
 type AuthState = {
+  _id: string | null
   token: string | null
   role: Role
   name: string | null
@@ -46,6 +47,7 @@ export const useAuth = create<AuthState>((set, get) => {
   }
 
   return {
+    _id: persisted?._id ?? null,
     token: persisted?.token ?? null,
     role: persisted?.role ?? null,
     name: persisted?.name ?? null,

@@ -5,7 +5,7 @@ import { Play, Ticket } from "lucide-react";
 type Movie = {
   _id: string;
   title: string;
-  poster: string;
+  posterUrl: string;
   averageRating?: string;
   ageRating?: string;
 };
@@ -17,7 +17,7 @@ export default function MovieCard({ movie }: { movie: Movie }) {
       <div className="relative rounded-lg overflow-hidden">
         <Link to={`/movies/${movie._id}`} className="block">
           <img
-            src={movie.poster}
+            src={movie?.posterUrl}
             alt={movie.title}
             className="w-full h-[320px] sm:h-[360px] md:h-[400px] lg:h-[420px] xl:h-[440px] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
