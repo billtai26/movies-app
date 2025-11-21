@@ -156,33 +156,46 @@ export default function Seats(){
     });
 
     // Lắng nghe cập nhật ghế
-    newSocket.on('seat:updated', (updatedSeat: Seat) => {
-      setSeats(prevSeats => 
-        prevSeats.map(s => {
-          if (s.id !== updatedSeat.id) return s;
-          // Nếu người khác giữ, hiện trạng thái held
-          if (updatedSeat.state === 'held' && updatedSeat.userId !== myUserId) {
-             return { ...updatedSeat, state: 'held' };
-          }
-          return updatedSeat;
-        })
-      );
-    });
+    // --- SỬA ĐOẠN NÀY ---
+        newSocket.on('seat:updated', (updatedSeat: Seat) => {
+            setSeats(prevSeats =>
+                prevSeats.map(s => {
+                    if (s.id !== updatedSeat.id) return s;
 
-    // Lắng nghe khi ghế đã bán
-    newSocket.on('seats:booked', (bookedSeatIds: string[]) => {
-      setSeats(prevSeats => 
-        prevSeats.map(s => 
-          bookedSeatIds.includes(s.id) ? { ...s, state: 'booked' } : s
-        )
-      );
-    });
+                    // Logic mới: Giữ lại toàn bộ thông tin cũ của s (...s)
+                    // và chỉ ghi đè những thông tin thay đổi từ updatedSeat
+                    
+                    // Nếu người khác giữ -> set state 'held'
+                    if (updatedSeat.state === 'held' && updatedSeat.userId !== myUserId) {
+                        return { ...s, state: 'held', userId: updatedSeat.userId };
+                    }
+                    
+                    // Nếu ghế được nhả ra -> set state 'empty'
+                    if (updatedSeat.state === 'empty') {
+                        return { ...s, state: 'empty', userId: undefined };
+                    }
 
-    return () => {
-      newSocket.emit('leave_room', showtimeId);
-      newSocket.disconnect();
-    };
-  }, [showtimeId, myUserId]);
+                    // Trường hợp khác (ví dụ 'booked'), cập nhật state tương ứng
+                    return { ...s, state: updatedSeat.state, userId: updatedSeat.userId };
+                })
+            );
+        });
+        // --------------------
+
+        // Lắng nghe khi ghế đã bán (giữ nguyên)
+        newSocket.on('seats:booked', (bookedSeatIds: string[]) => {
+            setSeats(prevSeats =>
+                prevSeats.map(s =>
+                    bookedSeatIds.includes(s.id) ? { ...s, state: 'booked' } : s
+                )
+            );
+        });
+
+        return () => {
+            newSocket.emit('leave_room', showtimeId);
+            newSocket.disconnect();
+        };
+    }, [showtimeId, myUserId]);
 
   // 4. XỬ LÝ GHẾ CỦA TÔI
   const mySelectedSeats = useMemo(() => {
