@@ -2,6 +2,9 @@ import React from 'react'
 import { useAuth } from '../../store/auth'
 import { api } from '../../lib/api'
 import { Eye, EyeOff, X } from 'lucide-react'
+import LoadingOverlay from "./LoadingOverlay";
+import { useState } from "react";
+import { toast } from 'react-toastify';
 
 interface Props {
   open: boolean
@@ -12,89 +15,64 @@ interface Props {
 }
 
 export default function LoginModal({ open, onClose, onRegisterClick, onForgotPasswordClick, onLoginSuccess }: Props) {
-  const login = useAuth(s=>s.login)
+  // const login = useAuth(s=>s.login)
   const [email,setEmail] = React.useState('')
   const [password,setPassword] = React.useState('')
   const [showPwd,setShowPwd] = React.useState(false)
-  const [error,setError] = React.useState('')
-  const [composing, setComposing] = React.useState(false)
-  const [pwdFieldError, setPwdFieldError] = React.useState('')
-  const toTelex = (s:string)=>{
-    let out = ''
-    let tonePending = ''
-    const flushTone = () => { if (tonePending) { out += tonePending; tonePending=''; } }
-    const isLetter = (c:string)=> /[A-Za-z]/.test(c)
-
-    for (const ch of s){
-      const code = ch.codePointAt(0) || 0
-      const isBoundary = !(isLetter(ch) || ch === 'đ' || ch === 'Đ')
-      if (isBoundary){ flushTone(); out += ch; continue }
-
-      if (ch === 'đ') { out += 'dd'; continue }
-      if (ch === 'Đ') { out += 'DD'; continue }
-
-      const d = ch.normalize('NFD')
-      const base = d[0]
-      let add = ''
-      let tone = ''
-      for (let i=1;i<d.length;i++){
-        const m = d[i]
-        if (m==='\u0301') tone='s'
-        else if (m==='\u0300') tone='f'
-        else if (m==='\u0309') tone='r'
-        else if (m==='\u0303') tone='x'
-        else if (m==='\u0323') tone='j'
-        else if (m==='\u0302'){ if (/^[aAeEoO]$/.test(base)) add += base.toLowerCase() }
-        else if (m==='\u0306'){ if (/^[aA]$/.test(base)) add += 'w' }
-        else if (m==='\u031B'){ if (/^[oOuU]$/.test(base)) add += 'w' }
-      }
-      out += base.replace(/[ÂÊÔƠƯĂ]/g, c=>c.toLowerCase()) + add
-      if (tone) tonePending = tone
-    }
-    flushTone()
-    return out
-  }
-
-  const handlePwdBeforeInput = (e:any)=>{
-    const ev: any = e?.nativeEvent
-    const data = ev?.data
-    if (typeof data === 'string' && data.length > 0){
-      e.preventDefault()
-      setPassword(p=> p + toTelex(data))
-    }
-  }
-  const handlePwdPaste = (e:any)=>{
-    const txt = e.clipboardData?.getData?.('text') || ''
-    if (txt){ e.preventDefault(); setPassword(p=> p + toTelex(txt)) }
-  }
-  const containsAccent = (s:string)=>{
-    const base = s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d')
-    return base !== s
-  }
-  
+  const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(()=>{
-    if(!open){ setEmail(''); setPassword(''); setShowPwd(false); setError(''); setPwdFieldError('') }
+    if(!open){ setEmail(''); setPassword(''); setShowPwd(false) }
   },[open])
 
   const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault()
-    if(!email){ alert('⚠️ Vui lòng nhập email'); return }
-    if(!password){ setPwdFieldError('Mật khẩu không được để trống!'); return }
-    try{
-      const data = await api.login(email, password)
-      if (!data || !data.token){ throw new Error((data && data.message) || 'Đăng nhập thất bại') }
-      const name = data.user?.name || email.split('@')[0]
-      const avatarUrl = data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`
-      const uid = data.user?._id || data.user?.id || null
-      useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user', userId: uid || undefined })
-    }catch(err:any){
-      setError('Thông tin đăng nhập không chính xác. Vui lòng kiểm tra lại email và mật khẩu.')
-      return
+    if(!email || !password){  
+      // ❌ Bỏ alert('⚠️ Vui lòng nhập email và mật khẩu'); 
+      toast.warning('⚠️ Vui lòng nhập email và mật khẩu!'); // ✅ Thay bằng toast
+      return 
     }
-    onClose()
-    // Gọi callback sau khi đăng nhập thành công
-    onLoginSuccess?.()
+    try{
+      setIsLoading(true);
+      const data = await api.login(email, password)
+      // Kiểm tra xem có token không
+      if (!data || !data.token) { 
+        throw new Error((data && data.message) || 'Đăng nhập thất bại') 
+      }
+
+      // --- SỬA ĐOẠN NÀY ---
+      
+      // 1. Log ra xem backend thực sự trả về cái gì (F12 -> Console)
+      console.log("Login Response Data:", data);
+
+      // 2. Mapping lại tên trường cho đúng với Backend (username & avatarUrl)
+      // Ưu tiên lấy data.user.username trước, nếu không có mới lấy data.user.name
+      const name = data.user?.username || data.user?.name || email.split('@')[0];
+      
+      // Ưu tiên lấy data.user.avatarUrl trước (đây là cái Backend của bạn trả về)
+      const avatarUrl = data.user?.avatarUrl || data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`;
+
+      // 3. Lưu vào session
+      useAuth.getState().setSession({ 
+        token: data.token, 
+        name: name, 
+        email: email, 
+        avatar: avatarUrl, 
+        role: data.user?.role || 'user' 
+      })
+       // ✅ QUAN TRỌNG: Đã di chuyển vào đây (chỉ chạy khi thành công)
+      toast.success('Đăng nhập thành công!')
+      setTimeout(() => {
+        onClose()
+        onLoginSuccess?.()
+      }, 1500)
+    }catch(err:any){
+      // --- HIỂN THỊ LỖI ---
+      const errorMsg = err?.response?.data?.errors || err?.response?.data?.message || err?.message || 'Vui lòng thử lại.';
+      toast.error(`${errorMsg}`);
+    } finally {
+      setIsLoading(false); // Tắt loading
+    }
   }
 
   if(!open) return null
@@ -110,11 +88,6 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           {/* <img src="/images/login-banner.png" alt="banner" className="w-40 h-32 object-contain" /> */}
           <h3 className="text-lg font-semibold">Đăng Nhập Tài Khoản</h3>
         </div>
-        {error && (
-          <p className="mt-3 text-center text-red-600 text-sm">
-            {error}
-          </p>
-        )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
@@ -123,33 +96,13 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           </div>
           <div>
             <label className="text-sm text-gray-700">Mật khẩu</label>
-              <div className="mt-1 relative">
-              <input
-                type={showPwd? 'text':'password'}
-                value={password}
-                onCompositionStart={()=>setComposing(true)}
-                onCompositionEnd={()=>setComposing(false)}
-                onKeyDown={e=>{
-                  if (!composing) return
-                  const k = e.key
-                  const accentKeys = ['s','f','r','x','j','w','d','S','F','R','X','J','W','D']
-                  if (accentKeys.includes(k)){
-                    e.preventDefault()
-                    setPassword(p=> p + k)
-                  }
-                }}
-                onBeforeInput={handlePwdBeforeInput}
-                onPaste={handlePwdPaste}
-                onChange={e=> { setPassword(e.target.value); if (pwdFieldError && e.target.value) setPwdFieldError('') }}
-                className={`w-full rounded border px-3 py-2 pr-10 ${pwdFieldError? 'border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="Nhập Mật khẩu"
-              />
-              <button type="button" onClick={()=>setShowPwd(s=>!s)} className="absolute right-2 top-2 text-gray-500" title={showPwd? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
-                {showPwd? <Eye size={18} /> : <EyeOff size={18} />}
+            <div className="mt-1 relative">
+              <input type={showPwd? 'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} className="w-full rounded border px-3 py-2 pr-10" placeholder="Nhập Mật khẩu" />
+              <button type="button" onClick={()=>setShowPwd(s=>!s)} className="absolute right-2 top-2 text-gray-500">
+                {showPwd? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-              </div>
-              {pwdFieldError && <p className="text-xs text-red-600 mt-1">{pwdFieldError}</p>}
             </div>
+          </div>
           <div>
             <button type="submit" className="w-full bg-[#f58a1f] hover:bg-[#f07a00] text-white font-medium px-4 py-2 rounded">ĐĂNG NHẬP</button>
           </div>
@@ -167,6 +120,8 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
           </div>
         </form>
       </div>
+      {/* Đặt LoadingOverlay ở đây */}
+      <LoadingOverlay isLoading={isLoading} message="Đang đăng nhập..." />
     </div>
   )
 }

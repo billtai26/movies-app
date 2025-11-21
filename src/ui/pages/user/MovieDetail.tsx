@@ -155,7 +155,7 @@ export default function MovieDetail() {
     <>
       {/* Hero full-width */}
       <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-hidden">
-        <img src={movie.poster} className="w-full h-[360px] md:h-[500px] object-cover brightness-75" />
+        <img src={movie?.posterUrl} className="w-full h-[360px] md:h-[500px] object-cover brightness-75" />
         {/* Overlay nhẹ giúp nút play nổi bật */}
         <div className="absolute inset-0 bg-black/20" />
         {/* Nút play ở giữa */}
@@ -174,7 +174,7 @@ export default function MovieDetail() {
         <div className="md:col-span-2 space-y-6">
           {/* Tiêu đề + thông tin cơ bản (poster ăn vào banner) */}
           <div className="flex items-start gap-6 -mt-14 md:-mt-20 relative z-10">
-            <img src={movie.poster} className="h-80 w-[calc(13rem+0.9cm)] md:h-96 md:w-[calc(15rem+0.9cm)] rounded-xl object-cover shadow-2xl ring-1 ring-black/10" />
+            <img src={movie?.posterUrl} className="h-80 w-[calc(13rem+0.9cm)] md:h-96 md:w-[calc(15rem+0.9cm)] rounded-xl object-cover shadow-2xl ring-1 ring-black/10" />
             <div className="flex-1 text-gray-800 mt-10 md:mt-14">
               {/* Tiêu đề + badge độ tuổi theo mẫu */}
               <div className="flex items-start gap-3">
