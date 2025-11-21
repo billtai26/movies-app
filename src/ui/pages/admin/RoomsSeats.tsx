@@ -1,7 +1,8 @@
 import CrudTable from "../../components/CrudTable";
+import { EntitySchema } from "../../../types/entities";
 
 export default function RoomsSeats() {
-  const schema = {
+  const schema: EntitySchema = {
     name: "rooms",
     title: "Phòng & Ghế",
     columns: [

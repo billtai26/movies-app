@@ -83,7 +83,7 @@ export default function Profile() {
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
     // Cập nhật vào auth store để đồng bộ với NavBar
-    updateProfile(user.name, user.avatar, user.email);
+    updateProfile({ name: user.name, avatar: user.avatar, email: user.email });
     showSuccessToast("Cập nhật thông tin thành công! ✅");
   };
 

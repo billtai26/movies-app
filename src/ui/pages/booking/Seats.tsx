@@ -336,7 +336,7 @@ export default function Seats(){
   }
   const timeButtons = availableTimes
   const aisleCols = [7]
-  const basePrice = st?.price || 0
+  const basePrice = st?.price ?? 80000
   const couplePrice = basePrice * 2 + 10000
 
   // 'selected' giờ là state 'mySelectedSeats' đã tính ở trên

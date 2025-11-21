@@ -86,7 +86,8 @@ export default function LoginModal({ open, onClose, onRegisterClick, onForgotPas
       if (!data || !data.token){ throw new Error((data && data.message) || 'Đăng nhập thất bại') }
       const name = data.user?.name || email.split('@')[0]
       const avatarUrl = data.user?.avatar || `https://i.pravatar.cc/150?u=${email}`
-      useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user' })
+      const uid = data.user?._id || data.user?.id || null
+      useAuth.getState().setSession({ token: data.token, name, email, avatar: avatarUrl, role: 'user', userId: uid || undefined })
     }catch(err:any){
       setError('Thông tin đăng nhập không chính xác. Vui lòng kiểm tra lại email và mật khẩu.')
       return

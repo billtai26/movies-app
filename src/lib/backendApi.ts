@@ -76,23 +76,35 @@ export const api = {
     return res.data
   },
   async listComments(movieId?: string) {
-    const res = await axios.get(`${BASE_URL}/comments`, movieId ? { params: { movieId } } : undefined)
+    const token = getAuthToken();
+    const cfg: any = {};
+    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
+    const url = movieId ? `${BASE_URL}/comments/movie/${movieId}` : `${BASE_URL}/comments`
+    const res = await axios.get(url, cfg)
     return res.data
   },
    // --- CẬP NHẬT CÁC HÀM NÀY ĐỂ GỬI TOKEN ---
   async create<T>(collection: string, item: T) {
     const token = getAuthToken();
-    const res = await axios.post(`${BASE_URL}/${collection}`, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    const url = collection === 'comments' ? `${BASE_URL}/comments` : `${BASE_URL}/${collection}`
+    const payload = collection === 'comments' ? ({
+      movieId: (item as any)?.movieId,
+      content: (item as any)?.content,
+      parentId: (item as any)?.parentId ?? null
+    }) : item
+    const res = await axios.post(url, payload, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return res.data
   },
   async update<T>(collection: string, id: string, item: T) {
     const token = getAuthToken();
-    const res = await axios.put(`${BASE_URL}/${collection}/${id}`, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
+    const res = await axios.put(url, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return res.data
   },
   async remove(collection: string, id: string) {
     const token = getAuthToken();
-    const res = await axios.delete(`${BASE_URL}/${collection}/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
+    const res = await axios.delete(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return res.data
   },
 
@@ -192,4 +204,18 @@ export const api = {
     const res = await axios.put(url, payload)
     return res.data
   },
+  async listTickets(params?: { page?: number; limit?: number }){
+    const token = getAuthToken();
+    const cfg: any = {};
+    if (params) cfg.params = params;
+    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
+    const res = await axios.get(`${BASE_URL}/tickets`, cfg)
+    return res.data
+  },
+  async getTicket(id: string){
+    const token = getAuthToken();
+    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    const res = await axios.get(`${BASE_URL}/tickets/${id}`, cfg)
+    return res.data
+  }
 }

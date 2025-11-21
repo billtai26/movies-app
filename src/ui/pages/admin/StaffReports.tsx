@@ -82,10 +82,6 @@ export default function AdminStaffReports() {
       schema={schema as any}
       canEdit={true}
       customActions={customActions}
-      rows={data}
-      create={addItem}
-      update={updateItem}
-      remove={deleteItem}
     />
   );
 }

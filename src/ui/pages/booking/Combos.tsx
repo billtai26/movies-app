@@ -31,7 +31,7 @@ export default function Combos(){
   const comboTotal = Object.entries(qty).reduce((s,[id,n])=> s + (items.find(i=>i.id===id)?.price||0)*n, 0)
   // Tính tiền vé chính xác: phân loại ghế đơn/ghế đôi theo quy tắc ở Seats.tsx
   const selectedSeats: string[] = (state?.selected||[])
-  const basePrice = show?.price || 0
+  const basePrice = show?.price ?? 80000
   const couplePrice = basePrice * 2 + 10000
   const aisleCols = [7]
   const coupleRow = 'H'
@@ -122,7 +122,7 @@ export default function Combos(){
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">Thời gian giữ ghế:</div>
-            <Countdown seconds={420} onExpire={()=>nav('/movies')} />
+            <Countdown secondsLeft={420} />
           </div>
 
           {/* Poster + tiêu đề */}

@@ -195,7 +195,8 @@ export default function RegisterModal({ open, onClose }:{ open:boolean; onClose:
       if (token){
         const name = user?.name || formData.fullName
         const avatarUrl = user?.avatar || `https://i.pravatar.cc/150?u=${formData.email}`
-        useAuth.getState().setSession({ token, name, email: formData.email, avatar: avatarUrl, role: 'user' })
+        const uid = user?._id || user?.id || null
+        useAuth.getState().setSession({ token, name, email: formData.email, avatar: avatarUrl, role: 'user', userId: uid || undefined })
       }
       // 4. Thay vì alert và close, hãy set state "Thành công"
       setIsSuccess(true)

@@ -9,11 +9,12 @@ type AuthState = {
   name: string | null
   email: string | null
   avatar: string | null
+  userId: string | null
   // login hỗ trợ cả hai dạng gọi:
   // 1) login(role, name?, avatar?)
   // 2) login(email, password, role?)
   login: (...args: any[]) => void
-  setSession: (payload: { token: string; name?: string; email?: string; avatar?: string; role?: Role }) => void
+  setSession: (payload: { token: string; name?: string; email?: string; avatar?: string; role?: Role; userId?: string }) => void
   logout: () => void
   updateAvatar: (avatar: string) => void
   updateProfile: (payload: { name?: string; email?: string; avatar?: string }) => void
@@ -40,6 +41,7 @@ export const useAuth = create<AuthState>((set, get) => {
       name: state.name,
       email: state.email,
       avatar: state.avatar,
+      userId: state.userId,
     }
     try { localStorage.setItem('auth', JSON.stringify(toSave)) } catch {}
     set(next as any)
@@ -51,6 +53,7 @@ export const useAuth = create<AuthState>((set, get) => {
     name: persisted?.name ?? null,
     email: persisted?.email ?? null,
     avatar: persisted?.avatar ?? null,
+    userId: persisted?.userId ?? null,
 
     login: (...args: any[]) => {
       let role: Role = 'user'
@@ -74,13 +77,13 @@ export const useAuth = create<AuthState>((set, get) => {
       persist({ token, role, name, email, avatar })
     },
 
-    setSession: ({ token, name, email, avatar, role }: { token: string; name?: string; email?: string; avatar?: string; role?: Role }) => {
-      persist({ token, role: role ?? 'user', name: name ?? get().name, email: email ?? get().email, avatar: avatar ?? get().avatar })
+    setSession: ({ token, name, email, avatar, role, userId }: { token: string; name?: string; email?: string; avatar?: string; role?: Role; userId?: string }) => {
+      persist({ token, role: role ?? 'user', name: name ?? get().name, email: email ?? get().email, avatar: avatar ?? get().avatar, userId: userId ?? get().userId })
     },
 
     logout: () => {
       try { localStorage.removeItem('auth') } catch {}
-      set({ token: null, role: null, name: null, email: null, avatar: null })
+      set({ token: null, role: null, name: null, email: null, avatar: null, userId: null })
     },
 
     updateAvatar: (newAvatar: string) => {
