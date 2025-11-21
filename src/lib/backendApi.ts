@@ -59,7 +59,9 @@ export const api = {
     const res = await axios.get(`${BASE_URL}/showtimes/${id}`)
     return res.data
   },
+  // Backend trả về { combos: [], pagination: {} } nên ta cần gọi đúng endpoint
   async listCombos() {
+    // Endpoint này khớp với Router.route('/') trong comboRoute.js
     const res = await axios.get(`${BASE_URL}/combos`)
     return res.data
   },
