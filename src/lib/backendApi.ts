@@ -219,7 +219,7 @@ export const api = {
     const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
     const res = await axios.get(`${BASE_URL}/tickets/${id}`, cfg)
     return res.data
-  }
+  },
   // 1. Lấy thông tin cá nhân (GET /v1/users/profile)
   async getProfile() {
     const token = getAuthToken();
