@@ -62,6 +62,26 @@ export const api = {
     }catch{ return { comments: [] } }
   },
 
+  // --- Vé: thêm để khớp kiểu với backendApi ---
+  async listTickets(params?: { page?: number; limit?: number }){
+    await wait(150)
+    const sample = [
+      { id: 'tk1', code: 'OC-0001', movieTitle: 'Avatar', seats: ['A1','A2'], cinema: 'Only Cinema Landmark', room: 'Room A', startTime: '2025-11-30T19:00', price: 180000, status: 'done' },
+      { id: 'tk2', code: 'OC-0002', movieTitle: 'Tron: Ares', seats: ['B3'], cinema: 'Only Cinema Crescent', room: 'Room B', startTime: '2025-12-01T21:00', price: 90000, status: 'pending' },
+    ]
+    const limit = params?.limit || 5
+    const page = params?.page || 1
+    const start = (page-1)*limit
+    const slice = sample.slice(start, start+limit)
+    return { tickets: slice, pagination: { totalPages: Math.ceil(sample.length/limit), currentPage: page } }
+  },
+  async getTicket(id: string){
+    await wait(120)
+    const item = [{ id: 'tk1', code: 'OC-0001', movieTitle: 'Avatar', seats: ['A1','A2'], cinema: 'Only Cinema Landmark', room: 'Room A', startTime: '2025-11-30T19:00', price: 180000, status: 'done' },
+                  { id: 'tk2', code: 'OC-0002', movieTitle: 'Tron: Ares', seats: ['B3'], cinema: 'Only Cinema Crescent', room: 'Room B', startTime: '2025-12-01T21:00', price: 90000, status: 'pending' }].find(t=> String((t as any).id)===String(id))
+    return item || null
+  },
+
   async login(email: string, password: string){
     await wait(200)
     if (!email || !password) return Promise.reject({ response: { data: { message: 'Email/Mật khẩu không hợp lệ' } } })

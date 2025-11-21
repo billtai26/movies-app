@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../../../lib/mockApi'
+import { api } from '../../../lib/api'
 import BookingBreadcrumb from '../../components/BookingBreadcrumb'
 
 export default function Select(){
@@ -18,7 +18,10 @@ export default function Select(){
   const [expandedShowtime, setExpandedShowtime] = React.useState(false)
 
   React.useEffect(()=>{
-    api.listMovies('now').then(setMovies)
+    api.listMovies({ status: 'now_showing' }).then((res: any) => {
+      const list = (res && (res.movies || res.data)) || res
+      setMovies(Array.isArray(list) ? list : [])
+    })
     api.listTheaters().then(setTheaters)
     api.listRooms().then(setRooms)
     api.listShowtimes().then(setShowtimes)

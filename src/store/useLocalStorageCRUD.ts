@@ -37,21 +37,21 @@ export function useLocalStorageCRUD<T extends WithId>(
   }, [key, data])
 
   // 🧩 CRUD methods
-  const addItem = (item: Omit<T, "id"> & Partial<Pick<T, "id">>) => {
-    const id = (item as any).id ?? Date.now().toString()
+  const addItem = (item: Partial<T> & { id?: string | number }) => {
+    const id = item.id ?? Date.now().toString()
     setData((prev) => [...prev, { ...(item as any), id }])
   }
 
   const updateItem = (id: string | number, patch: Partial<T>) => {
-    setData((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)))
+    setData((prev) => prev.map((it) => ((it as any).id === id ? { ...(it as any), ...(patch as any) } : it)))
   }
 
   const deleteItem = (id: string | number) => {
-    setData((prev) => prev.filter((it) => it.id !== id))
+    setData((prev) => prev.filter((it) => (it as any).id !== id))
   }
 
   const replaceItem = (id: string | number, next: T) => {
-    setData((prev) => prev.map((it) => (it.id === id ? next : it)))
+    setData((prev) => prev.map((it) => ((it as any).id === id ? next : it)))
   }
 
   const setAll = (next: T[]) => setData(next)

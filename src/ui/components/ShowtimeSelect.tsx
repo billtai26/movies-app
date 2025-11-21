@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+ 
 
 interface Showtime {
   id: string;
@@ -58,7 +58,7 @@ export const ShowtimeSelect: React.FC<ShowtimeSelectProps> = ({
                     }`}
                   >
                     <div className="text-sm font-medium">
-                      {format(new Date(showtime.startTime), 'HH:mm')}
+                      {new Date(showtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     <div className="text-xs mt-1 opacity-75">
                       {(showtime.price / 1000).toFixed(0)}k

@@ -57,7 +57,7 @@ export default function Payment(){
   }
 
   const aisleCols = [7]
-  const basePrice = show?.price || 0
+  const basePrice = show?.price ?? 80000
   const couplePrice = basePrice * 2 + 10000
 
   const seatSummary = React.useMemo(()=>{

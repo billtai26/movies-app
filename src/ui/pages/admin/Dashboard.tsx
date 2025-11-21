@@ -184,12 +184,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="h-[400px] rounded-xl overflow-hidden">
-          <MapContainer
-            center={mapCenter as [number, number]}
-            zoom={selectedCity === "Tất cả" ? 6 : 11}
-            scrollWheelZoom={false}
-            className="h-full w-full"
-          >
+          <MapContainer className="h-full w-full">
             {/* 👇 MapUpdater giúp tự pan khi đổi khu vực */}
             <MapUpdater
               center={mapCenter as [number, number]}
@@ -197,11 +192,11 @@ export default function AdminDashboard() {
             />
 
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              {...({ attribution: '&copy; OpenStreetMap contributors' } as any)}
             />
             {filteredCinemas.map((c, i) => (
-              <Marker key={i} position={[c.lat, c.lng]} icon={cinemaIcon}>
+              <Marker key={i} position={[c.lat, c.lng]} {...({ icon: cinemaIcon } as any)}>
                 <Popup>
                   <b>{c.name}</b>
                   <br />
