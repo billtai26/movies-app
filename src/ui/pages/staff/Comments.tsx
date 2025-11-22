@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useLocalStorageCRUD } from '../../../store/useLocalStorageCRUD'
-import { seedMockOnce } from '../../../store/seedMock'
+
 
 type CommentItem = {
   id: string
@@ -12,45 +11,7 @@ type CommentItem = {
 }
 
 export default function StaffComments() {
-  seedMockOnce()
-  const { data, addItem, updateItem, replaceItem, deleteItem } = useLocalStorageCRUD<CommentItem>('staff_comments', [])
-  const [query, setQuery] = useState('')
-  const [form, setForm] = useState<Partial<CommentItem>>({ content: '', user: '', movie: '', status: 'visible' })
-  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return data
-    return data.filter(c => (c.content + ' ' + (c.user ?? '') + ' ' + (c.movie ?? '')).toLowerCase().includes(q))
-  }, [query, data])
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.content?.trim()) return
-    if (editingId) {
-      updateItem(editingId, {
-        content: form.content,
-        user: form.user,
-        movie: form.movie,
-        status: (form.status as any) ?? 'visible'
-      })
-      setEditingId(null)
-    } else {
-      addItem({
-        id: Date.now().toString(),
-        content: form.content!.trim(),
-        user: form.user?.trim(),
-        movie: form.movie?.trim(),
-        status: (form.status as any) ?? 'visible',
-        createdAt: new Date().toISOString()
-      } as any)
-    }
-    setForm({ content: '', user: '', movie: '', status: 'visible' })
-  }
-
-  const startEdit = (c: CommentItem) => {
-    setEditingId(c.id)
-    setForm(c)
   }
 
   return (

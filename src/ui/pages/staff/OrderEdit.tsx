@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCollection } from "../../../lib/mockCrud";
-import { seedAll } from "../../../lib/seed";
+
 import CustomSelect from "../../../ui/components/CustomSelect";
 
 export default function OrderEdit() {
@@ -14,7 +14,7 @@ export default function OrderEdit() {
   const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
-    seedAll();
+
   }, []);
 
   const handleEdit = (order: any) => {
@@ -54,17 +54,17 @@ export default function OrderEdit() {
   }, [keyword, pageSize]);
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow space-y-5">
+    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow space-y-5">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Quản lý đơn hàng
         </h2>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           {/* Số dòng/trang */}
           <select
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
+            className="border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-1 text-sm bg-white dark:bg-gray-800"
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
           >
@@ -89,9 +89,9 @@ export default function OrderEdit() {
       </div>
 
       {/* Bảng đơn hàng */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200">
-        <table className="min-w-full text-sm text-gray-700">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+        <table className="min-w-full text-sm text-gray-700 dark:text-gray-200">
+          <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
               <th className="text-left px-3 py-2">Mã đơn</th>
               <th className="text-left px-3 py-2">Tổng tiền (₫)</th>
@@ -103,9 +103,9 @@ export default function OrderEdit() {
             {pageRows.map((order) => (
               <tr
                 key={order.id}
-                className="border-t border-gray-100 hover:bg-gray-50 transition"
+                className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
               >
-                <td className="px-3 py-2 font-medium text-gray-900">
+                <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
                   #{order.id}
                 </td>
                 <td className="px-3 py-2">
@@ -146,7 +146,7 @@ export default function OrderEdit() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 dark:text-gray-300">
           Hiển thị {total === 0 ? 0 : `${start + 1}–${Math.min(end, total)}`} /
           Tổng {total}
         </div>
@@ -156,7 +156,7 @@ export default function OrderEdit() {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
               page <= 1
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
             }`}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
@@ -164,7 +164,7 @@ export default function OrderEdit() {
             Trang trước
           </button>
 
-          <span className="px-2 text-sm font-semibold text-gray-700">
+          <span className="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
             {page} / {totalPages}
           </span>
 
@@ -172,7 +172,7 @@ export default function OrderEdit() {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
               page >= totalPages
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
             }`}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
@@ -184,7 +184,7 @@ export default function OrderEdit() {
 
       {/* Form chỉnh sửa */}
       {editing && (
-        <div className="mt-6 border-t border-gray-200 pt-4">
+        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
           <div className="text-base font-semibold mb-2">
             Đang chỉnh sửa đơn{" "}
             <span className="text-blue-500">#{editing.id}</span>
@@ -210,7 +210,7 @@ export default function OrderEdit() {
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={() => setEditing(null)}
-              className="px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm"
+              className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
             >
               Hủy
             </button>

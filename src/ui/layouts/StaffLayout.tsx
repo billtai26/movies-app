@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DarkToggle from "../components/DarkToggle";
@@ -12,12 +12,26 @@ import {
   Edit3,
   Percent,
   Menu,
+  Film,
 } from "lucide-react";
 
 export default function StaffLayout() {
+  const { role, logout } = useAuth();
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  // 🧩 Bảo vệ route - chỉ cho phép role staff/admin
+  useEffect(() => {
+    if (!role || (role !== "staff" && role !== "admin")) {
+      nav("/auth/login");
+    }
+  }, [role, nav]);
+
+  // Danh sách menu bên trái
   const items = [
     { to: "/staff", label: "Tổng quan", icon: <ClipboardCheck size={16} /> },
     { to: "/staff/checkin", label: "Check-in vé", icon: <Ticket size={16} /> },
+    { to: "/staff/booking", label: "Đặt vé tại quầy", icon: <Film size={16} /> },
     { to: "/staff/seat-change", label: "Đổi ghế tại quầy", icon: <RefreshCw size={16} /> },
     { to: "/staff/combos", label: "Xử lý combo", icon: <Utensils size={16} /> },
     { to: "/staff/reports", label: "Báo cáo sự cố", icon: <FileWarning size={16} /> },
@@ -25,21 +39,18 @@ export default function StaffLayout() {
     { to: "/staff/promo", label: "Ưu đãi tại rạp", icon: <Percent size={16} /> },
   ];
 
-  const { logout } = useAuth();
-  const nav = useNavigate();
-  const [open, setOpen] = useState(false);
-
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar: LUÔN fixed, KHÔNG md:static */}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      {/* === SIDEBAR === */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transition-transform duration-300 dark:bg-gray-800
-        ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg dark:bg-gray-800 transition-transform duration-300 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
       >
         <Sidebar items={items} />
       </aside>
 
-      {/* Overlay mobile */}
+      {/* Overlay (mobile only) */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -47,37 +58,42 @@ export default function StaffLayout() {
         />
       )}
 
-      {/* Main: bù đúng 16rem khi >= md */}
+      {/* === MAIN === */}
       <div className="flex flex-1 flex-col md:ml-64">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-white p-3 dark:border-gray-700 dark:bg-gray-900 md:justify-end">
+        {/* HEADER */}
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900 md:justify-end">
           <div className="flex items-center gap-2 md:hidden">
             <button
               className="rounded-md p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
-              onClick={() => setOpen(!open)}
+              onClick={() => setOpen((v) => !v)}
             >
               <Menu size={20} />
             </button>
             <span className="font-semibold text-gray-700 dark:text-gray-200">
-              Only Cinema Panel
+              Cinesta Panel
             </span>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-3">
             <DarkToggle />
             <button
-              className="btn-outline"
-              onClick={() => { logout(); nav("/auth/login"); }}
+              className="btn-outline text-sm px-3 py-1"
+              onClick={() => {
+                logout();
+                nav("/auth/login");
+              }}
             >
               Đăng xuất
             </button>
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden overflow-y-visible flex justify-center">
+        {/* NỘI DUNG CHÍNH */}
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden overflow-y-auto flex justify-center">
           <div className="w-full max-w-6xl md:max-w-[calc(100vw-16rem)]">
             <Outlet />
           </div>
         </main>
-
       </div>
     </div>
   );
