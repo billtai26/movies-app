@@ -1,27 +1,42 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, User, Clock3 } from "lucide-react";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { ChevronDown, LogOut, User, Clock3, Search } from "lucide-react";
 import { useAuth } from "../../store/auth";
-import DarkToggle from "./DarkToggle";
+// import DarkToggle from "./DarkToggle";
+import HoverDropdown from "./HoverDropdown";
+import MovieDropdown from "./MovieDropdown";
+import AuthModals from "./AuthModals";
+import { api } from "../../lib/api";
+import { useDebounce } from "../../lib/useDebounce";
 
+// ----- Navbar Chính -----
 export default function NavBar() {
   const { role, name, logout } = useAuth();
   const nav = useNavigate();
-
+  const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  
+  // --- THAY ĐỔI 1: State cho kết quả API ---
+  const [searchResults, setSearchResults] = useState<any[]>([]); // State cho kết quả từ API
+  const [isSearching, setIsSearching] = useState(false); // State cho biết đang tải
+  const [theaters, setTheaters] = useState<any[]>([]);
+  useEffect(() => { api.listTheaters().then(setTheaters).catch(()=>setTheaters([])); }, []);
+  
+  // --- THAY ĐỔI 2: Xóa useCollection cho 'movies' ---
+  // const { rows: movies = [] } = useCollection<any>("movies"); // <-- XÓA DÒNG NÀY
 
-  // === MENU CHÍNH ===
-  const menu = [
-    { to: "/movies", label: "Phim" },
-    { to: "/offers", label: "Star Shop" },
-    { to: "/blog", label: "Góc Điện Ảnh" },
-    { to: "/events", label: "Sự Kiện" },
-    { to: "/cinemas", label: "Rạp/Giá Vé" },
-  ];
+  // --- THAY ĐỔI 3: Thêm useDebounce ---
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms delay
 
-  // === Đóng dropdown khi click ngoài ===
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -32,14 +47,112 @@ export default function NavBar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // === Đóng menu mobile khi route đổi ===
+  // Tự động mở popup reset khi điều hướng có state (từ route reset-password)
   useEffect(() => {
-    const closeMenu = () => setMobileOpen(false);
-    window.addEventListener("popstate", closeMenu);
-    return () => window.removeEventListener("popstate", closeMenu);
-  }, []);
+    const st: any = location.state as any;
+    if (st && st.openReset && st.resetToken) {
+      setResetToken(st.resetToken);
+      setShowReset(true);
+    }
+  }, [location]);
 
-  // === JSX ===
+  const closeResetAndCleanUrl = () => {
+    setShowReset(false);
+    setResetToken(null);
+    nav({ pathname: location.pathname }, { replace: true });
+  };
+
+  // --- THAY ĐỔI 4: useEffect mới để gọi API tìm kiếm ---
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      setIsSearching(true);
+      setShowSearchResults(true); // Hiển thị dropdown khi bắt đầu tìm
+      
+      api.listMovies({ q: debouncedSearchQuery, limit: 5 }) // Gọi API với query và giới hạn 5
+        .then((data) => {
+          // API trả về { movies: [...] }
+          if (data.movies && Array.isArray(data.movies)) {
+            setSearchResults(data.movies);
+          } else {
+            setSearchResults([]);
+          }
+        })
+        .catch((err) => {
+          console.error("Lỗi khi tìm kiếm phim:", err);
+          setSearchResults([]);
+        })
+        .finally(() => {
+          setIsSearching(false);
+        });
+    } else {
+      setShowSearchResults(false); // Ẩn nếu không có query
+      setSearchResults([]);
+    }
+  }, [debouncedSearchQuery]); // Chạy lại khi query đã "debounce" thay đổi
+
+  // Dropdown items cho menu Phim
+  const movieDropdownItems = [
+    { label: "Phim Đang Chiếu", to: "/movies?tab=now", description: "Xem các phim đang chiếu tại rạp" },
+    { label: "Phim Sắp Chiếu", to: "/movies?tab=coming", description: "Khám phá phim sắp ra mắt" },
+    { label: "Phim IMAX", to: "/movies?tab=imax", description: "Trải nghiệm điện ảnh đỉnh cao" },
+    { label: "Tất Cả Phim", to: "/movies", description: "Xem toàn bộ danh sách phim" },
+  ];
+
+  // Dropdown items cho Star Shop
+  const starShopDropdownItems = [
+    { label: "Khuyến Mãi", to: "/offers", description: "Ưu đãi và giảm giá đặc biệt" },
+    { label: "Sản Phẩm", to: "/products", description: "Combo bắp nước và quà tặng" },
+    { label: "Thẻ Thành Viên", to: "/membership", description: "Đăng ký thẻ OL-STAR" },
+  ];
+
+  // Dropdown items cho Góc Điện Ảnh
+  const blogDropdownItems = [
+    { label: "Thể Loại Phim", to: "/blog/genres" },
+    { label: "Diễn Viên", to: "/blog/actors" },
+    { label: "Đạo Diễn", to: "/blog/directors" },
+    { label: "Bình Luận Phim", to: "/reviews" },
+    { label: "Blog Điện Ảnh", to: "/movie-blog" },
+  ];
+
+  // Dropdown items cho Sự Kiện (kiểu đơn giản giống mẫu)
+  const eventsDropdownItems = [
+    { label: "Ưu Đãi", to: "/offers" },
+    { label: "Phim Hay Tháng", to: "/events/monthly" },
+  ];
+
+  // Dropdown items cho Rạp/Giá Vé
+  // Dropdown rạp: danh sách rạp cuộn dài giống Galaxy
+  // Lấy danh sách rạp từ collection của ứng dụng
+  const cinemasDropdownItems = (
+    theaters.length > 0
+      ? theaters.map((t: any) => ({ label: t.name, to: `/cinemas?theater=${t._id || t.id}` }))
+      : [
+          { label: "Danh Sách Rạp", to: "/cinemas" },
+        ]
+  );
+
+  // Logic tìm kiếm phim
+  // const filteredMovies = movies.filter(movie =>
+  //   movie.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // ).slice(0, 5); // Chỉ hiển thị tối đa 5 kết quả
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    // setShowSearchResults(value.length > 0);
+  };
+
+  const handleMovieClick = (movieId: string) => {
+    setSearchQuery("");
+    setShowSearchResults(false);
+    setShowSearchInput(false);
+    nav(`/movies/${movieId}`);
+  };
+
+  const handleSearchIconClick = () => {
+    setShowSearchInput(true);
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 dark:bg-gray-900 dark:border-gray-800">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2">
@@ -81,44 +194,122 @@ export default function NavBar() {
           ))}
         </nav>
 
-        {/* PHẦN BÊN PHẢI */}
-        <div className="flex items-center gap-4">
-          <DarkToggle />
+          <div className="flex items-center gap-5">
+            {/* Search Box */}
+            <div className="relative" ref={searchRef}>
+              {!showSearchInput ? (
+                // Chỉ hiển thị icon khi chưa click
+                <button
+                  onClick={handleSearchIconClick}
+                  className="p-2 text-gray-600 hover:text-[#f58a1f] transition-colors"
+                >
+                  <Search size={20} />
+                </button>
+              ) : (
+                // Hiển thị input khi đã click vào icon
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm phim..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    autoFocus
+                    className="pl-10 pr-4 py-2 w-64 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f58a1f] focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              )}
+              
+              {/* --- THAY ĐỔI 5: Cập nhật Dropdown kết quả --- */}
+              {showSearchInput && showSearchResults && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                  
+                  {/* --- Hiển thị loading --- */}
+                  {isSearching && (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
+                      Đang tìm kiếm...
+                    </div>
+                  )}
 
-          {!role ? (
-            <>
-              <Link
-                to="/auth/login"
-                className="text-gray-700 dark:text-gray-200 hover:text-[#f58a1f] text-sm"
-              >
-                Đăng Nhập
-              </Link>
-              <Link
-                to="/auth/register"
-                className="flex items-center gap-1 text-[#007bff] text-sm font-semibold hover:underline"
-              >
-                <span>THAM GIA</span>
-                <span className="text-[#f58a1f] font-bold">OL-STAR</span>
-              </Link>
-            </>
-          ) : (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setOpen((v) => !v)}
-                className="flex items-center gap-2 focus:outline-none"
-              >
-                <img
-                  src="https://i.pravatar.cc/100?img=12"
-                  alt="avatar"
-                  className="w-9 h-9 rounded-full border-2 border-[#f58a1f]"
-                />
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform ${
-                    open ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+                  {/* --- Hiển thị khi không có kết quả --- */}
+                  {!isSearching && searchResults.length === 0 && (
+                    <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
+                      Không tìm thấy phim nào
+                    </div>
+                  )}
+
+                  {/* --- Hiển thị kết quả (thay 'filteredMovies' bằng 'searchResults') --- */}
+                  {!isSearching && searchResults.length > 0 && (
+                    <>
+                      {/* Thay 'filteredMovies' bằng 'searchResults' và key dùng _id */}
+                      {searchResults.map((movie) => (
+                        <button
+                          key={movie._id} // <-- Dùng _id từ MongoDB
+                          onClick={() => handleMovieClick(movie._id)} // <-- Dùng _id
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0 flex items-center gap-3"
+                        >
+                          <img
+                            src={movie.posterUrl || movie.poster || "/placeholder-movie.jpg"} // <-- Dùng posterUrl
+                            alt={movie.title}
+                            className="w-10 h-14 object-cover rounded"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">{movie.title}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {/* Đảm bảo genre là mảng string */}
+                              {Array.isArray(movie.genre) ? movie.genre.join(", ") : (typeof movie.genre === 'string' ? movie.genre : '')}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      
+                      {/* Nút này đã đúng, nó điều hướng tới trang /movies với query */}
+                      <button
+                        onClick={() => {
+                          setShowSearchResults(false);
+                          setShowSearchInput(false);
+                          nav(`/movies?search=${encodeURIComponent(searchQuery)}`);
+                        }}
+                        className="w-full px-4 py-2 text-center text-[#f58a1f] hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+                      >
+                        Xem tất cả kết quả cho "{searchQuery}"
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* <DarkToggle /> */}
+
+            {!token ? (
+              <>
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="text-gray-700 hover:text-[#f58a1f] text-sm"
+                >
+                  Đăng Nhập
+                </button>
+                <button
+                  onClick={() => setShowRegister(true)}
+                  className="text-[#f26b38] text-sm font-semibold hover:underline"
+                >
+                  THAM GIA <span className="text-[#f58a1f] font-bold">OL-STAR</span>
+                </button>
+              </>
+            ) : (
+              <div className="relative" ref={dropdownRef}>
+                <button onClick={() => setOpen(!open)} className="flex items-center gap-2">
+                  <img
+                    src={avatar || "https://i.pravatar.cc/100?img=12"}
+                    alt="avatar"
+                    className="w-9 h-9 rounded-full border-2 border-[#f58a1f]"
+                  />
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${open ? "rotate-180" : ""}`}
+                  />
+                </button>
 
               {open && (
                 <div className="absolute right-0 mt-3 w-48 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden animate-fadeIn">
@@ -231,7 +422,20 @@ export default function NavBar() {
             )}
           </nav>
         </div>
-      )}
-    </header>
+      </header>
+
+      {/* Popup */}
+      <AuthModals
+        loginOpen={showLogin}
+        onLoginClose={() => setShowLogin(false)}
+        onLoginSuccess={() => {
+          setShowLogin(false);
+          window.location.reload();
+        }}
+        resetOpen={showReset}
+        resetToken={resetToken}
+        onResetClose={closeResetAndCleanUrl}
+      />
+    </>
   );
 }

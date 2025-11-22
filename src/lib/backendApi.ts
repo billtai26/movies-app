@@ -1,23 +1,10 @@
-// src/lib/backendApi.ts
-import axios from "axios";
-import { BASE_URL } from "./config";
+import axios from 'axios'
+import { BASE_URL } from './config'
 
-// === Helper: call API with safe error handling ===
-async function safeRequest<T>(promise: Promise<{ data: T }>): Promise<T> {
-  try {
-    const res = await promise;
-    return (res.data as any)?.data ?? res.data;
-  } catch (err: any) {
-    console.error("❌ API Error:", err?.response?.status, err?.response?.data || err.message);
-    throw new Error(err?.response?.data?.message || "Server error");
-  }
-}
-
-// === API Object ===
 export const api = {
-  // 🎬 Movies
-  async listMovies() {
-    return safeRequest(axios.get(`${BASE_URL}/api/movies`));
+  async listMovies(status?: 'now' | 'coming') {
+    const res = await axios.get(`${BASE_URL}/movies`, { params: { status } })
+    return res.data
   },
   async getMovie(id: string) {
     return safeRequest(axios.get(`${BASE_URL}/api/movies/${id}`));
@@ -30,66 +17,56 @@ export const api = {
 
   // 🏢 Theaters
   async listTheaters() {
-    return safeRequest(axios.get(`${BASE_URL}/api/theaters`));
+    const res = await axios.get(`${BASE_URL}/theaters`)
+    return res.data
   },
-
-  // 💺 Rooms / Seats
-  async listRoomsSeats() {
-    return safeRequest(axios.get(`${BASE_URL}/api/roomsseats`));
+  async listRooms(theaterId?: string) {
+    const res = await axios.get(`${BASE_URL}/rooms`, { params: { theaterId } })
+    return res.data
   },
 
   // 🕒 Showtimes
   async listShowtimes() {
-    return safeRequest(axios.get(`${BASE_URL}/api/showtimes`));
+    const res = await axios.get(`${BASE_URL}/showtimes`)
+    return res.data
+  },
+  async listShowtimesByMovie(movieId: string) {
+    const res = await axios.get(`${BASE_URL}/showtimes`, { params: { movieId } })
+    return res.data
   },
   async getShowtime(id: string) {
     return safeRequest(axios.get(`${BASE_URL}/api/showtimes/${id}`));
   },
-
-  // 🍿 Combos
   async listCombos() {
-    return safeRequest(axios.get(`${BASE_URL}/api/combos`));
+    const res = await axios.get(`${BASE_URL}/combos`)
+    return res.data
   },
 
   // 👤 Users
   async listUsers() {
-    return safeRequest(axios.get(`${BASE_URL}/api/users`));
+    const res = await axios.get(`${BASE_URL}/users`)
+    return res.data
   },
-
-  // 🎟 Tickets
-  async listTickets() {
-    return safeRequest(axios.get(`${BASE_URL}/api/tickets`));
+  async listPromos() {
+    const res = await axios.get(`${BASE_URL}/promos`)
+    return res.data
   },
-
-  // 💸 Vouchers
-  async listVouchers() {
-    return safeRequest(axios.get(`${BASE_URL}/api/vouchers`));
+  async listArticles() {
+    const res = await axios.get(`${BASE_URL}/articles`)
+    return res.data
   },
-
-  // === GENERIC CRUD (Admin uses this) ===
   async create<T>(collection: string, item: T) {
-    return safeRequest(axios.post(`${BASE_URL}/api/${collection}`, item));
+    const res = await axios.post(`${BASE_URL}/${collection}`, item)
+    return res.data
   },
 
   async update<T>(collection: string, id: string, item: T) {
-    return safeRequest(axios.put(`${BASE_URL}/api/${collection}/${id}`, item));
+    const res = await axios.put(`${BASE_URL}/${collection}/${id}`, item)
+    return res.data
   },
 
   async remove(collection: string, id: string) {
-    return safeRequest(axios.delete(`${BASE_URL}/api/${collection}/${id}`));
+    const res = await axios.delete(`${BASE_URL}/${collection}/${id}`)
+    return res.data
   },
-
-  // === Generic GET ===
-  async getAll(collection: string) {
-    return safeRequest(axios.get(`${BASE_URL}/api/${collection}`));
-  },
-
-  async getOne(collection: string, id: string) {
-    return safeRequest(axios.get(`${BASE_URL}/api/${collection}/${id}`));
-  },
-
-  // Dùng tên khác tránh trùng create()
-  async createItem(collection: string, data: any) {
-    return safeRequest(axios.post(`${BASE_URL}/api/${collection}`, data));
-  },
-};
+}

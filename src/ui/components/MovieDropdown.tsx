@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCollection } from "../../lib/mockCrud";
+import { api } from "../../lib/api";
 import SidebarMovieCard from "./SidebarMovieCard";
 
 interface MovieDropdownProps {
@@ -14,12 +14,20 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Lấy dữ liệu phim từ mockData
-  const { rows: movies = [] } = useCollection<any>("movies");
-  
-  // Lấy phim đang chiếu và sắp chiếu
-  const nowPlayingMovies = movies.filter(m => m.status === 'now').slice(0, 4);
-  const comingMovies = movies.filter(m => m.status === 'coming').slice(0, 4);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<any[]>([]);
+  const [comingMovies, setComingMovies] = useState<any[]>([]);
+  useEffect(() => {
+    Promise.all([
+      api.listMovies({ status: 'now_showing', limit: 4 }),
+      api.listMovies({ status: 'coming_soon', limit: 4 })
+    ]).then(([now, coming]) => {
+      setNowPlayingMovies((now as any)?.movies || []);
+      setComingMovies((coming as any)?.movies || []);
+    }).catch(() => {
+      setNowPlayingMovies([]);
+      setComingMovies([]);
+    });
+  }, []);
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -68,10 +76,10 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
                 PHIM ĐANG CHIẾU
               </h3>
               <div className="grid grid-cols-4 gap-3">
-                {nowPlayingMovies.map((m) => (
-                  <div key={m.id} onClick={() => setIsOpen(false)}>
+                {nowPlayingMovies.map((m: any) => (
+                  <div key={m._id || m.id} onClick={() => setIsOpen(false)}>
                     <SidebarMovieCard
-                      movie={{ id: m.id, title: m.title, img: m.poster, poster: m.poster, rating: m.rating, ageRating: m.ageRating || "T18" }}
+                      movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: m.poster, poster: m.poster, rating: m.averageRating || m.rating, ageRating: m.ageRating || "T18" }}
                       size="compact"
                     />
                   </div>
@@ -86,10 +94,10 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
                   PHIM SẮP CHIẾU
                 </h3>
                 <div className="grid grid-cols-4 gap-3">
-                  {comingMovies.map((m) => (
-                    <div key={m.id} onClick={() => setIsOpen(false)}>
+                  {comingMovies.map((m: any) => (
+                    <div key={m._id || m.id} onClick={() => setIsOpen(false)}>
                       <SidebarMovieCard
-                        movie={{ id: m.id, title: m.title, img: m.poster, poster: m.poster, rating: m.rating, ageRating: m.ageRating || "T18" }}
+                        movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: m.poster, poster: m.poster, rating: m.averageRating || m.rating, ageRating: m.ageRating || "T18" }}
                         size="compact"
                       />
                     </div>

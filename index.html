@@ -1,5 +1,5 @@
 
-<!doctype html><html lang="vi" class="dark">
+<!doctype html><html lang="vi">
 <head>
       <meta name="color-scheme" content="light dark">
     <style>
@@ -9,11 +9,12 @@
     </style>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cinesta — Movie Booking</title>
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dyxvjfily/image/upload/v1762854706/Colorful_Retro_Illustrative_Tasty_Popcorn_Logo_qsnmkf.png"/>
   <script>
     try{
-      var prefer = (localStorage.getItem('theme')||'dark')==='dark';
-      if(prefer) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
-    }catch(e){ document.documentElement.classList.add('dark'); }
+      localStorage.setItem('theme','light');
+      document.documentElement.classList.remove('dark');
+    }catch(e){ document.documentElement.classList.remove('dark'); }
   </script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-950"><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>

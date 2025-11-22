@@ -5,119 +5,92 @@ import { BASE_URL } from '../lib/config'
 
 export type Role = 'user' | 'staff' | 'admin'
 
-interface AuthState {
+type AuthState = {
+  _id: string | null
   token: string | null
-  user: {
-    name: string | null
-    email: string | null
-    role: Role | null
-  }
-  loading: boolean
-
-  login: (email: string, password: string) => Promise<any>
-  register: (data: { name: string; email: string; password: string; phone?: string }) => Promise<void>
+  role: Role
+  name: string | null
+  email: string | null
+  avatar: string | null
+  userId: string | null
+  // login hỗ trợ cả hai dạng gọi:
+  // 1) login(role, name?, avatar?)
+  // 2) login(email, password, role?)
+  login: (...args: any[]) => void
+  setSession: (payload: { token: string; name?: string; email?: string; avatar?: string; role?: Role; userId?: string }) => void
   logout: () => void
   load: () => void
   isAuthenticated: () => boolean
 }
 
-export const useAuth = create<AuthState>((set, get) => ({
-  token: null,
-  loading: false,
+export const useAuth = create<AuthState>((set, get) => {
+  const persisted = loadPersisted()
 
-  user: {
-    name: null,
-    email: null,
-    role: null,
-  },
-
-  // =====================================
-  // 🟢 LOGIN
-  // =====================================
-  login: async (email, password) => {
-    set({ loading: true })
-    try {
-      const res = await axios.post(`${BASE_URL}/api/auth/login`, { email, password })
-      const { token, user } = res.data
-
-      // Save localStorage
-      localStorage.setItem('auth_token', token)
-      localStorage.setItem('auth_user', JSON.stringify(user))
-
-      // Set axios header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-
-      set({
-        token,
-        user: {
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-      })
-
-      return user
-    } catch (err: any) {
-      throw new Error(err?.response?.data?.message || 'Login failed')
-    } finally {
-      set({ loading: false })
+  const persist = (next: Partial<AuthState>) => {
+    const state = { ...get(), ...next }
+    const toSave = {
+      token: state.token,
+      role: state.role,
+      name: state.name,
+      email: state.email,
+      avatar: state.avatar,
+      userId: state.userId,
     }
-  },
+    try { localStorage.setItem('auth', JSON.stringify(toSave)) } catch {}
+    set(next as any)
+  }
 
-  // =====================================
-  // 🟣 REGISTER
-  // =====================================
-  // FE sẽ gửi: { name, email, password, phone }
-  register: async (data) => {
-    set({ loading: true })
-    try {
-      await axios.post(`${BASE_URL}/api/auth/register`, data)
-    } catch (err: any) {
-      throw new Error(err?.response?.data?.message || 'Register failed')
-    } finally {
-      set({ loading: false })
-    }
-  },
+  return {
+    _id: persisted?._id ?? null,
+    token: persisted?.token ?? null,
+    role: persisted?.role ?? null,
+    name: persisted?.name ?? null,
+    email: persisted?.email ?? null,
+    avatar: persisted?.avatar ?? null,
+    userId: persisted?.userId ?? null,
 
-  // =====================================
-  // 🔒 LOGOUT
-  // =====================================
-  logout: () => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('auth_user')
+    login: (...args: any[]) => {
+      let role: Role = 'user'
+      let name: string | null = null
+      let email: string | null = null
+      let avatar: string | null = null
 
-    delete axios.defaults.headers.common['Authorization']
+      // Dạng (role, name?, avatar?)
+      if (args[0] === 'user' || args[0] === 'staff' || args[0] === 'admin') {
+        role = args[0]
+        name = args[1] ?? 'Guest'
+        avatar = args[2] ?? null
+      } else {
+        // Dạng (email, password, role?)
+        email = args[0] ?? null
+        role = (args[2] as Role) ?? 'user'
+        name = email ? String(email).split('@')[0] : 'Guest'
+      }
 
-    set({
-      token: null,
-      user: { name: null, email: null, role: null },
-    })
-  },
+      const token = 'mock-token'
+      persist({ token, role, name, email, avatar })
+    },
 
-  // =====================================
-  // ⚙️ LOAD FROM LOCALSTORAGE
-  // =====================================
-  load: () => {
-    const token = localStorage.getItem('auth_token')
-    const user = JSON.parse(localStorage.getItem('auth_user') || 'null')
+    setSession: ({ token, name, email, avatar, role, userId }: { token: string; name?: string; email?: string; avatar?: string; role?: Role; userId?: string }) => {
+      persist({ token, role: role ?? 'user', name: name ?? get().name, email: email ?? get().email, avatar: avatar ?? get().avatar, userId: userId ?? get().userId })
+    },
 
-    if (token && user) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      set({
-        token,
-        user: {
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-      })
-    }
-  },
+    logout: () => {
+      try { localStorage.removeItem('auth') } catch {}
+      set({ token: null, role: null, name: null, email: null, avatar: null, userId: null })
+    },
 
-  // =====================================
-  // 🧠 CHECK AUTH
-  // =====================================
-  isAuthenticated: () => {
-    return !!get().token
-  },
-}))
+    updateAvatar: (newAvatar: string) => {
+      persist({ avatar: newAvatar })
+    },
+
+    updateProfile: (payload) => {
+      const next = {
+        name: payload.name !== undefined ? payload.name : get().name,
+        email: payload.email !== undefined ? payload.email : get().email,
+        avatar: payload.avatar !== undefined ? payload.avatar : get().avatar,
+      }
+      persist(next)
+    },
+  }
+})

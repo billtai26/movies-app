@@ -1,48 +1,9 @@
 import React, { useEffect, useState } from "react";
 import CrudTable from "../../components/CrudTable";
-import { api } from "../../../lib/api";
+import { EntitySchema } from "../../../types/entities";
 
-// Helper: format datetime-local
-const toLocalInput = (iso?: string) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-    d.getDate()
-  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
-// Helper: convert back to ISO
-const fromLocalInputToISO = (v?: string) => {
-  if (!v) return "";
-  const d = new Date(v);
-  return d.toISOString();
-};
-
-export default function AdminShowtimes() {
-  const [movies, setMovies] = useState<any[]>([]);
-  const [theaters, setTheaters] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-
-  // 🟢 Load phim, rạp, phòng từ BE
-  useEffect(() => {
-    (async () => {
-      try {
-        const [m, t, r] = await Promise.all([
-          api.getAll("movies"),
-          api.getAll("theaters"),
-          api.getAll("roomsseats"),
-        ]);
-        setMovies(m?.data || m || []);
-        setTheaters(t?.data || t || []);
-        setRooms(r?.data || r || []);
-      } catch (e) {
-        console.error("❌ Lỗi tải dữ liệu:", e);
-      }
-    })();
-  }, []);
-
-  const schema: any = {
+export default function Showtimes() {
+  const schema: EntitySchema = {
     name: "showtimes",
     title: "Lịch chiếu",
     columns: [

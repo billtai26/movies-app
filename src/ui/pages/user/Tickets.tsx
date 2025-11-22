@@ -1,14 +1,121 @@
 
 import React from 'react'
-import { useLocation } from 'react-router-dom'
+import { api } from '../../../lib/api'
+import { useAuth } from '../../../store/auth'
 import QRCode from 'qrcode.react'
+
 export default function Tickets(){
-  const { state } = useLocation() as any
-  const ticket = state?.ticket || JSON.stringify({ sample:true, at: Date.now() })
+  const { token } = useAuth()
+  const [rows, setRows] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState('')
+  const [page, setPage] = React.useState(1)
+  const PAGE_SIZE = 5
+  const [serverTotalPages, setServerTotalPages] = React.useState<number | null>(null)
+  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [selected, setSelected] = React.useState<any | null>(null)
+
+  const normalize = (t:any)=>{
+    const id = t?._id || t?.id
+    const code = t?.code || t?.ticketCode || t?.qrCode || id || ''
+    const movie = t?.movie?.title || t?.movieTitle || t?.movie || ''
+    const seats = Array.isArray(t?.seats) ? t.seats : (typeof t?.seats === 'string' ? t.seats.split(',').map((s:string)=>s.trim()).filter(Boolean) : [])
+    const theater = t?.cinema?.name || t?.theater?.name || t?.cinema || t?.theater || ''
+    const room = t?.room?.name || t?.room || ''
+    const startTime = t?.startTime || t?.showtime?.startTime || t?.time || null
+    const total = t?.total || t?.price || null
+    const status = t?.status || 'done'
+    const createdAt = t?.createdAt || null
+    return { id, code, movie, seats, theater, room, startTime, total, status, createdAt, raw: t }
+  }
+
+  React.useEffect(()=>{
+    setLoading(true)
+    setError('')
+    api.listTickets({ page, limit: PAGE_SIZE })
+      .then((res:any)=>{
+        const arr = res?.tickets || res?.data || res || []
+        const list = Array.isArray(arr) ? arr.map(normalize) : []
+        setRows(list)
+        const tp = res?.pagination?.totalPages || res?.totalPages || null
+        setServerTotalPages(tp ?? null)
+        if (selectedId){
+          const found = list.find(x=> String(x.id)===String(selectedId)) || null
+          setSelected(found)
+        }
+      })
+      .catch((e:any)=>{ setError(e?.response?.data?.message || e?.message || 'Lỗi tải vé') })
+      .finally(()=> setLoading(false))
+  },[page])
+
+  const totalPages = serverTotalPages ?? Math.max(1, (Array.isArray(rows) ? Math.ceil(rows.length / PAGE_SIZE) : 1))
+  const start = (page-1) * PAGE_SIZE
+  const visible = rows.slice(start, start + PAGE_SIZE)
+
+  const handleOpen = async (id:string)=>{
+    setSelectedId(id)
+    setSelected(rows.find(r=> String(r.id)===String(id)) || null)
+    try{
+      const data:any = await api.getTicket(id)
+      const t = normalize(data)
+      setSelected(t)
+    }catch{}
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Vé của tôi</h2>
-      <div className="card flex items-center gap-6"><QRCode value={ticket} size={120}/><div className="text-sm text-gray-600 break-all">{ticket}</div></div>
+      {loading ? (
+        <div className="card">Đang tải...</div>
+      ) : error ? (
+        <div className="card text-red-600 text-sm">{error}</div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map(t=> (
+            <div key={t.id} className="card p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm">{t.movie || 'Vé phim'}</div>
+                  <div className="text-xs text-gray-600">{t.theater}{t.room?` - ${t.room}`:''}</div>
+                  <div className="text-xs text-gray-600">Ghế: {t.seats?.join(', ') || '...'}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm">{t.total!=null ? `${Number(t.total).toLocaleString()} đ` : ''}</div>
+                  <button className="mt-1 px-3 py-1 border rounded text-xs" onClick={()=> handleOpen(String(t.id))}>Xem chi tiết</button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-600">Trang {page}/{totalPages}</div>
+            <div className="flex gap-2">
+              <button className={`px-2 py-1 border rounded text-xs ${page<=1?'opacity-50 cursor-not-allowed':''}`} disabled={page<=1} onClick={()=> setPage(p=> Math.max(1, p-1))}>Trước</button>
+              <button className={`px-2 py-1 border rounded text-xs ${page>=totalPages?'opacity-50 cursor-not-allowed':''}`} disabled={page>=totalPages} onClick={()=> setPage(p=> Math.min(totalPages, p+1))}>Sau</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selected && (
+        <div className="card p-4 space-y-3">
+          <div className="font-semibold">Chi tiết vé</div>
+          <div className="flex items-center gap-4">
+            <QRCode value={JSON.stringify({ type:'ticket', id: selected.id, code: selected.code })} size={120}/>
+            <div className="text-sm text-gray-700 space-y-1">
+              <div>Mã: {selected.code || selected.id}</div>
+              <div>Phim: {selected.movie}</div>
+              <div>Rạp: {selected.theater}{selected.room?` - ${selected.room}`:''}</div>
+              <div>Suất: {selected.startTime ? new Date(selected.startTime).toLocaleString() : '...'}</div>
+              <div>Ghế: {selected.seats?.join(', ') || '...'}</div>
+              <div>Tổng tiền: {selected.total!=null ? `${Number(selected.total).toLocaleString()} đ` : '...'}</div>
+              <div>Trạng thái: {selected.status}</div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button className="px-3 py-1 border rounded text-xs" onClick={()=> setSelected(null)}>Đóng</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -7,12 +7,12 @@ import "slick-carousel/slick/slick-theme.css";
 import { BASE_URL } from "../../lib/config";
 
 export default function Banner() {
-  const [banners, setBanners] = React.useState<string[]>([]);
-React.useEffect(() => {
-  axios.get(`${BASE_URL}/api/vouchers`).then(res => {
-    setBanners(res.data.map((v: any) => v.image));
-  });
-}, []);
+  const banners = [
+    "https://cdn.galaxycine.vn/media/2025/11/13/long-dien-huong-2048_1763019004777.jpg", // Long Diên Hương
+    "https://cdn.galaxycine.vn/media/2025/11/12/trm-2048_1762920318151.jpg", // The Running Man
+    "https://cdn.galaxycine.vn/media/2025/11/5/gdm-mainposter-2048_1762336588270.jpg", // G-Dragon in Cinema
+    "https://cdn.galaxycine.vn/media/2025/10/21/predator-2048_1761030066371.jpg", // Predator: Badlands
+  ];
 
   const sliderRef = React.useRef<Slider>(null);
 

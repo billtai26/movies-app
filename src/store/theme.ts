@@ -2,9 +2,9 @@
 import { create } from 'zustand'
 type ThemeState = { dark:boolean; init:()=>void; toggle:()=>void; set:(v:boolean)=>void }
 export const useTheme = create<ThemeState>((set)=>({
-  dark: true,
+  dark: false,
   init: ()=>set((s)=>{
-    const prefer = (typeof localStorage!=='undefined' && localStorage.theme)? localStorage.theme==='dark' : true
+    const prefer = (typeof localStorage!=='undefined' && localStorage.theme)? localStorage.theme==='dark' : false
     if (typeof document!=='undefined') document.documentElement.classList.toggle('dark', prefer)
     return { dark: prefer }
   }),

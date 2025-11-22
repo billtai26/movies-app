@@ -1,9 +1,12 @@
-import React, { useState } from "react";
-import { useCollection } from "../../lib/mockCrud";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import MovieCard from "./MovieCard";
+import { api } from "../../lib/api";
 
 export default function MovieTabs() {
-  const { rows: movies = [] } = useCollection<any>("movies");
+  const [movies, setMovies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [tab, setTab] = useState<"now" | "coming" | "imax" | "all">("now");
 
   const tabs = [
@@ -13,15 +16,43 @@ export default function MovieTabs() {
     { key: "all", label: "Toàn quốc" },
   ];
 
-  // 🧩 Lọc phim theo trạng thái
-  const filtered =
-    tab === "all"
-      ? movies
-      : tab === "imax"
-      ? movies.filter((m) => m.title?.toLowerCase()?.includes("imax"))
-      : movies.filter((m) => m.status === tab);
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setLoading(true);
+      try {
+        let statusParam = undefined;
+        if (tab === 'now') {
+          statusParam = 'now_showing'; // Gửi 'now_showing' thay vì 'now'
+        } else if (tab === 'coming') {
+          statusParam = 'coming_soon'; // Gửi 'coming_soon' thay vì 'coming'
+        }
+        // Nếu tab là 'imax' hoặc 'all', statusParam vẫn là undefined (để backend tự xử lý)
+        
+        // Gọi API thật từ backendApi.ts
+        const data = await api.listMovies({ status: statusParam }); 
 
-  // Giới hạn hiển thị 8 phim ở tab “Đang chiếu”
+        console.log('DỮ LIỆU API TRẢ VỀ:', JSON.stringify(data, null, 2));
+
+        setMovies(data.movies && Array.isArray(data.movies) ? data.movies : []); // Lưu kết quả vào state
+      } catch (err) {
+        console.error("Lỗi khi fetch phim:", err);
+        setMovies([]); // Đặt mảng rỗng nếu có lỗi
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, [tab]); // Phụ thuộc vào 'tab', khi tab thay đổi, gọi lại API
+
+  // Lọc phim theo tab (logic này giữ nguyên, nó sẽ lọc client-side)
+  // API đã lọc cho 'now' và 'coming' rồi.
+  // Chúng ta chỉ cần lọc client-side cho 'imax' (nếu cần).
+  const filtered =
+    tab === 'imax'
+      ? movies.filter((m) => m.isImax) // Giả sử bạn có trường 'isImax'
+      : movies; // Đối với 'now', 'coming', 'all', chỉ cần dùng mảng 'movies' từ API
+  // Giới hạn 8 phim ở tab "Đang chiếu"
   const visible = tab === "now" ? filtered.slice(0, 8) : filtered;
 
   return (
@@ -49,8 +80,12 @@ export default function MovieTabs() {
         </div>
       </div>
 
-      {/* Movie grid */}
-      {visible.length === 0 ? (
+      {/* 4. Thêm kiểm tra loading */}
+      {loading ? (
+        <p className="text-gray-500 text-sm text-center py-10">
+          Đang tải phim...
+        </p>
+      ) : visible.length === 0 ? (
         <p className="text-gray-500 text-sm text-center py-10">
           Hiện chưa có phim nào trong mục này.
         </p>
@@ -58,62 +93,7 @@ export default function MovieTabs() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             {visible.map((movie) => (
-              <div
-                key={movie._id || movie.id}
-                className="group bg-white rounded-xl shadow-sm overflow-hidden transition hover:shadow-md"
-              >
-                <div className="relative">
-                  <img
-                    src={
-                      movie.posterUrl ||
-                      movie.poster ||
-                      "https://placehold.co/400x600?text=No+Image"
-                    }
-                    alt={movie.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://placehold.co/400x600?text=No+Image";
-                    }}
-                    className="w-full h-[380px] object-cover"
-                  />
-                  {/* Overlay hover */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-300">
-                    <Link
-                      to={`/booking/select?movie=${movie._id || movie.id}`}
-                      className="bg-[#f58a1f] hover:bg-[#f07a00] text-white font-semibold px-4 py-2 rounded-md mb-2 transition"
-                    >
-                      🎟 Mua vé
-                    </Link>
-                    {movie.trailerUrl && (
-                      <a
-                        href={movie.trailerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-white/90 hover:bg-white text-gray-900 font-semibold px-4 py-2 rounded-md transition"
-                      >
-                        ▶ Trailer
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-3">
-                  <h3 className="font-semibold text-sm line-clamp-1 mb-1">
-                    {movie.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span className="px-1.5 py-0.5 rounded bg-gray-800 text-white text-[11px]">
-                      {movie.ageRating || movie.rating || "P"}
-                    </span>
-                    <span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded text-[11px] font-medium">
-                      {movie.ratingCount
-                        ? (movie.rating ?? 8).toFixed(1)
-                        : (Math.random() * 2 + 7).toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <MovieCard key={movie._id} movie={movie} />
             ))}
           </div>
 

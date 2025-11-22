@@ -1,27 +1,33 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../../../lib/api'
+// Giả sử bạn import 'api' giống như bên ResetPassword.tsx
+import { api } from '../../../lib/api' 
 
 export default function ForgotPassword() {
   const nav = useNavigate()
-
+  // 1. Thêm state để lưu email
   const [email, setEmail] = React.useState('')
-  const [loading, setLoading] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(false)
 
-  const sendRequest = async () => {
-    if (!email) return alert("Vui lòng nhập email!")
-
+  // 2. Thêm hàm handleSubmit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) {
+      alert('⚠️ Vui lòng nhập email của bạn')
+      return
+    }
+    
+    setIsLoading(true)
     try {
-      setLoading(true)
-      await api.post('/auth/forgot-password', { email })
-
-      alert("Đã gửi mã OTP đến email của bạn!")
-      nav('/auth/reset-password', { state: { email } })
-
+      // 3. Gọi API forgotPassword
+      const res = await api.requestPasswordReset(email)
+      alert(res?.message || '✅ Đã gửi yêu cầu. Vui lòng kiểm tra email của bạn!')
+      // (Bạn có thể chọn ở lại trang hoặc chuyển đi đâu đó)
+      // nav('/auth/login') 
     } catch (err: any) {
-      alert("Email không tồn tại!")
+      alert(`Lỗi: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -34,22 +40,24 @@ export default function ForgotPassword() {
         Nhập email để nhận mã OTP đặt lại mật khẩu
       </p>
 
-      <input
-        className="input w-full bg-transparent border border-gray-500 text-white placeholder-gray-400 mb-4"
-        placeholder="Email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-
-      <button
-        className="btn-primary w-full bg-blue-600 hover:bg-blue-500 text-white mb-4"
-        disabled={loading}
-        onClick={sendRequest}
-      >
-        {loading ? "Đang gửi..." : "Gửi yêu cầu"}
-      </button>
-
+      {/* 4. Kết nối form và input */}
+      <form onSubmit={handleSubmit}>
+        <input 
+          className="input w-full bg-transparent border border-gray-500 text-white placeholder-gray-400 mb-4" 
+          placeholder="Email" 
+          type="email" // Thêm type="email" để validate tốt hơn
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+        <button 
+          type="submit" // Thêm type="submit"
+          className="btn-primary w-full bg-blue-600 hover:bg-blue-500 text-white mb-4"
+          disabled={isLoading} // Vô hiệu hóa nút khi đang tải
+        >
+          {isLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
+        </button>
+      </form>
+      {/* (Phần còn lại giữ nguyên) */}
       <div className="flex justify-between text-sm">
         <button onClick={() => nav('/auth/login')} className="text-blue-400 hover:underline">
           Đăng nhập

@@ -1,32 +1,10 @@
 import React, { useEffect, useState } from "react";
 import CrudTable from "../../components/CrudTable";
+import { EntitySchema } from "../../../types/entities";
 
-export default function AdminRoomsSeats() {
-  const [theaterOptions, setTheaterOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-
-  // 🟢 Load danh sách rạp thật từ backend Cinesta
-  useEffect(() => {
-    const fetchTheaters = async () => {
-      try {
-        const res = await fetch("http://localhost:8017/api/theaters");
-        const json = await res.json();
-        const opts = (json.data || []).map((c: any) => ({
-          label: c.name,
-          value: c._id,
-        }));
-        setTheaterOptions(opts);
-      } catch (err) {
-        console.error("❌ Lỗi tải danh sách rạp:", err);
-      }
-    };
-    fetchTheaters();
-  }, []);
-
-  // 🧩 Schema chuẩn theo BE Cinesta
-  const schema = {
-    name: "roomsseats", // gọi đúng endpoint /api/roomsseats
+export default function RoomsSeats() {
+  const schema: EntitySchema = {
+    name: "rooms",
     title: "Phòng & Ghế",
     columns: [
       { key: "roomName", label: "Phòng" },

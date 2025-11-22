@@ -223,6 +223,14 @@ html.dark input, html.dark select, html.dark textarea {
   color-scheme: dark !important;
 }
 
+/* Ẩn nút "reveal password" mặc định của Edge để tránh trùng với icon custom */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Ẩn thanh cuộn mọi trình duyệt */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
