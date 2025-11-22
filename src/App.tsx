@@ -55,6 +55,7 @@ import StaffReports from './ui/pages/admin/StaffReports'
 import AdminCombos from './ui/pages/admin/Combos'
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
+import StaffBooking from './ui/pages/staff/StaffBooking'
 // --- 1. Import ToastContainer và CSS ---
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -112,6 +113,7 @@ export default function App(){
         <Route element={<StaffLayout/>}>
           <Route index element={<StaffDashboard/>} />
           <Route path="checkin" element={<CheckIn/>} />
+          <Route path="booking" element={<StaffBooking/>} />
           <Route path="seat-change" element={<SeatChange/>} />
           <Route path="combos" element={<Combos/>} />
           <Route path="reports" element={<Reports/>} />

@@ -1,23 +1,11 @@
-import React, { useEffect } from "react";
+import React from "react";
 import CrudTable from "../../components/CrudTable";
-import { seedAll } from "../../../lib/seed";
-import { useCollection } from "../../../lib/mockCrud";
+import { schemas } from "../../../types/entities";
 
-export default function Genres() {
-  useEffect(() => { seedAll(); }, []);
-  const { rows } = useCollection<any>("genres");
-
-  const schema = {
-    name: "genres",
-    title: "Thể loại",
-    columns: [
-      { key: "id", label: "ID" },
-      { key: "name", label: "Tên thể loại" },
-    ],
-    fields: [
-      { key: "name", label: "Tên thể loại", type: "text", required: true },
-    ],
-  };
-
-  return <CrudTable schema={schema as any} />;
+export default function AdminGenres() {
+  return (
+    <div className="w-full">
+      <CrudTable schema={schemas["genres"]} />
+    </div>
+  );
 }
