@@ -1,6 +1,7 @@
 import React from 'react'
 import { X } from 'lucide-react'
 import { api } from '../../lib/api'
+import { toast } from 'react-toastify'
 
 interface Props {
   open: boolean
@@ -52,11 +53,32 @@ export default function ResetPasswordModal({ open, onClose, token, onLoginOpen }
   const handleBeforeInputPwd = (e:any)=>{
     const ev:any = e?.nativeEvent
     const data = ev?.data
-    if (typeof data === 'string' && data.length>0){ e.preventDefault(); setPassword(p=> p + toTelex(data)) }
+    if (typeof data === 'string' && data.length>0){ 
+      e.preventDefault(); 
+      setPassword(p=> p + toTelex(data)) 
+    }
   }
-  const handlePastePwd = (e:any)=>{ const t = e.clipboardData?.getData?.('text')||''; if(t){ e.preventDefault(); setPassword(p=> p + toTelex(t)) } }
-  const handleBeforeInputConfirm = (e:any)=>{ const d = e?.nativeEvent?.data; if(typeof d==='string'&&d.length>0){ e.preventDefault(); setConfirmPassword(p=> p + toTelex(d)) } }
-  const handlePasteConfirm = (e:any)=>{ const t = e.clipboardData?.getData?.('text')||''; if(t){ e.preventDefault(); setConfirmPassword(p=> p + toTelex(t)) } }
+  const handlePastePwd = (e:any)=>{ 
+    const t = e.clipboardData?.getData?.('text')||''; 
+    if(t){ 
+      e.preventDefault(); 
+      setPassword(p=> p + toTelex(t)) 
+    } 
+  }
+  const handleBeforeInputConfirm = (e:any)=>{ 
+    const d = e?.nativeEvent?.data; 
+    if(typeof d==='string'&&d.length>0){ 
+      e.preventDefault(); 
+      setConfirmPassword(p=> p + toTelex(d)) 
+    } 
+  }
+  const handlePasteConfirm = (e:any)=>{ 
+    const t = e.clipboardData?.getData?.('text')||''; 
+    if(t){ 
+      e.preventDefault(); 
+      setConfirmPassword(p=> p + toTelex(t)) 
+    } 
+  }
   
 
   React.useEffect(() => {
@@ -72,17 +94,29 @@ export default function ResetPasswordModal({ open, onClose, token, onLoginOpen }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!password) { alert('⚠️ Vui lòng nhập mật khẩu mới'); return }
-    if (password.length < 6) { alert('⚠️ Mật khẩu phải có ít nhất 6 ký tự'); return }
+    if (!password) { 
+      toast.warning('⚠️ Vui lòng nhập mật khẩu mới'); 
+      return 
+    }
+    if (password.length < 6) { 
+      toast.warning('⚠️ Mật khẩu phải có ít nhất 6 ký tự'); 
+      return 
+    }
     const p1 = toTelex(password)
     const p2 = toTelex(confirmPassword)
     if (p1 !== password || p2 !== confirmPassword) { setPassword(p1); setConfirmPassword(p2); setError('Mật khẩu không được chứa dấu'); return }
-    if (password !== confirmPassword) { alert('⚠️ Mật khẩu xác nhận không khớp'); return }
-    if (!token) { alert('⚠️ Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn'); return }
+    if (password !== confirmPassword) { 
+      toast.error('⚠️ Mật khẩu xác nhận không khớp'); 
+      return 
+    }
+    if (!token) { 
+      toast.error('⚠️ Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn'); 
+      return 
+    }
     try {
       setSubmitting(true)
       const res = await api.resetPassword(token, password)
-      alert(res?.message || '✅ Đặt lại mật khẩu thành công!')
+      toast.success(res?.message || '✅ Đặt lại mật khẩu thành công!')
       onClose()
       if (onLoginOpen) onLoginOpen()
     } catch (err: any) {
