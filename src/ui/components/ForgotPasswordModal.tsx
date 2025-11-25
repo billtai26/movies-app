@@ -1,9 +1,8 @@
-import React from 'react'
-// 1. Di chuyển import 'api' lên đầu và thêm 'AlertCircle'
+import React, { useState } from 'react'
 import { api } from '../../lib/api' 
 import { X, AlertCircle } from 'lucide-react'
-import { useState } from "react";
-import LoadingOverlay from "./LoadingOverlay";
+import LoadingOverlay from "./LoadingOverlay"
+import { toast } from "react-toastify"
 
 interface Props {
   open: boolean
@@ -12,33 +11,38 @@ interface Props {
 
 export default function ForgotPasswordModal({ open, onClose }: Props) {
   const [email, setEmail] = React.useState('')
-  // 2. Thêm state mới để quản lý màn hình "Thành công"
   const [isSuccess, setIsSuccess] = React.useState(false)
   const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     if (!open) {
       setEmail('')
-      // 3. Reset state thành công khi modal đóng
       setIsSuccess(false)
     }
   }, [open])
 
+  // Helper xử lý lỗi (tương tự như CommentsSection)
+  const getErrorMessage = (error: any) => {
+    if (typeof error === 'string') return error;
+    return error?.response?.data?.message || error?.message || "Có lỗi xảy ra, vui lòng thử lại.";
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) {
-      alert('⚠️ Vui lòng nhập email')
+      toast.warning('Vui lòng nhập email')
       return
     }
     try{
       setIsLoading(true);
-      const res = await api.requestPasswordReset(email) 
+      await api.requestPasswordReset(email) 
       
-      // 4. Thay vì alert và close, set state "Thành công"
+      // Chuyển sang màn hình thành công
       setIsSuccess(true) 
+      toast.success("Đã gửi email khôi phục!")
       
     } catch(err:any){
-      alert(`Gửi yêu cầu thất bại: ${err?.response?.data?.message || err?.message || 'Vui lòng thử lại.'}`)
+      toast.error(getErrorMessage(err))
     } finally {
       setIsLoading(false);
     }
@@ -46,32 +50,28 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
 
   if (!open) return null
 
-  // 5. Render có điều kiện
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       <div 
         className="absolute inset-0 bg-black/50" 
-        // Không cho bấm ra ngoài để đóng khi màn hình thành công hiện ra
+        // Không cho bấm ra ngoài để đóng khi màn hình thành công hiện ra để user chú ý đọc thông báo
         onClick={isSuccess ? undefined : onClose} 
       />
 
       {isSuccess ? (
         // --- NẾU THÀNH CÔNG: HIỂN THỊ MÀN HÌNH NÀY ---
-        <div className="relative z-10 w-[400px] bg-white rounded-xl shadow-2xl p-8 flex flex-col items-center text-center">
-          {/* 6. Dùng icon "chấm than" màu cam */}
+        <div className="relative z-10 w-[400px] bg-white rounded-xl shadow-2xl p-8 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
           <AlertCircle size={64} className="text-orange-500 mb-4" />
           
           <h3 className="text-xl font-semibold text-gray-800 mb-2">
             Đã Gửi Yêu Cầu
           </h3>
           
-          {/* 7. Hiển thị nội dung thông báo từ code FE */}
           <p className="text-sm text-gray-700 mb-6">
-            ✅ Liên kết đặt lại mật khẩu đã được gửi đến email của bạn!
+            ✅ Liên kết đặt lại mật khẩu đã được gửi đến email <strong>{email}</strong>. Vui lòng kiểm tra hộp thư đến (hoặc mục Spam).
           </p>
 
           <button
-            // Nút này sẽ đóng modal
             onClick={onClose} 
             className="w-full bg-[#f58a1f] hover:bg-[#e47316] text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
@@ -81,12 +81,11 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
 
       ) : (
         // --- NẾU CHƯA THÀNH CÔNG: HIỂN THỊ FORM NHƯ CŨ ---
-        <div className="relative z-10 w-[400px] bg-white rounded-xl shadow-2xl p-8">
+        <div className="relative z-10 w-[400px] bg-white rounded-xl shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
           <button className="absolute right-4 top-4 text-gray-400 hover:text-gray-600" onClick={onClose} aria-label="close">
             <X size={20} />
           </button>
           
-          {/* Header với hình ảnh (Giữ nguyên) */}
           <div className="flex flex-col items-center mb-6">
             <div className="mb-4 relative">
               <svg width="120" height="80" viewBox="0 0 120 80" className="mb-2">
@@ -115,7 +114,6 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
             </p>
           </div>
 
-          {/* Form (Giữ nguyên) */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -125,6 +123,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
                 onChange={e => setEmail(e.target.value)} 
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-colors" 
                 placeholder="Nhập Email" 
+                autoFocus
               />
             </div>
             
