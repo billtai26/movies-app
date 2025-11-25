@@ -22,21 +22,31 @@ export interface EntitySchema {
 
 export const schemas: Record<string, EntitySchema> = {
   movies: {
-    name: "movies",
+    name: "movies", // Tên này sẽ được truyền vào api.create('movies', ...)
     title: "Phim",
     columns: [
       { key: "title", label: "Tiêu đề" },
-      { key: "rating", label: "P" },
+      { key: "posterUrl", label: "Poster" }, // Backend thường trả về posterUrl sau khi upload
       { key: "status", label: "Trạng thái" },
     ],
     fields: [
       { key: "title", label: "Tiêu đề", type: "text", required: true },
-      { key: "poster", label: "Poster (URL)", type: "image", required: true },
-      { key: "rating", label: "Phân loại (P)", type: "text" },
+      // Backend api.create tách key 'poster' ra để xử lý file
+      { key: "poster", label: "Poster (File)", type: "image", required: false }, 
+      // Kiểm tra model backend xem dùng key 'rating' hay 'ageRating'
+      { key: "rating", label: "Phân loại (P)", type: "text" }, 
+      // Option value phải khớp với enum trong database (ví dụ: 'now_showing', 'coming_soon')
       { key: "status", label: "Trạng thái", type: "select", options: [
-        { label: "Đang chiếu", value: "now" }, { label: "Sắp chiếu", value: "coming" }
+        { label: "Đang chiếu", value: "now_showing" }, 
+        { label: "Sắp chiếu", value: "coming_soon" },
+        { label: "Ngưng chiếu", value: "ended" }
       ]},
-      { key: "desc", label: "Mô tả", type: "textarea" },
+      // Backend thường dùng 'description' thay vì 'desc'
+      { key: "description", label: "Mô tả", type: "textarea" }, 
+      
+      // Bổ sung các trường cần thiết khác nếu Backend yêu cầu (ví dụ: thời lượng, ngày khởi chiếu)
+      { key: "duration", label: "Thời lượng (phút)", type: "number" },
+      { key: "releaseDate", label: "Ngày khởi chiếu", type: "datetime" },
     ]
   },
   users: {

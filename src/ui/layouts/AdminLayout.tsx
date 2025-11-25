@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { ClipboardList, Menu } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import DarkToggle from "../components/DarkToggle";
 import { useAuth } from "../../store/auth";
 import {
   LayoutDashboard,
@@ -81,7 +80,6 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <DarkToggle />
             <button
               className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 
                          hover:bg-gray-100 dark:hover:bg-gray-800 transition"
