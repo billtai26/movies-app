@@ -201,8 +201,13 @@ export const api = {
   },
   // --- THÊM HÀM MỚI NÀY VÀO ---
   async resetPassword(token: string, password: string) {
-    const url = `${BASE_URL}/users/reset-password`
-    const payload = { token, password }
+    // CÁCH MỚI (Đúng logic backend):
+    // 1. Gắn token vào URL để khớp với route '/reset-password/:resetToken'
+    const url = `${BASE_URL}/users/reset-password/${token}`
+    
+    // 2. Chỉ gửi password trong body để khớp với userValidation
+    const payload = { password } 
+
     const res = await axios.put(url, payload)
     return res.data
   },
