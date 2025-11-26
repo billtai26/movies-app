@@ -44,26 +44,42 @@ export default function CrudTable({
 
       const data = await api.list(schema.name, params);
       
-      // --- SỬA ĐOẠN NÀY ---
-      let listData = [];
+      // --- BẮT ĐẦU ĐOẠN SỬA ---
+      // Logic tìm kiếm mảng dữ liệu thông minh hơn (Smart Data Finding)
+      let listData: any[] = [];
 
       if (Array.isArray(data)) {
-        // Trường hợp API trả về mảng trực tiếp
+        // 1. Nếu trả về mảng trực tiếp -> Lấy luôn
         listData = data;
-      } else if (data[schema.name]) { 
-        // Trường hợp API trả về { movies: [...] } -> Lấy data["movies"]
-        // Đây là dòng giúp fix lỗi của bạn!
-        listData = data[schema.name];
-      } else if (data.results) {
-        // Trường hợp API trả về { results: [...] }
-        listData = data.results;
-      } else if (data.data) {
-        // Trường hợp API trả về { data: [...] }
-        listData = data.data;
+      } else if (data && typeof data === 'object') {
+        // 2. Nếu trả về object, ta sẽ đi tìm mảng bên trong
+        
+        // Ưu tiên 1: Tìm theo đúng tên schema (ví dụ: data['movies'])
+        if (Array.isArray(data[schema.name])) {
+           listData = data[schema.name];
+        }
+        // Ưu tiên 2: Tìm các key phổ biến (results, data, items)
+        else if (Array.isArray(data.results)) {
+           listData = data.results;
+        } else if (Array.isArray(data.data)) {
+           listData = data.data;
+        }
+        // Ưu tiên 3 (Quan trọng nhất): Quét tất cả các key để tìm mảng đầu tiên
+        // Cách này giúp fix lỗi "theaters" vs "cinemas" của bạn
+        else {
+           const keys = Object.keys(data);
+           for (const key of keys) {
+              // Bỏ qua key 'pagination' hoặc các key không phải mảng
+              if (key !== 'pagination' && Array.isArray(data[key])) {
+                 listData = data[key];
+                 break; // Tìm thấy mảng đầu tiên là chốt luôn
+              }
+           }
+        }
       }
       
       setRows(listData || []);
-      // --------------------
+      // --- KẾT THÚC ĐOẠN SỬA ---
 
     } catch (error) {
       console.error("Lỗi lấy dữ liệu:", error);
