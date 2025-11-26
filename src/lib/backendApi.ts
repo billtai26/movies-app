@@ -155,22 +155,42 @@ export const api = {
     
     // XỬ LÝ ĐẶC BIỆT CHO MOVIES
     if (collection === 'movies') {
-       const { poster, ...movieData } = item as any;
-       // B1: Tạo thông tin phim
-       const res = await axios.post(`${BASE_URL}/movies`, movieData, {
+       const rawMovieData = item as any;
+
+       // Chỉ cần xử lý chuyển đổi dữ liệu (String -> Number/Array)
+       const moviePayload = {
+         ...rawMovieData,
+         
+         // 1. Chuyển đổi số
+         durationInMinutes: Number(rawMovieData.durationInMinutes),
+         
+         // 2. Chuyển chuỗi "Hành động, Hài" thành mảng ["Hành động", "Hài"]
+         genres: typeof rawMovieData.genres === 'string' 
+            ? rawMovieData.genres.split(',').map((g: string) => g.trim()) 
+            : rawMovieData.genres,
+
+         // 3. Chuyển chuỗi diễn viên thành mảng
+         actors: typeof rawMovieData.actors === 'string'
+            ? rawMovieData.actors.split(',').map((a: string) => a.trim())
+            : rawMovieData.actors,
+         
+         // 4. posterUrl lấy trực tiếp từ những gì bạn nhập (không cần upload nữa)
+         posterUrl: rawMovieData.posterUrl, 
+       };
+
+       // Xóa các trường thừa
+       delete (moviePayload as any).duration; 
+       delete (moviePayload as any).rating;
+
+       // GỌI 1 API DUY NHẤT
+       const res = await axios.post(`${BASE_URL}/movies`, moviePayload, {
          headers: { Authorization: `Bearer ${token}` }
        });
-       const createdMovie = res.data;
-
-       // B2: Upload poster nếu có
-       if (poster && poster instanceof File) {
-         const movieId = createdMovie.id || createdMovie._id; 
-         await api.uploadMoviePoster(movieId, poster);
-       }
-       return createdMovie;
+       
+       return res.data;
     }
 
-    // CÁC TRƯỜNG HỢP KHÁC
+    // ... (Giữ nguyên logic cho các collection khác) ...
     const url = collection === 'comments' ? `${BASE_URL}/comments` : `${BASE_URL}/${collection}`
     const payload = collection === 'comments' ? ({
       movieId: (item as any)?.movieId,
@@ -188,20 +208,43 @@ export const api = {
 
     // XỬ LÝ ĐẶC BIỆT CHO MOVIES
     if (collection === 'movies') {
-       const { poster, ...movieData } = item as any;
-       // B1: Update thông tin
-       const res = await axios.put(`${BASE_URL}/movies/${id}`, movieData, {
+       const rawMovieData = item as any;
+       
+       const moviePayload = {
+         ...rawMovieData,
+         // Logic chuyển đổi dữ liệu (giữ nguyên như cũ)
+         durationInMinutes: Number(rawMovieData.durationInMinutes),
+         genres: typeof rawMovieData.genres === 'string' 
+            ? rawMovieData.genres.split(',').map((g: string) => g.trim()) 
+            : rawMovieData.genres,
+         actors: typeof rawMovieData.actors === 'string'
+            ? rawMovieData.actors.split(',').map((a: string) => a.trim())
+            : rawMovieData.actors,
+       };
+
+       // --- KHU VỰC DỌN DẸP DỮ LIỆU ---
+       // Xóa các trường thừa hoặc trường hệ thống mà Backend cấm update
+       delete (moviePayload as any)._id; 
+       delete (moviePayload as any).duration; 
+       delete (moviePayload as any).rating;
+
+       // -> THÊM CÁC DÒNG NÀY ĐỂ FIX LỖI:
+       delete (moviePayload as any).averageRating;
+       delete (moviePayload as any).reviewCount;
+       delete (moviePayload as any).createdAt;
+       delete (moviePayload as any).updatedAt;
+       delete (moviePayload as any)._destroy;
+       delete (moviePayload as any).slug; // Xóa luôn slug nếu có (thường slug tự generate)
+
+       // GỌI API
+       const res = await axios.put(`${BASE_URL}/movies/${id}`, moviePayload, {
          headers: { Authorization: `Bearer ${token}` }
        });
        
-       // B2: Update poster nếu chọn file mới
-       if (poster && poster instanceof File) {
-          await api.uploadMoviePoster(id, poster);
-       }
        return res.data;
     }
 
-    // CÁC TRƯỜNG HỢP KHÁC
+    // ... (Giữ nguyên logic cũ cho các collection khác)
     const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
     const res = await axios.put(url, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return res.data
