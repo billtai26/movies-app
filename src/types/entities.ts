@@ -61,6 +61,20 @@ export const schemas: Record<string, EntitySchema> = {
       ]},
     ]
   },
+  // --- THÊM ĐOẠN NÀY VÀO ---
+  genres: {
+    name: "genres", // Tên collection trong database/API
+    title: "Thể loại phim",
+    columns: [
+      { key: "name", label: "Tên thể loại" },
+      { key: "slug", label: "Slug" }, // Thường backend sẽ tự tạo slug, nhưng hiển thị ra để xem
+    ],
+    fields: [
+      { key: "name", label: "Tên thể loại", type: "text", required: true, placeholder: "Ví dụ: Hành động, Kinh dị..." },
+      // Nếu backend yêu cầu nhập slug thủ công thì mở dòng dưới, nếu tự động thì thôi
+      // { key: "slug", label: "Slug", type: "text" }, 
+    ]
+  },
   users: {
     name: "users",
     title: "Người dùng",
@@ -98,7 +112,7 @@ export const schemas: Record<string, EntitySchema> = {
     ]
   },
   theaters: {
-    name: "theaters",
+    name: "cinemas",
     title: "Rạp/Cụm",
     columns: [
       { key: "name", label: "Tên cụm rạp" },

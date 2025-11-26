@@ -244,6 +244,46 @@ export const api = {
        return res.data;
     }
 
+    // CASE 2: XỬ LÝ ĐẶC BIỆT CHO CINEMAS (SỬA LỖI CỦA BẠN TẠI ĐÂY)
+    // CASE 2: XỬ LÝ ĐẶC BIỆT CHO CINEMAS/THEATERS
+    if (collection === 'cinemas' || collection === 'theaters') {
+        const url = `${BASE_URL}/cinemas/${id}`;
+        
+        // --- 1. SAO CHÉP VÀ LỌC DỮ LIỆU (FIX LỖI CỦA BẠN) ---
+        const payload = { ...item } as any; // Tạo bản sao để không ảnh hưởng state gốc
+        
+        // Xóa sạch các trường hệ thống mà Backend cấm
+        delete payload._id;
+        delete payload.createdAt;
+        delete payload.updatedAt;
+        delete payload._destroy;
+        
+        // --- 2. GỬI DỮ LIỆU SẠCH ĐI ---
+        const res = await axios.patch(url, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return res.data;
+    }
+
+    // --- CASE 3: XỬ LÝ CHO GENRES (THÊM ĐOẠN NÀY) ---
+    if (collection === 'genres') {
+        const url = `${BASE_URL}/genres/${id}`;
+        const payload = { ...item } as any;
+
+        // Lọc dữ liệu sạch
+        delete payload._id;
+        delete payload.createdAt;
+        delete payload.updatedAt;
+        delete payload._destroy;
+        delete payload.slug; // Nếu slug tự sinh thì xóa luôn
+
+        // Gọi PATCH
+        const res = await axios.patch(url, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return res.data;
+    }
+
     // ... (Giữ nguyên logic cũ cho các collection khác)
     const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
     const res = await axios.put(url, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
