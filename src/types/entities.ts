@@ -21,32 +21,44 @@ export interface EntitySchema {
 }
 
 export const schemas: Record<string, EntitySchema> = {
-  movies: {
-    name: "movies", // Tên này sẽ được truyền vào api.create('movies', ...)
+ movies: {
+    name: "movies",
     title: "Phim",
     columns: [
       { key: "title", label: "Tiêu đề" },
-      { key: "posterUrl", label: "Poster" }, // Backend thường trả về posterUrl sau khi upload
+      { key: "posterUrl", label: "Poster" },
       { key: "status", label: "Trạng thái" },
     ],
     fields: [
       { key: "title", label: "Tiêu đề", type: "text", required: true },
-      // Backend api.create tách key 'poster' ra để xử lý file
-      { key: "poster", label: "Poster (File)", type: "image", required: false }, 
-      // Kiểm tra model backend xem dùng key 'rating' hay 'ageRating'
-      { key: "rating", label: "Phân loại (P)", type: "text" }, 
-      // Option value phải khớp với enum trong database (ví dụ: 'now_showing', 'coming_soon')
+      { key: "description", label: "Mô tả", type: "textarea", required: true },
+      
+      // --- CÁC TRƯỜNG MỚI/SỬA ---
+      { key: "director", label: "Đạo diễn", type: "text", required: true }, // Thêm mới
+      { key: "actors", label: "Diễn viên", type: "text" }, // (Optional: nếu Backend cần thì thêm)
+      
+      // Sửa key 'duration' thành 'durationInMinutes'
+      { key: "durationInMinutes", label: "Thời lượng (phút)", type: "number", required: true },
+      
+      { key: "releaseDate", label: "Ngày khởi chiếu", type: "datetime", required: true },
+      
+      // Thêm mới: Nhập chuỗi, BackendApi sẽ tách thành mảng
+      { key: "genres", label: "Thể loại (cách nhau dấu phẩy)", type: "text", required: true, placeholder: "Hành động, Hài hước" },
+      
+      { key: "trailerUrl", label: "Trailer URL", type: "text", required: true }, // Thêm mới
+      
+      // Giữ nguyên Poster Url
+      { key: "posterUrl", label: "Poster URL", type: "text", required: true }, 
+
+      // XÓA key 'rating' đi vì Backend báo "not allowed"
+      // { key: "rating", ... } -> Xóa
+      
       { key: "status", label: "Trạng thái", type: "select", options: [
         { label: "Đang chiếu", value: "now_showing" }, 
-        { label: "Sắp chiếu", value: "coming_soon" },
-        { label: "Ngưng chiếu", value: "ended" }
+        { label: "Sắp chiếu", value: "coming_soon" }
+        // Lưu ý: Joi validation chỉ cho phép 'now_showing' hoặc 'coming_soon'. 
+        // Nếu chọn 'ended' sẽ bị lỗi validation, trừ khi sửa Backend.
       ]},
-      // Backend thường dùng 'description' thay vì 'desc'
-      { key: "description", label: "Mô tả", type: "textarea" }, 
-      
-      // Bổ sung các trường cần thiết khác nếu Backend yêu cầu (ví dụ: thời lượng, ngày khởi chiếu)
-      { key: "duration", label: "Thời lượng (phút)", type: "number" },
-      { key: "releaseDate", label: "Ngày khởi chiếu", type: "datetime" },
     ]
   },
   users: {

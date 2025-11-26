@@ -3,6 +3,9 @@ import React, { useEffect, useState } from "react";
 import CrudModal from "./CrudModal";
 import { EntitySchema } from "../../types/entities";
 import { api } from "../../lib/backendApi"; // <--- 1. Import API thật
+import { toast } from "react-toastify";
+// 1. Import component mới
+import ConfirmModal from "./ConfirmModal";
 
 export default function CrudTable({
   schema,
@@ -23,6 +26,10 @@ export default function CrudTable({
   const [pageSize, setPageSize] = useState(5);
   const [keyword, setKeyword] = useState(""); // Tìm kiếm (q)
   const [filters, setFilters] = useState<Record<string, string>>({});
+
+  // 2. Thêm state quản lý việc xóa
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // 1. HÀM GỌI API (Fetch Data)
   const fetchData = async () => {
@@ -89,21 +96,33 @@ export default function CrudTable({
       }
       setOpen(false);
       fetchData(); // Load lại bảng sau khi lưu
-      alert("Thành công!");
+      toast.success("Thành công!");
     } catch (error) {
       console.error("Lỗi lưu dữ liệu:", error);
-      alert("Có lỗi xảy ra, vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     }
   };
 
-  const onRemove = async (id: string) => {
-    if (!window.confirm("Bạn có chắc muốn xoá không?")) return;
+  // 3. Sửa hàm handleDelete (Hàm này được gắn vào nút thùng rác ở bảng)
+  const handleDeleteClick = (id: string) => {
+    // Thay vì window.confirm, ta chỉ set state để mở Modal
+    setDeleteId(id);
+  };
+
+  // 4. Hàm thực sự gọi API (sẽ truyền vào ConfirmModal)
+  const onConfirmDelete = async () => {
+    if (!deleteId) return;
+    
+    setIsDeleting(true); // Bật loading
     try {
-      await api.remove(schema.name, id);
-      fetchData(); // Load lại bảng sau khi xoá
-    } catch (error) {
-      console.error("Lỗi xoá:", error);
-      alert("Không thể xoá mục này.");
+      await api.remove(schema.name, deleteId);
+      toast.success("Đã xóa thành công!");
+      fetchData(); // Load lại bảng
+    } catch (error: any) {
+      toast.error("Lỗi: Không thể xóa bản ghi này.");
+    } finally {
+      setIsDeleting(false); // Tắt loading
+      setDeleteId(null);    // Đóng modal
     }
   };
 
@@ -178,7 +197,7 @@ export default function CrudTable({
                   <td className="px-3 py-2 text-center">
                     <div className="flex justify-center gap-2">
                        <button className="text-blue-600" onClick={() => onEdit(r)}>Sửa</button>
-                       <button className="text-red-600" onClick={() => onRemove(r.id || r._id)}>Xoá</button>
+                       <button  className="text-red-600 hover:underline"  onClick= {() => handleDeleteClick(r.id || r._id)}> Xóa </button>
                     </div>
                   </td>
                 </tr>
@@ -217,6 +236,16 @@ export default function CrudTable({
         value={editing}
         onClose={() => setOpen(false)}
         onSubmit={onSubmit}
+      />
+
+      {/* Modal Xác nhận Xóa (Đặt ở đây là chuẩn nhất) */}
+      <ConfirmModal
+        open={!!deleteId} // Chỉ mở khi deleteId có giá trị (khác null)
+        title="Xác nhận xóa"
+        message="Bạn có chắc chắn muốn xóa dòng dữ liệu này không? Hành động này không thể hoàn tác."
+        onClose={() => setDeleteId(null)}
+        onConfirm={onConfirmDelete}
+        isLoading={isDeleting}
       />
     </div>
   );
