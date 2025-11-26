@@ -42,12 +42,12 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+    <div className="flex w-screen h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* SIDEBAR */}
       <aside
         className={`fixed md:static inset-y-0 left-0 z-40 w-64 transform bg-white dark:bg-gray-900 
                     border-r border-gray-200 dark:border-gray-800 shadow-sm 
-                    transition-transform duration-300 ease-in-out 
+                    transition-transform duration-300 ease-in-out overflow-y-auto
                     ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <Sidebar items={items} />
@@ -62,10 +62,10 @@ export default function AdminLayout() {
       )}
 
       {/* MAIN */}
-      <main className="flex-1 flex flex-col min-h-screen">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* HEADER */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 
-                        p-3 bg-white dark:bg-gray-900 transition-colors duration-300">
+                        p-3 bg-white dark:bg-gray-900 transition-colors duration-300 flex-shrink-0">
           <div className="flex items-center gap-2">
             {/* Menu mobile */}
             <button
@@ -94,8 +94,10 @@ export default function AdminLayout() {
         </div>
 
         {/* PAGE CONTENT */}
-        <div className="flex-1 p-4 sm:p-6 overflow-x-hidden bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
-          <Outlet />
+        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+          <div className="p-4 sm:p-6">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>
