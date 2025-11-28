@@ -103,12 +103,20 @@ export default function CrudTable({
   // 3. HÀM XỬ LÝ THÊM / SỬA / XOÁ
   const onSubmit = async (data: any) => {
     try {
+      // 👉 BẮT ĐẦU SỬA: Biến đổi dữ liệu trước khi gửi đi
+      // Kiểm tra xem schema có định nghĩa toPayload không?
+      // - Nếu có: Chạy qua hàm toPayload để đổi tên trường (type -> cinemaType, theater -> cinemaId...)
+      // - Nếu không: Giữ nguyên data gốc
+      const payload = (schema as any).toPayload ? (schema as any).toPayload(data) : data;
+
+      console.log("Payload gửi đi:", payload);
+
       if (editing) {
         // Gọi API Update
-        await api.update(schema.name, editing.id || editing._id, data);
+        await api.update(schema.name, editing.id || editing._id, payload);
       } else {
         // Gọi API Create
-        await api.create(schema.name, data);
+        await api.create(schema.name, payload);
       }
       setOpen(false);
       fetchData(); // Load lại bảng sau khi lưu

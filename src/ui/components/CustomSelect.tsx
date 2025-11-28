@@ -19,10 +19,10 @@ export default function CustomSelect({
   leadingLabel?: string;
   step?: number;
 }) {
-  console.log(`CustomSelect ${id}: value=${value}, options=`, options);
+  // console.log(`CustomSelect ${id}: value=${value}, options=`, options);
 
   const handleValueChange = (newValue: string) => {
-    console.log(`CustomSelect ${id}: onChange called with`, newValue);
+    // console.log(`CustomSelect ${id}: onChange called with`, newValue);
     onChange(newValue);
   };
 
