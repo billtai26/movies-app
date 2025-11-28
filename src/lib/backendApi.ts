@@ -42,8 +42,10 @@ export const api = {
     return res.data
   },
 
-  async listRooms(theaterId?: string) {
-    const res = await axios.get(`${BASE_URL}/cinemahalls`, { params: { theaterId } })
+  // 1. Cập nhật hàm listRooms để nhận params linh động hơn (cho phân trang/filter)
+  async listRooms(params?: any) {
+    // params có thể là { theaterId: '...' } hoặc { page: 1, limit: 10 }
+    const res = await axios.get(`${BASE_URL}/cinemahalls`, { params })
     return res.data
   },
 
@@ -110,17 +112,20 @@ export const api = {
 
   // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
   // Hàm này giúp CrudTable gọi đúng API dựa vào tên collection (schema.name)
+  // 2. Cập nhật hàm list tổng quát
   async list(collection: string, params?: any) {
-    console.log(`API Generic List: ${collection}`, params);
+    // console.log(`API Generic List: ${collection}`, params);
     
-    // Mapping các collection đặc biệt (tên collection != tên endpoint)
     if (collection === 'movies') return this.listMovies(params);
     if (collection === 'users') return this.listUsers(params);
-    if (collection === 'theaters') return this.listTheaters();
+    if (collection === 'theaters') return this.listTheaters(); // map theaters -> cinemas endpoint
     if (collection === 'promotions') return this.listPromos();
     if (collection === 'tickets') return this.listTickets(params);
     
-    // Mặc định: gọi theo tên collection (ví dụ: comments, showtimes)
+    // --> THÊM DÒNG NÀY: Map tên collection 'cinemaHalls' vào hàm listRooms
+    if (collection === 'cinemaHalls') return this.listRooms(params);
+
+    // Mặc định
     const token = getAuthToken();
     const cfg: any = { params };
     if (token) cfg.headers = { Authorization: `Bearer ${token}` };
@@ -244,40 +249,27 @@ export const api = {
        return res.data;
     }
 
-    // CASE 2: XỬ LÝ ĐẶC BIỆT CHO CINEMAS (SỬA LỖI CỦA BẠN TẠI ĐÂY)
-    // CASE 2: XỬ LÝ ĐẶC BIỆT CHO CINEMAS/THEATERS
-    if (collection === 'cinemas' || collection === 'theaters') {
-        const url = `${BASE_URL}/cinemas/${id}`;
+    // GỘP CASE: Xử lý cho cinemaHalls, cinemas, theaters, genres
+    if (['cinemas', 'theaters', 'genres', 'cinemaHalls'].includes(collection)) {
+        // Map collection name sang endpoint thực tế nếu cần
+        let endpoint = collection;
+        if (collection === 'theaters') endpoint = 'cinemas';
+        if (collection === 'cinemaHalls') endpoint = 'cinemahalls';
+
+        const url = `${BASE_URL}/${endpoint}/${id}`;
         
-        // --- 1. SAO CHÉP VÀ LỌC DỮ LIỆU (FIX LỖI CỦA BẠN) ---
-        const payload = { ...item } as any; // Tạo bản sao để không ảnh hưởng state gốc
+        const payload = { ...item } as any; 
         
-        // Xóa sạch các trường hệ thống mà Backend cấm
+        // Xóa các trường hệ thống
         delete payload._id;
         delete payload.createdAt;
         delete payload.updatedAt;
         delete payload._destroy;
+        delete payload.slug; 
+
+        // Riêng cinemaHalls: API có thể không cho update trực tiếp mảng seats nếu quá lớn, 
+        // nhưng tạm thời cứ gửi cả payload.
         
-        // --- 2. GỬI DỮ LIỆU SẠCH ĐI ---
-        const res = await axios.patch(url, payload, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    }
-
-    // --- CASE 3: XỬ LÝ CHO GENRES (THÊM ĐOẠN NÀY) ---
-    if (collection === 'genres') {
-        const url = `${BASE_URL}/genres/${id}`;
-        const payload = { ...item } as any;
-
-        // Lọc dữ liệu sạch
-        delete payload._id;
-        delete payload.createdAt;
-        delete payload.updatedAt;
-        delete payload._destroy;
-        delete payload.slug; // Nếu slug tự sinh thì xóa luôn
-
-        // Gọi PATCH
         const res = await axios.patch(url, payload, {
             headers: { Authorization: `Bearer ${token}` }
         });

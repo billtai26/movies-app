@@ -2,7 +2,8 @@
 // src/types/entities.ts
 // Schema definitions for admin CRUD rendering
 
-export type FieldType = "text" | "number" | "select" | "datetime" | "textarea" | "image" | "boolean";
+// 1. Thêm 'layout' vào FieldType
+export type FieldType = "text" | "number" | "select" | "datetime" | "textarea" | "image" | "boolean" | "layout";
 
 export interface FieldSchema {
   key: string;
@@ -188,4 +189,18 @@ export const schemas: Record<string, EntitySchema> = {
       ]},
     ]
   },
+  // 2. Thêm schema cinemaHalls (Phòng chiếu)
+  cinemaHalls: {
+    name: "cinemaHalls", // Tên này phải khớp với mapping trong backendApi
+    title: "Phòng chiếu",
+    columns: [
+      { key: "name", label: "Tên phòng" }, // BE thường trả về 'name'
+      { key: "theater", label: "Rạp" },    // Cần populate tên rạp
+      { key: "seatCount", label: "Số ghế" },
+    ],
+    fields: [
+       // Các field sẽ được override trong component để lấy options động
+      { key: "name", label: "Tên phòng", type: "text", required: true },
+    ]
+  }
 };
