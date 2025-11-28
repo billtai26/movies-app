@@ -103,27 +103,28 @@ export default function CrudTable({
   // 3. HÀM XỬ LÝ THÊM / SỬA / XOÁ
   const onSubmit = async (data: any) => {
     try {
-      // 👉 BẮT ĐẦU SỬA: Biến đổi dữ liệu trước khi gửi đi
-      // Kiểm tra xem schema có định nghĩa toPayload không?
-      // - Nếu có: Chạy qua hàm toPayload để đổi tên trường (type -> cinemaType, theater -> cinemaId...)
-      // - Nếu không: Giữ nguyên data gốc
+      console.log("1. Dữ liệu gốc từ Form:", data); // Check log 1
+
+      // 👉 KIỂM TRA VÀ GỌI HÀM toPayload
+      // Dòng này cực kỳ quan trọng: Biến đổi 'theater' thành 'cinemaId'
       const payload = (schema as any).toPayload ? (schema as any).toPayload(data) : data;
 
-      console.log("Payload gửi đi:", payload);
+      console.log("2. Payload gửi đi (Sau khi toPayload):", payload); // Check log 2
+      // Nếu log này vẫn hiện 'theater' mà không có 'cinemaId' -> code toPayload bị lỗi hoặc chưa chạy
 
       if (editing) {
-        // Gọi API Update
         await api.update(schema.name, editing.id || editing._id, payload);
       } else {
-        // Gọi API Create
         await api.create(schema.name, payload);
       }
+
       setOpen(false);
-      fetchData(); // Load lại bảng sau khi lưu
+      fetchData();
       toast.success("Thành công!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi lưu dữ liệu:", error);
-      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
+      const msg = error?.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại.";
+      toast.error(msg);
     }
   };
 
@@ -156,7 +157,15 @@ export default function CrudTable({
     setOpen(true);
   };
   const onEdit = (r: any) => {
-    setEditing(r);
+    // 👉 SỬA ĐOẠN NÀY:
+    // Kiểm tra xem schema có hàm toForm không?
+    // - Nếu có: Chạy dữ liệu thô (r) qua hàm toForm để biến đổi (map cinemaId -> theater, Config -> chuỗi...)
+    // - Nếu không: Dùng nguyên dữ liệu thô
+    const formData = (schema as any).toForm ? (schema as any).toForm(r) : r;
+    
+    // console.log("Dữ liệu sau khi toForm:", formData); // Debug xem có dữ liệu chưa
+
+    setEditing(formData);
     setOpen(true);
   };
 
