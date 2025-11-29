@@ -283,4 +283,20 @@ export const api = {
       { headers: { Authorization: `Bearer ${token}` } }
     );
   },
+
+   // ================= AI CHAT =================
+  async aiHistory(userId: string) {
+    const res = await axios.get(`${BASE_URL}/ai/history`, {
+      params: { userId }
+    });
+    return res.data; // mảng [{role, content}]
+  },
+
+  async aiChat(userId: string | null, message: string) {
+    const res = await axios.post(`${BASE_URL}/ai/chat`, {
+      userId,
+      message
+    });
+    return res.data; // { reply: string }
+  },
 }

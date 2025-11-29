@@ -56,6 +56,7 @@ import AdminCombos from './ui/pages/admin/Combos'
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
 import StaffBooking from './ui/pages/staff/StaffBooking'
+import AiChatBox from './ui/components/AiChatBox';
 // --- 1. Import ToastContainer và CSS ---
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -149,7 +150,9 @@ export default function App(){
       <Route path="/auth/reset-password/:token" element={<ResetPassword />} />
 
       <Route path="*" element={<Navigate to="/" replace/>} />
+
     </Routes>
+    <AiChatBox />
   </>
   )
 }
