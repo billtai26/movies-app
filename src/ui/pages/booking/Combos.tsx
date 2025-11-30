@@ -251,8 +251,15 @@ export default function Combos() {
             className="btn-next"
             onClick={() =>
               nav('/booking/payment', {
-                state: { ...state, qty, selected: selectedSeats, comboTotal, ticketTotal: seatInfo.total }
-              })
+              state: { 
+                ...state, 
+                qty, 
+                selected: selectedSeats, 
+                comboTotal, 
+                ticketTotal: seatInfo.total,
+                grandTotal: seatInfo.total + comboTotal  // 🔥 THÊM DÒNG NÀY
+              }
+            })
             }
           >
             Tiếp tục
