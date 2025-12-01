@@ -147,6 +147,28 @@ function Confirm() {
     return lines.join("\n");
   }, [userName, seatLabels, amount, bookingCode, state?.movieTitle, momoParams.transId]);
 
+import React from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import QRCode from 'qrcode.react'
+import BookingBreadcrumb from '../../components/BookingBreadcrumb'
+import { api } from '../../../lib/api'
+
+export default function Confirm(){
+  const { state } = useLocation() as any
+  const nav = useNavigate()
+  const payload = JSON.stringify({ type:'ticket', at: Date.now(), ...state })
+  const ticketTotal = state?.ticketTotal ?? 0
+  const comboTotal = state?.comboTotal ?? 0
+  const grandTotal = state?.grandTotal ?? (ticketTotal + comboTotal)
+  const seatLabels = state?.selected?.join(', ')
+  React.useEffect(()=>{
+    const showtimeId = state?.show?._id || state?.id || state?.show?.id
+    const seats = Array.isArray(state?.selected) ? state.selected : []
+    const theaterId = state?.theater?._id || state?.theater?.id || state?.theaterId
+    const movieId = state?.movie?._id || state?.movie?.id || state?.movieId
+    const body = { showtimeId, seats, total: grandTotal, theaterId, movieId, status: 'paid' }
+    api.createMyTicket(body).catch(()=>{})
+  },[])
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <div className="md:col-span-2">
@@ -155,39 +177,12 @@ function Confirm() {
 
       {/* BÊN TRÁI: QR */}
       <div className="card text-center">
-        <div className="mb-2 text-xl font-semibold">Thanh toán thành công!</div>
-
-        <div className="flex justify-center">
-          <QRCode value={qrText} size={220} />
+        <div className="mb-2 text-xl font-semibold">Thanh toán thành công</div>
+        <div className="flex justify-center"><QRCode value={payload} size={220}/></div>
+        <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 break-all">{payload}</div>
+        <div className="mt-3">
+          <button className="btn-primary" onClick={()=> nav('/tickets')}>Xem lịch sử vé</button>
         </div>
-
-        <div className="mt-3 space-y-1 text-sm text-gray-700">
-          <div>
-            Mã đặt vé:{" "}
-            <span className="font-semibold">{bookingCode}</span>
-          </div>
-          <div>
-            Số tiền:{" "}
-            <span className="font-semibold">
-              {amount.toLocaleString("vi-VN")} đ
-            </span>
-          </div>
-          {seatLabels && (
-            <div>
-              Ghế: <span className="font-semibold">{seatLabels}</span>
-            </div>
-          )}
-          <div>
-            Tên khách hàng:{" "}
-            <span className="font-semibold">{userName}</span>
-          </div>
-        </div>
-
-        {loading && (
-          <div className="mt-2 text-xs text-gray-500">
-            Đang đồng bộ thông tin vé...
-          </div>
-        )}
       </div>
 
       {/* BÊN PHẢI: TÓM TẮT VÉ */}
