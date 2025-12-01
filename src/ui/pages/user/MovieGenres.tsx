@@ -7,22 +7,59 @@ import QuickBooking from "../../components/QuickBooking";
 export default function MovieGenres() {
   const [movies, setMovies] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  React.useEffect(() => {
-    setLoading(true);
-    api.listMovies()
-      .then((data: any) => {
-        const arr = data?.movies || data || [];
-        setMovies(Array.isArray(arr) ? arr : []);
-      })
-      .catch(() => setMovies([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const [genreList, setGenreList] = React.useState<any[]>([]);
+  const [genreOptions, setGenreOptions] = React.useState<{value:string,label:string}[]>([]);
 
   const [genre, setGenre] = React.useState<string>("Tất cả");
   const [country, setCountry] = React.useState<string>("Tất cả");
   const [year, setYear] = React.useState<string>("2025");
   const [status, setStatus] = React.useState<string>("now");
   const [sort, setSort] = React.useState<string>("Xem Nhiều Nhất");
+
+  React.useEffect(() => {
+    setLoading(true);
+    const statusParam = status === 'now' ? 'now_showing' : (status === 'coming' ? 'coming_soon' : undefined);
+    const params: any = {};
+    if (statusParam) params.status = statusParam;
+    if (genre && genre !== 'Tất cả') {
+      const found = genreList.find((g:any)=> (g.name===genre) || (g.slug===genre) || (String(g.id)===String(genre)) )
+      const val = found ? (found.slug || found.name || found.id) : genre
+      params.genre = val
+    }
+    if (country && country !== 'Tất cả') params.country = country;
+    if (year) params.year = year;
+    if (sort) params.sort = (sort === 'Xem Nhiều Nhất') ? 'popular' : 'latest';
+    api.listMovies(params)
+      .then((data: any) => {
+        const arr = data?.movies || data || [];
+        setMovies(Array.isArray(arr) ? arr : []);
+      })
+      .catch(() => setMovies([]))
+      .finally(() => setLoading(false));
+  }, [genre, country, year, status, sort, genreList]);
+
+  React.useEffect(() => {
+    api.listGenres()
+      .then((data: any) => {
+        const arr = data?.genres || data || [];
+        setGenreList(Array.isArray(arr) ? arr : []);
+      })
+      .catch(() => setGenreList([]));
+  }, []);
+
+  React.useEffect(() => {
+    const fromApi = (genreList || []).map((g:any)=> ({ value: g.slug || g.name || g.id, label: g.name || g.label || g.slug || String(g.id) }))
+    const fromMoviesSet = new Set<string>()
+    movies.forEach((m:any)=>{
+      const arr = Array.isArray(m.genres) ? m.genres : (typeof m.genres === 'string' ? m.genres.split(',').map((x:string)=>x.trim()) : [])
+      arr.forEach((x:string)=>{ if (x) fromMoviesSet.add(x) })
+    })
+    const fromMovies = Array.from(fromMoviesSet).map((x)=> ({ value: x, label: x }))
+    const seen = new Set<string>()
+    const merged: {value:string,label:string}[] = []
+    ;[...fromApi, ...fromMovies].forEach(opt=>{ const k = String(opt.label).toLowerCase(); if (!seen.has(k)){ seen.add(k); merged.push(opt) } })
+    setGenreOptions(merged)
+  }, [genreList, movies])
 
   const filtered = movies.filter((m: any) => {
     if (status === "all") return true;
@@ -44,10 +81,10 @@ export default function MovieGenres() {
         {/* Filters bar */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <select value={genre} onChange={(e) => setGenre(e.target.value)} className="border rounded px-3 py-1.5 text-sm">
-            <option>Tất cả</option>
-            <option>Hành động</option>
-            <option>Tình cảm</option>
-            <option>Kinh dị</option>
+            <option value="Tất cả">Tất cả</option>
+            {genreOptions.map((g)=> (
+              <option key={g.value} value={g.value}>{g.label}</option>
+            ))}
           </select>
           <select value={country} onChange={(e) => setCountry(e.target.value)} className="border rounded px-3 py-1.5 text-sm">
             <option>Tất cả</option>
@@ -78,10 +115,14 @@ export default function MovieGenres() {
           <p className="text-gray-500 text-sm text-center py-10">Đang tải phim...</p>
         ) : (
           <div className="space-y-4">
-            {filtered.map((m: any, idx: number) => (
+            {(genre==='Tất cả' ? filtered : filtered.filter((m:any)=>{
+              const arr = Array.isArray((m as any).genres) ? (m as any).genres : (typeof (m as any).genres === 'string' ? (m as any).genres.split(',').map((x:string)=>x.trim()) : []);
+              const norm = (s:string)=> String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+              return arr.some((x:string)=> norm(x) === norm(genre));
+            })).map((m: any, idx: number) => (
               <div key={m._id || m.id} className="grid grid-cols-[220px_1fr] gap-4 p-3 border rounded">
                 <Link to={`/movies/${m._id || m.id}`} className="block w-[220px] h-[140px] rounded overflow-hidden bg-gray-100">
-                  <img src={m.poster} alt={m.title || m.name} className="w-full h-full object-cover" />
+                  <img src={m.posterUrl || m.poster} alt={m.title || m.name} className="w-full h-full object-cover" />
                 </Link>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
@@ -114,10 +155,10 @@ export default function MovieGenres() {
           <h3 className="text-base font-semibold border-l-4 border-blue-600 pl-2 mb-3">PHIM ĐANG CHIẾU</h3>
           <div className="space-y-3">
             {nowPlaying.length > 0 && (
-              <SidebarMovieCard movie={{ id: (nowPlaying[0] as any)._id || nowPlaying[0].id, title: nowPlaying[0].title || (nowPlaying[0] as any).name, img: nowPlaying[0].poster, rating: (nowPlaying[0] as any).averageRating || nowPlaying[0].rating }} size="large" />
+              <SidebarMovieCard movie={{ id: (nowPlaying[0] as any)._id || nowPlaying[0].id, title: nowPlaying[0].title || (nowPlaying[0] as any).name, img: (nowPlaying[0] as any).posterUrl || nowPlaying[0].poster, rating: (nowPlaying[0] as any).averageRating || nowPlaying[0].rating }} size="default" />
             )}
             {nowPlaying.slice(1).map((p: any) => (
-              <SidebarMovieCard key={p._id || p.id} movie={{ id: p._id || p.id, title: p.title || p.name, img: p.poster, rating: p.averageRating || p.rating }} size="default" />
+              <SidebarMovieCard key={p._id || p.id} movie={{ id: p._id || p.id, title: p.title || p.name, img: (p as any).posterUrl || p.poster, rating: (p as any).averageRating || p.rating }} size="default" />
             ))}
           </div>
           <Link to="/movies" className="block mx-auto mt-4 w-fit border border-orange-500 text-orange-500 px-5 py-2 rounded-lg text-sm font-medium hover:bg-orange-500 hover:text-white transition">

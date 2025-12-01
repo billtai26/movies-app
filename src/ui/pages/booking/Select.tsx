@@ -21,10 +21,29 @@ export default function Select(){
     api.listMovies({ status: 'now_showing' }).then((res: any) => {
       const list = (res && (res.movies || res.data)) || res
       setMovies(Array.isArray(list) ? list : [])
-    })
-    api.listTheaters().then(setTheaters)
-    api.listRooms().then(setRooms)
-    api.listShowtimes().then(setShowtimes)
+    }).catch(()=> setMovies([]))
+    api.listTheaters().then((res:any)=>{
+      const raw = Array.isArray(res) ? res : (res.cinemas || res.theaters || res.data || [])
+      const list = (Array.isArray(raw) ? raw : []).map((t:any)=> ({ id: (t._id || t.id), name: t.name, city: t.city || t.location?.city || t.region }))
+      setTheaters(list)
+    }).catch(()=> setTheaters([]))
+    api.listRooms().then((res:any)=>{
+      const raw = Array.isArray(res) ? res : (res.cinemaHalls || res.rooms || res.data || [])
+      const list = (Array.isArray(raw) ? raw : []).map((r:any)=> ({ id: (r._id || r.id), name: r.name || r.hallName }))
+      setRooms(list)
+    }).catch(()=> setRooms([]))
+    api.listShowtimes().then((res:any)=>{
+      const raw = Array.isArray(res) ? res : (res.showtimes || res.data || [])
+      const list = (Array.isArray(raw) ? raw : []).map((s:any)=> ({
+        id: (s._id || s.id),
+        movieId: s.movieId || s.movie?._id || s.movie,
+        theaterId: s.theaterId || s.cinemaId || s.cinema?._id || s.theater,
+        roomId: s.roomId || s.hallId || s.cinemaHall?._id || s.room,
+        startTime: s.startTime || s.start_at || s.startAt,
+        price: s.price || s.basePrice || 0,
+      }))
+      setShowtimes(list)
+    }).catch(()=> setShowtimes([]))
   },[])
 
   // Danh sách thành phố rút ra từ dữ liệu rạp (fallback nếu trống)
@@ -42,10 +61,10 @@ export default function Select(){
 
   // Lọc suất theo phim đã chọn và rạp thuộc thành phố đã chọn
   const filteredShowtimes = React.useMemo(()=>{
-    const theaterIds = new Set(theatersInCity.map((t:any)=> String(t.id)))
+    const theaterIds = new Set(theatersInCity.map((t:any)=> String((t._id || t.id))))
     return showtimes.filter(s =>
       (!movie || String(s.movieId)===String(movie)) &&
-      (city ? theaterIds.has(String(s.theaterId)) : true)
+      (city ? theaterIds.has(String((s as any).theaterId)) : true)
     )
   },[showtimes, movie, city, theatersInCity])
 
@@ -91,14 +110,14 @@ export default function Select(){
 
   const [theaterFilter, setTheaterFilter] = React.useState<string>('')
 
-  const selectedMovie = React.useMemo(()=> movies.find(m=> String(m.id)===String(movie)),[movies, movie])
-  const selectedShowtimeObj = React.useMemo(()=> showtimes.find(st=> String(st.id)===String(selectedShowtime)) || null,[showtimes, selectedShowtime])
+  const selectedMovie = React.useMemo(()=> movies.find(m=> String((m as any)._id || m.id)===String(movie)),[movies, movie])
+  const selectedShowtimeObj = React.useMemo(()=> showtimes.find(st=> String((st as any)._id || st.id)===String(selectedShowtime)) || null,[showtimes, selectedShowtime])
   const theaterNameById = React.useCallback((id:string)=>{
-    const t = theaters.find(th=> String(th.id)===String(id))
+    const t = theaters.find(th=> String((th as any)._id || th.id)===String(id))
     return t?.name || ''
   },[theaters])
   const roomNameById = React.useCallback((id:string)=>{
-    const r = rooms.find(ro=> String(ro.id)===String(id))
+    const r = rooms.find(ro=> String((ro as any)._id || ro.id)===String(id))
     return r?.name || ''
   },[rooms])
 
@@ -167,17 +186,18 @@ export default function Select(){
             {expandedMovie ? (
               <div className="space-y-3 opacity-100">
                 {movies.map(m => {
-                  const active = String(movie)===String(m.id)
+                  const mId = (m as any)._id || m.id
+                  const active = String(movie)===String(mId)
                   return (
-                    <button key={m.id}
+                    <button key={mId}
                       className={`w-full film-list border rounded-lg p-2 flex items-center gap-3 ${active?'border-orange-500 bg-orange-50':''}`}
-                      onClick={()=> setMovie(String(m.id))}
+                      onClick={()=> setMovie(String(mId))}
                     >
-                      <img src={m.poster||'https://picsum.photos/200/200'} alt={m.title} className="w-16 h-20 object-cover rounded" />
+                      <img src={(m as any).posterUrl || m.poster || 'https://picsum.photos/200/200'} alt={(m as any).title || (m as any).name} className="w-16 h-20 object-cover rounded" />
                       <div className="flex-1 text-left">
-                        <div className="font-medium">{m.title}</div>
+                        <div className="font-medium">{(m as any).title || (m as any).name}</div>
                       </div>
-                      <div className="film-number"><span className="px-2 py-1 rounded bg-gray-100">{m.ageRating||'C16'}</span></div>
+                      <div className="film-number"><span className="px-2 py-1 rounded bg-gray-100">{(m as any).ageRating || 'C16'}</span></div>
                     </button>
                   )
                 })}
@@ -238,9 +258,9 @@ export default function Select(){
                           {items
                             .sort((a:any,b:any)=> new Date(a.startTime).getTime()-new Date(b.startTime).getTime())
                             .map((st:any)=> (
-                              <button key={st.id}
+                              <button key={(st as any)._id || st.id}
                                 className={`px-3 py-1.5 rounded border hover:bg-orange-50 ${String(selectedShowtime)===String(st.id)?'border-orange-500 bg-orange-50':''}`}
-                                onClick={()=> setSelectedShowtime(String(st.id))}
+                                onClick={()=> setSelectedShowtime(String((st as any)._id || st.id))}
                               >{new Date(st.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute:'2-digit' })}</button>
                             ))}
                         </div>
@@ -258,19 +278,19 @@ export default function Select(){
         <aside className="space-y-4 md:sticky md:top-4">
           <div className="card p-5 space-y-4">
             <div className="flex gap-4">
-              {selectedMovie?.poster ? (
-                <img src={selectedMovie.poster} alt={selectedMovie.title} className="h-48 w-32 rounded-lg object-cover" />
+              {((selectedMovie as any)?.posterUrl || selectedMovie?.poster) ? (
+                <img src={(selectedMovie as any).posterUrl || (selectedMovie as any).poster} alt={(selectedMovie as any)?.title || (selectedMovie as any)?.name} className="h-48 w-32 rounded-lg object-cover" />
               ) : (
                 <div className="h-48 w-32 rounded-lg border flex items-center justify-center text-gray-400">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-10 h-10"><path fill="currentColor" d="M4 5h16v14H4z"/><path fill="#fff" d="M7 8h10v8H7z"/></svg>
                 </div>
               )}
               <div className="text-base">
-                <div className="text-xl font-semibold leading-tight">{selectedMovie?.title || '-'}</div>
+                <div className="text-xl font-semibold leading-tight">{(selectedMovie as any)?.title || (selectedMovie as any)?.name || '-'}</div>
                 <div className="text-sm text-gray-700 flex items-center gap-2 mt-2">
                   <span>2D Phụ Đề</span>
                   {(()=>{
-                    const badge = selectedMovie?.ageRating ?? (selectedMovie?.rating!=null ? `T${selectedMovie.rating}` : null)
+                    const badge = (selectedMovie as any)?.ageRating ?? ((selectedMovie as any)?.rating!=null ? `T${(selectedMovie as any).rating}` : null)
                     return badge ? <span className="inline-block px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700">{badge}</span> : null
                   })()}
                 </div>

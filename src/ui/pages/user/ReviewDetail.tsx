@@ -3,16 +3,21 @@ import { useParams, Link } from "react-router-dom";
 import { getReviewById } from "../../../lib/mockReviews";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
 import QuickBooking from "../../components/QuickBooking";
+import { api } from "../../../lib/api";
 
 export default function ReviewDetail() {
   const { id } = useParams();
   const review = React.useMemo(() => (id ? getReviewById(id) : null), [id]);
-
-  const nowPlaying = [
-    { id: "m1", name: "Nhà Ma Xó", img: "https://picsum.photos/300/200?random=10", rating: "7.0" },
-    { id: "m2", name: "Cục Vàng Của Ngoại", img: "https://picsum.photos/300/200?random=11", rating: "8.4" },
-    { id: "m3", name: "Tee Yod: Quỷ Ăn Tạng 3", img: "https://picsum.photos/300/200?random=12", rating: "7.5" },
-  ];
+  const [nowPlaying, setNowPlaying] = React.useState<any[]>([])
+  React.useEffect(()=>{
+    api.listMovies({ status: 'now_showing', limit: 4 })
+      .then((res:any)=>{
+        const list = res?.movies || res || []
+        const mapped = (Array.isArray(list) ? list : []).map((m:any)=> ({ id: m._id || m.id, name: m.title || m.name, img: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating }))
+        setNowPlaying(mapped.slice(0,3))
+      })
+      .catch(()=> setNowPlaying([]))
+  },[])
 
   if (!id || !review) {
     return (
