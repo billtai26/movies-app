@@ -22,12 +22,7 @@ const getAuthToken = () => {
 
 export const api = {
   // --- 1. CÁC HÀM GET DỮ LIỆU CỤ THỂ ---
-  async listMovies(params?: { 
-    status?: 'now_showing' | 'coming_soon'; 
-    limit?: number; 
-    page?: number;
-    q?: string; 
-  }) {
+  async listMovies(params?: any) {
     const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },
@@ -80,6 +75,11 @@ export const api = {
     return res.data
   },
 
+  async listGenres() {
+    const res = await axios.get(`${BASE_URL}/genres`)
+    return res.data
+  },
+
   async listArticles() {
     const res = await axios.get(`${BASE_URL}/articles`)
     return res.data
@@ -108,6 +108,53 @@ export const api = {
     const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
     const res = await axios.get(`${BASE_URL}/tickets/${id}`, cfg)
     return res.data
+  },
+
+  async listMyTickets(params?: { page?: number; limit?: number }){
+    const token = getAuthToken();
+    const cfg: any = {};
+    if (params) cfg.params = params;
+    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
+    const endpoints = [
+      '/tickets',
+      '/orders',
+      '/bookings',
+      '/users/tickets',
+      '/tickets/me'
+    ];
+    for (const ep of endpoints){
+      try {
+        const res = await axios.get(`${BASE_URL}${ep}`, cfg);
+        return res.data;
+      } catch (e: any) {
+        const s = e?.response?.status;
+        if (s === 404 || s === 401) continue;
+        continue;
+      }
+    }
+    throw new Error('Không tìm thấy endpoint vé');
+  },
+
+  async getMyTicket(id: string){
+    const token = getAuthToken();
+    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    const endpoints = [
+      `/tickets/${id}`,
+      `/orders/${id}`,
+      `/bookings/${id}`,
+      `/users/tickets/${id}`
+    ];
+    for (const ep of endpoints){
+      try {
+        const res = await axios.get(`${BASE_URL}${ep}`, cfg);
+        return res.data;
+      } catch (e: any) {
+        const s = e?.response?.status;
+        if (s === 404 || s === 401) continue;
+        continue;
+      }
+    }
+    throw new Error('Không tìm thấy vé');
   },
 
   // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
@@ -377,5 +424,22 @@ export const api = {
       { seatNumbers },
       { headers: { Authorization: `Bearer ${token}` } }
     );
+  },
+
+  async createMyTicket(payload: any){
+    const token = getAuthToken();
+    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    const endpoints = ['/orders', '/tickets', '/bookings'];
+    for (const ep of endpoints){
+      try{
+        const res = await axios.post(`${BASE_URL}${ep}`, payload, cfg);
+        return res.data;
+      }catch(e:any){
+        const s = e?.response?.status;
+        if (s === 404 || s === 401) continue;
+        continue;
+      }
+    }
+    throw new Error('Không tạo được vé');
   },
 }

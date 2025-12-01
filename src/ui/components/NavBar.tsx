@@ -29,7 +29,15 @@ export default function NavBar() {
   const [searchResults, setSearchResults] = useState<any[]>([]); // State cho kết quả từ API
   const [isSearching, setIsSearching] = useState(false); // State cho biết đang tải
   const [theaters, setTheaters] = useState<any[]>([]);
-  useEffect(() => { api.listTheaters().then(setTheaters).catch(()=>setTheaters([])); }, []);
+  useEffect(() => {
+    api.listTheaters()
+      .then((res:any)=>{
+        const arr = Array.isArray(res) ? res : (res.cinemas || res.theaters || res.data || [])
+        const list = (Array.isArray(arr)?arr:[]).map((t:any)=> ({ _id: t._id, id: t._id || t.id, name: t.name }))
+        setTheaters(list)
+      })
+      .catch(()=>setTheaters([]));
+  }, []);
   
   // --- THAY ĐỔI 2: Xóa useCollection cho 'movies' ---
   // const { rows: movies = [] } = useCollection<any>("movies"); // <-- XÓA DÒNG NÀY
@@ -200,10 +208,11 @@ export default function NavBar() {
               variant="simple"
             />
             
-            {/* Hover Dropdown cho Rạp/Giá Vé */}
+            {/* Hover Dropdown cho Rạp/Giá Vé (kiểu đơn giản giống dropdown mẫu) */}
             <HoverDropdown 
               label="Rạp/Giá Vé" 
               items={cinemasDropdownItems}
+              variant="simple"
             />
           </nav>
 

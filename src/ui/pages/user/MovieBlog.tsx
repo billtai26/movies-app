@@ -1,12 +1,21 @@
 import React from "react";
 import { ThumbsUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCollection } from "../../../lib/mockCrud";
+import { api } from "../../../lib/api";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
 import QuickBooking from "../../components/QuickBooking";
 
 export default function MovieBlog() {
-  const { rows: movies = [] } = useCollection<any>("movies");
+  const [nowPlaying, setNowPlaying] = React.useState<any[]>([])
+  React.useEffect(()=>{
+    api.listMovies({ status: 'now_showing', limit: 4 })
+      .then((res:any)=>{
+        const list = res?.movies || res || []
+        const mapped = (Array.isArray(list) ? list : []).map((m:any)=> ({ id: m._id || m.id, name: m.title || m.name, img: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating }))
+        setNowPlaying(mapped.slice(0,3))
+      })
+      .catch(()=> setNowPlaying([]))
+  },[])
   
   const blogs = [
     {
@@ -32,16 +41,7 @@ export default function MovieBlog() {
     },
   ];
 
-  // Lấy 3 phim đang chiếu từ dữ liệu thực
-  const nowPlaying = movies
-    .filter(m => m.status === 'now')
-    .slice(0, 3)
-    .map(m => ({
-      id: m.id,
-      name: m.title,
-      img: m.poster || "https://picsum.photos/300/200?random=10",
-      rating: m.rating || "8.0",
-    }));
+  
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">

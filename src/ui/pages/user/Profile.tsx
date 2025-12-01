@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Star, Mail, Phone, Lock, Calendar, Check, User as UserIcon } from "lucide-react";
 import { useAuth } from "../../../store/auth";
-import { api } from "../../../lib/backendApi";
+import { api } from "../../../lib/api";
 // Import component Loading (đảm bảo đường dẫn đúng với file bạn đã tạo)
 import LoadingOverlay from "../../components/LoadingOverlay";
 
 export default function Profile() {
   // Lấy hàm cập nhật store để đồng bộ Navbar sau khi sửa profile
-  const { setSession } = useAuth(); 
+  const { setSession, name: authName, email: authEmail, avatar: authAvatar, role: authRole } = useAuth(); 
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -33,41 +33,51 @@ export default function Profile() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        setIsLoading(true); // Bật loading khi mới vào trang
-        const data = await api.getProfile(); // Gọi API
+        setIsLoading(true);
+        const data = await api.getProfile();
         if (data) {
-          // Map dữ liệu từ Backend về State của Frontend
           setUser({
             _id: data._id,
-            name: data.username, // Backend trả về 'username'
+            name: data.username,
             email: data.email,
             phone: data.phone || "",
-            dob: data.dob ? data.dob.split('T')[0] : "", // Cắt lấy phần ngày YYYY-MM-DD
+            dob: data.dob ? data.dob.split('T')[0] : "",
             loyaltyPoints: data.loyaltyPoints || 0,
-            avatar: data.avatarUrl || "", // Backend trả về 'avatarUrl'
+            avatar: data.avatarUrl || "",
             role: data.role,
-            password: "", 
+            password: "",
           });
-          
-          // Đồng bộ lại Auth Store (để Navbar hiển thị đúng)
           setSession({
             token: localStorage.getItem('auth') ? JSON.parse(localStorage.getItem('auth')!).token : "",
             name: data.username,
             email: data.email,
             avatar: data.avatarUrl,
-            role: data.role
+            role: data.role,
           });
+        } else {
+          setUser(u => ({
+            ...u,
+            name: authName || "",
+            email: authEmail || "",
+            avatar: authAvatar || "",
+            role: authRole || "",
+          }));
         }
       } catch (error) {
-        console.error("Lỗi tải thông tin:", error);
-        // Có thể xử lý logout nếu lỗi 401
+        setUser(u => ({
+          ...u,
+          name: authName || "",
+          email: authEmail || "",
+          avatar: authAvatar || "",
+          role: authRole || "",
+        }));
       } finally {
-        setIsLoading(false); // Tắt loading
+        setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, [setSession]);
+  }, [setSession, authName, authEmail, authAvatar, authRole]);
 
   const showSuccessToast = (message: string) => {
     setToastMessage(message);

@@ -4,10 +4,19 @@ import { ThumbsUp } from "lucide-react";
 import Dropdown from "../../components/Dropdown";
 import QuickBooking from "../../components/QuickBooking";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
-import { useCollection } from "../../../lib/mockCrud";
+import { api } from "../../../lib/api";
 
 export default function Actors() {
-  const { rows: movies = [] } = useCollection<any>("movies");
+  const [nowPlaying, setNowPlaying] = React.useState<any[]>([])
+  React.useEffect(()=>{
+    api.listMovies({ status: 'now_showing', limit: 4 })
+      .then((res:any)=>{
+        const list = res?.movies || res || []
+        const mapped = (Array.isArray(list) ? list : []).map((m:any)=> ({ id: m._id || m.id, name: m.title || m.name, img: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating }))
+        setNowPlaying(mapped.slice(0,3))
+      })
+      .catch(()=> setNowPlaying([]))
+  },[])
 
   const actors = [
     {
@@ -44,10 +53,7 @@ export default function Actors() {
     },
   ];
 
-  const nowPlaying = movies
-    .filter((m: any) => m.status === "now")
-    .slice(0, 3)
-    .map((m: any) => ({ id: m.id, name: m.title, img: m.poster, rating: m.rating || "7.4" }));
+  
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
