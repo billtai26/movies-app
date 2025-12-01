@@ -426,6 +426,57 @@ export const api = {
     );
   },
 
+   // ================= AI CHAT =================
+  async aiHistory(userId: string) {
+    const res = await axios.get(`${BASE_URL}/ai/history`, {
+      params: { userId }
+    });
+    return res.data; // mảng [{role, content}]
+  },
+
+  async aiChat(userId: string | null, message: string) {
+    const res = await axios.post(`${BASE_URL}/ai/chat`, {
+      userId,
+      message
+    });
+    return res.data; // { reply: string }
+  },
+     // 🔥 MoMo QR Payment
+momoCreate: async (data: any) => {
+  const token = getAuthToken();
+
+  const res = await axios.post(
+    // ĐÚNG: /v1/payments/momo/payment
+    `${BASE_URL}/payments/momo/payment`,
+    data,
+    {
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : undefined
+    }
+  );
+
+  // BE trả về { success, data: {...} }
+  // => trả thẳng data bên trong cho Payment.tsx
+  return res.data?.data || res.data;
+},
+
+  momoConfirm: async (params: any) => {
+  // Thường callback từ MoMo không cần token, nhưng có cũng không sao
+  const token = getAuthToken();
+
+  const res = await axios.post(
+    `${BASE_URL}/payments/momo/callback`,
+    params,
+    token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : undefined
+  );
+
+  // BE trả về { ... , invoice }
+  return res.data;
+},
+
   async createMyTicket(payload: any){
     const token = getAuthToken();
     const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
@@ -443,3 +494,4 @@ export const api = {
     throw new Error('Không tạo được vé');
   },
 }
+
