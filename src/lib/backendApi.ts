@@ -174,6 +174,7 @@ export const api = {
 
     // Mặc định cho các collection khác
     let endpoint = collection;
+    // Map đúng tên endpoint
     if (collection === 'staff-reports') endpoint = 'staff-reports';
     if (collection === 'comments') endpoint = 'comments';
 
@@ -202,6 +203,7 @@ export const api = {
     let endpoint = collection;
     if (['theaters'].includes(collection)) endpoint = 'cinemas';
     if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
+    if (collection === 'staff-reports') endpoint = 'staff-reports'; // Thêm dòng này nếu cần update report
     
     const payload = { ...item } as any;
     ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
@@ -220,6 +222,7 @@ export const api = {
   async remove(collection: string, id: string) {
     let endpoint = collection;
     if (collection === 'theaters') endpoint = 'cinemas';
+    if (collection === 'staff-reports') endpoint = 'staff-reports';
     
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
     return res.data;
@@ -290,7 +293,7 @@ export const api = {
     await axios.post(`${BASE_URL}/showtimes/${showtimeId}/release-seats`, { seatNumbers }, getHeader());
   },
   
-  // --- HÀM THANH TOÁN MOMO (Đã thêm ở đây) ---
+  // --- HÀM THANH TOÁN MOMO ---
   async momoCreate(body: any) {
      const res = await axios.post(`${BASE_URL}/payment/momo`, body, getHeader());
      return res.data;
