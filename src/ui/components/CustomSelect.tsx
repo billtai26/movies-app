@@ -10,6 +10,7 @@ export default function CustomSelect({
   id,
   leadingLabel,
   step,
+  disabled = false, // Add disabled prop with default value
 }: {
   value: string;
   options: { value: string; label: string }[];
@@ -18,11 +19,12 @@ export default function CustomSelect({
   id?: string;
   leadingLabel?: string;
   step?: number;
+  disabled?: boolean; // Add to type definition
 }) {
-  console.log(`CustomSelect ${id}: value=${value}, options=`, options);
+  // console.log(`CustomSelect ${id}: value=${value}, options=`, options);
 
   const handleValueChange = (newValue: string) => {
-    console.log(`CustomSelect ${id}: onChange called with`, newValue);
+    // console.log(`CustomSelect ${id}: onChange called with`, newValue);
     onChange(newValue);
   };
 
@@ -30,9 +32,11 @@ export default function CustomSelect({
   const displayValue = selectedOption ? selectedOption.label : (leadingLabel || placeholder || "-- Chọn --");
 
   return (
-    <Select.Root value={value} onValueChange={handleValueChange}>
+    <Select.Root value={value} onValueChange={handleValueChange} disabled={disabled}>
       <Select.Trigger
-        className="group flex w-full items-center justify-between h-11 px-2 text-sm text-gray-700 bg-transparent border-none rounded-none focus:outline-none focus:ring-0"
+        className={`group flex w-full items-center justify-between h-11 px-2 text-sm text-gray-700 bg-transparent border-none rounded-none focus:outline-none focus:ring-0 ${
+          disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : ""
+        }`}
         aria-label="Select"
       >
         <div className="flex items-center gap-2 min-w-0">

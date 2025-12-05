@@ -21,8 +21,10 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
       api.listMovies({ status: 'now_showing', limit: 4 }),
       api.listMovies({ status: 'coming_soon', limit: 4 })
     ]).then(([now, coming]) => {
-      setNowPlayingMovies((now as any)?.movies || []);
-      setComingMovies((coming as any)?.movies || []);
+      const nowList = (now as any)?.movies || now || [];
+      const comingList = (coming as any)?.movies || coming || [];
+      setNowPlayingMovies(Array.isArray(nowList) ? nowList : []);
+      setComingMovies(Array.isArray(comingList) ? comingList : []);
     }).catch(() => {
       setNowPlayingMovies([]);
       setComingMovies([]);
@@ -79,7 +81,7 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
                 {nowPlayingMovies.map((m: any) => (
                   <div key={m._id || m.id} onClick={() => setIsOpen(false)}>
                     <SidebarMovieCard
-                      movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: m.poster, poster: m.poster, rating: m.averageRating || m.rating, ageRating: m.ageRating || "T18" }}
+                      movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: (m as any).posterUrl || m.poster, poster: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating, ageRating: (m as any).ageRating || "T18" }}
                       size="compact"
                     />
                   </div>
@@ -97,7 +99,7 @@ export default function MovieDropdown({ label, className = "" }: MovieDropdownPr
                   {comingMovies.map((m: any) => (
                     <div key={m._id || m.id} onClick={() => setIsOpen(false)}>
                       <SidebarMovieCard
-                        movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: m.poster, poster: m.poster, rating: m.averageRating || m.rating, ageRating: m.ageRating || "T18" }}
+                        movie={{ _id: m._id, id: m._id || m.id, title: m.title || m.name, img: (m as any).posterUrl || m.poster, poster: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating, ageRating: (m as any).ageRating || "T18" }}
                         size="compact"
                       />
                     </div>

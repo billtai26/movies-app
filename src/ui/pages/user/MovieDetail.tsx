@@ -52,6 +52,16 @@ export default function MovieDetail() {
     if (!p) return ''
     return `${p.dd}/${p.mm}`
   }
+  const fmtDDMMYYYY = (iso?: string) => {
+    const p = parseIsoWallTime(iso)
+    if (!p) return '—'
+    return `${p.dd}/${p.mm}/${p.y}`
+  }
+  const yearFromIso = (iso?: string) => {
+    const p = parseIsoWallTime(iso)
+    if (!p) return '—'
+    return p.y
+  }
 
   React.useEffect(() => {
     if (!id) return
@@ -151,6 +161,18 @@ export default function MovieDetail() {
     el.scrollBy({ left: dir === 'prev' ? -amount : amount, behavior: 'smooth' })
   }
 
+  const countryText = (() => {
+    const m:any = movie
+    const arr = Array.isArray(m?.productionCountries) ? m?.productionCountries : (Array.isArray(m?.countries) ? m?.countries : (typeof m?.country === 'string' ? [m?.country] : []))
+    const joined = Array.isArray(arr) ? arr.filter(Boolean).join(', ') : ''
+    return joined || m?.originCountry || m?.country || '—'
+  })()
+  const productionYearText = (() => {
+    const m:any = movie
+    const y = m?.productionYear || yearFromIso(m?.productionDate) || yearFromIso(m?.releaseDate)
+    return y || '—'
+  })()
+
   return (
     <>
       {/* Hero full-width */}
@@ -159,8 +181,8 @@ export default function MovieDetail() {
         {/* Overlay nhẹ giúp nút play nổi bật */}
         <div className="absolute inset-0 bg-black/20" />
         {/* Nút play ở giữa */}
-        {movie.trailer && (
-          <a href={movie.trailer} target="_blank" className="absolute inset-0 flex items-center justify-center">
+        {((movie as any).trailerUrl || (movie as any).trailer) && (
+          <a href={(movie as any).trailerUrl || (movie as any).trailer} target="_blank" className="absolute inset-0 flex items-center justify-center">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 shadow-md ring-2 ring-white/60 hover:scale-105 transition-transform">
               <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#f58a1f]"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
             </span>
@@ -184,28 +206,27 @@ export default function MovieDetail() {
 
               {/* Meta: thời lượng + ngày khởi chiếu */}
               <div className="mt-2 text-sm text-gray-600 flex items-center gap-4">
-                <span>⏱ {movie.duration || 119} phút</span>
-                <span>📅 {movie.releaseDate || '16/10/2025'}</span>
+                <span>⏱ {(movie as any).durationInMinutes != null ? (movie as any).durationInMinutes : (movie as any).duration ?? '—'} phút</span>
+                <span>📅 {fmtDDMMYYYY((movie as any).releaseDate)}</span>
               </div>
 
               {/* Rating theo mẫu: sao + điểm + số votes */}
               <div className="mt-2 flex items-center gap-2 text-gray-800">
                 <span className="text-yellow-500">⭐</span>
-                <span className="font-semibold text-lg">{typeof (movie as any)?.averageRating === 'number' ? (movie as any).averageRating.toFixed(1) : (movie as any)?.averageRating || (typeof movie.rating === 'number' ? movie.rating.toFixed(1) : (movie.rating || '8.2'))}</span>
-                <span className="text-sm text-gray-500">({movie.votes || '173'} votes)</span>
+                <span className="font-semibold text-lg">{(() => { const r = typeof (movie as any).averageRating === 'number' ? (movie as any).averageRating : (typeof (movie as any).rating === 'number' ? (movie as any).rating : undefined); return r != null ? r.toFixed(1) : '—'; })()}</span>
+                <span className="text-sm text-gray-500">({(movie as any).reviewCount ?? (movie as any).votes ?? 0} votes)</span>
               </div>
 
-              {/* Quốc gia + Nhà sản xuất */}
               <div className="mt-3 space-x-6 text-gray-700">
-                <span>Quốc gia: <b>{movie.country || 'Việt Nam'}</b></span>
-                <span>Nhà sản xuất: <b>{movie.studio || '856 Pictures'}</b></span>
+                <span>Quốc gia: <b>{countryText}</b></span>
+                <span>Năm sản xuất: <b>{productionYearText}</b></span>
               </div>
 
               {/* Thể loại - hiển thị ngang, chỉ wrap khi hết chỗ */}
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <span className="text-gray-700">Thể loại:</span>
                 <div className="flex gap-1.5 flex-wrap">
-                  {(Array.isArray((movie as any)?.genre) ? (movie as any).genre : Array.isArray((movie as any)?.genres) ? (movie as any).genres : ['Gia Đình']).map((g:string) => (
+                  {(Array.isArray((movie as any).genres) ? (movie as any).genres : Array.isArray((movie as any).genre) ? (movie as any).genre : (typeof (movie as any).genres === 'string' ? (movie as any).genres.split(',').map((x:string)=>x.trim()).filter(Boolean) : (typeof (movie as any).genre === 'string' ? (movie as any).genre.split(',').map((x:string)=>x.trim()).filter(Boolean) : []))).map((g:string) => (
                     <span key={g} className="px-2.5 py-1 rounded-full border text-sm bg-white">{g}</span>
                   ))}
                 </div>
@@ -214,7 +235,7 @@ export default function MovieDetail() {
               {/* Đạo diễn - cùng hàng với nhãn, wrap khi hết chỗ */}
               <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                 <span className="text-gray-700">Đạo diễn:</span>
-                {(Array.isArray((movie as any)?.directors) ? (movie as any).directors : ['Khương Ngọc']).map((d:string) => (
+                {(Array.isArray((movie as any).directors) ? (movie as any).directors : ((movie as any).director ? [ (movie as any).director ] : [])).map((d:string) => (
                   <span key={d} className="px-2.5 py-1 rounded-full border text-sm bg-white">{d}</span>
                 ))}
               </div>
@@ -222,7 +243,7 @@ export default function MovieDetail() {
               {/* Diễn viên - cùng hàng với nhãn, wrap khi hết chỗ */}
               <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                 <span className="text-gray-700">Diễn viên:</span>
-                {(Array.isArray((movie as any)?.actors) ? (movie as any).actors : ['Việt Hương','Hồng Đào','Hữu Châu','Lê Khánh','Băng Di','Lâm Thanh Mỹ']).map((a:string) => (
+                {(Array.isArray((movie as any).actors) ? (movie as any).actors : (typeof (movie as any).actors === 'string' ? (movie as any).actors.split(',').map((x:string)=>x.trim()).filter(Boolean) : [])).map((a:string) => (
                   <span key={a} className="px-2.5 py-1 rounded-full border text-sm bg-white">{a}</span>
                 ))}
               </div>
@@ -237,15 +258,11 @@ export default function MovieDetail() {
             </div>
             <div className="text-gray-700 leading-relaxed text-sm md:text-base">
               <p>
-                { (movie as any).description || 
-                  'Lấy cảm hứng từ những ký ức tuổi thơ ngọt ngào, “Cục Vàng Của Ngoại” mang đến câu chuyện ấm áp về tình bà cháu trong một xóm nhỏ chan chứa nghĩa tình.' }
+                { (movie as any).description ?? '—' }
               </p>
-              <p className="mt-3">
-                {'Bà Hậu – người phụ nữ cả đời tần tảo, nay trở thành chỗ dựa duy nhất của cháu ngoại khi con gái bỏ đi. Dẫu cuộc sống còn nhiều nhọc nhằn, tình thương bà dành cho cháu vẫn luôn trọn vẹn. Với bà, cháu là “cục vàng” – niềm vui, niềm an ủi và cũng là lẽ sống của đời mình.'}
-              </p>
-              <p className="mt-3">
-                {'Bộ phim nhẹ nhàng dẫn khán giả trở lại những khoảnh khắc quen thuộc nơi xóm nhỏ: nụ cười hồn nhiên của cháu, vòng tay chở che của bà và sự đùm bọc từ hàng xóm láng giềng. Tất cả cùng hòa thành một bức tranh đời thường ấm áp, gợi nhớ về tuổi thơ bình yên và tình người mộc mạc, chân thành.'}
-              </p>
+              {(movie as any).longDescription && (
+                <p className="mt-3">{(movie as any).longDescription}</p>
+              )}
             </div>
           </div>
 
@@ -287,30 +304,30 @@ export default function MovieDetail() {
             {/* Đường ngang xanh cố định dưới tabs */}
             <div className="mt-2 h-[2px] bg-blue-600 w-full" />
             {/* Theo rạp */}
-            <div className="space-y-3">
-              {filteredTheaters.map(t => (
-                <div key={t.id} className="rounded-xl border bg-[#fcfcfc] p-4 shadow-sm">
-                  <div className="font-semibold mb-2">{t.name}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {t.showtimes.map(s => (
-                      <button
-                        key={s.id || (s as any)._id}
-                        className="w-16 h-10 flex items-center justify-center rounded-md border text-sm bg-white hover:bg-blue-50 shadow-sm"
-                        onClick={()=>handleShowtimeSelect(s.id || (s as any)._id)}
-                      >
-                        {fmtHHmm((s as any).startTime || s.time)}
-                      </button>
-                    ))}
-                    {t.showtimes.length===0 && (
-                      <div className="text-sm text-gray-500">Không có suất phù hợp</div>
-                    )}
+              <div className="space-y-3">
+                {filteredTheaters.map(t => (
+                  <div key={t.id} className="rounded-xl border bg-[#fcfcfc] p-4 shadow-sm">
+                    <div className="font-semibold mb-2">{t.name}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {t.showtimes.map(s => (
+                        <button
+                          key={s.id || (s as any)._id}
+                          className="w-16 h-10 flex items-center justify-center rounded-md border text-sm bg-white hover:bg-blue-50 shadow-sm"
+                          onClick={()=>handleShowtimeSelect(s.id || (s as any)._id)}
+                        >
+                          {fmtHHmm((s as any).startTime || s.time)}
+                        </button>
+                      ))}
+                      {t.showtimes.length===0 && (
+                        <div className="text-sm text-gray-500">Không có suất phù hợp</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {filteredTheaters.length===0 && (
-                <div className="text-sm text-gray-500">Chưa có lịch chiếu cho phim này</div>
-              )}
-            </div>
+                ))}
+                {filteredTheaters.length===0 && (
+                  <div className="text-sm text-gray-500">Chưa có lịch chiếu cho phim này</div>
+                )}
+              </div>
           </div>
 
           <CommentsSection movieId={id as string} />
@@ -323,7 +340,7 @@ export default function MovieDetail() {
               {nowMovies.map((p) => (
                 <div key={(p as any)._id || p.id} className="md:w-[calc(100%+2cm)]">
                   <SidebarMovieCard 
-                    movie={{ id: (p as any)._id || p.id, name: p.title || (p as any).name, img: p.poster, rating: (p as any).averageRating ?? p.rating }} 
+                    movie={{ id: (p as any)._id || p.id, name: p.title || (p as any).name, img: (p as any).posterUrl || (p as any).poster || '', rating: (p as any).averageRating ?? (p as any).rating }} 
                     styleHeight="calc(12rem + 0.5cm)" 
                   />
                 </div>

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
 import Dropdown from "../../components/Dropdown";
 import QuickBooking from "../../components/QuickBooking";
+import { api } from "../../../lib/api";
 
 export default function Reviews() {
   const reviews = [
@@ -32,26 +33,16 @@ export default function Reviews() {
     },
   ];
 
-  const nowPlaying = [
-    {
-      id: 1,
-      name: "Nhà Ma Xó",
-      img: "https://picsum.photos/300/200?random=10",
-      rating: "7.0",
-    },
-    {
-      id: 2,
-      name: "Cục Vàng Của Ngoại",
-      img: "https://picsum.photos/300/200?random=11",
-      rating: "8.4",
-    },
-    {
-      id: 3,
-      name: "Tee Yod: Quỷ Ăn Tạng 3",
-      img: "https://picsum.photos/300/200?random=12",
-      rating: "7.5",
-    },
-  ];
+  const [nowPlaying, setNowPlaying] = React.useState<any[]>([])
+  React.useEffect(()=>{
+    api.listMovies({ status: 'now_showing', limit: 4 })
+      .then((res:any)=>{
+        const list = res?.movies || res || []
+        const mapped = (Array.isArray(list) ? list : []).map((m:any)=> ({ id: m._id || m.id, name: m.title || m.name, img: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating }))
+        setNowPlaying(mapped.slice(0,3))
+      })
+      .catch(()=> setNowPlaying([]))
+  },[])
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">

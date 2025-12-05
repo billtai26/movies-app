@@ -32,9 +32,9 @@ export default function Tickets(){
   React.useEffect(()=>{
     setLoading(true)
     setError('')
-    api.listTickets({ page, limit: PAGE_SIZE })
+    api.listMyTickets({ page, limit: PAGE_SIZE })
       .then((res:any)=>{
-        const arr = res?.tickets || res?.data || res || []
+        const arr = res?.tickets || res?.orders || res?.data || res || []
         const list = Array.isArray(arr) ? arr.map(normalize) : []
         setRows(list)
         const tp = res?.pagination?.totalPages || res?.totalPages || null
@@ -56,7 +56,7 @@ export default function Tickets(){
     setSelectedId(id)
     setSelected(rows.find(r=> String(r.id)===String(id)) || null)
     try{
-      const data:any = await api.getTicket(id)
+      const data:any = await api.getMyTicket(id)
       const t = normalize(data)
       setSelected(t)
     }catch{}

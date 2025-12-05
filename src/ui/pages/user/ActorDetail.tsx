@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { ThumbsUp, Share2 } from "lucide-react";
-import { useCollection } from "../../../lib/mockCrud";
+import { api } from "../../../lib/api";
 import SidebarMovieCard from "../../components/SidebarMovieCard";
 import QuickBooking from "../../components/QuickBooking";
 
@@ -114,12 +114,16 @@ const ACTORS: Record<string, Actor> = {
 export default function ActorDetail() {
   const { id } = useParams();
   const actor = ACTORS[id || "1"];
-  const { rows: movies = [] } = useCollection<any>("movies");
-
-  const nowPlaying = movies
-    .filter((m: any) => m.status === "now")
-    .slice(0, 3)
-    .map((m: any) => ({ id: m.id, name: m.title, img: m.poster, rating: m.rating || "7.4" }));
+  const [nowPlaying, setNowPlaying] = React.useState<any[]>([])
+  React.useEffect(()=>{
+    api.listMovies({ status: 'now_showing', limit: 4 })
+      .then((res:any)=>{
+        const list = res?.movies || res || []
+        const mapped = (Array.isArray(list) ? list : []).map((m:any)=> ({ id: m._id || m.id, name: m.title || m.name, img: (m as any).posterUrl || m.poster, rating: (m as any).averageRating ?? m.rating }))
+        setNowPlaying(mapped.slice(0,3))
+      })
+      .catch(()=> setNowPlaying([]))
+  },[])
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -1,21 +1,32 @@
 import React, { useEffect, useState } from "react";
 import CrudTable from "../../components/CrudTable";
+import { api } from "../../../lib/backendApi"; // Import api wrapper
+import { FieldSchema } from "../../../types/entities";
 
 export default function AdminRoomsSeats() {
   const [theaterOptions, setTheaterOptions] = useState<
     { label: string; value: string }[]
   >([]);
 
-  // 🟢 Load danh sách rạp thật từ backend Cinesta
+  // 1. Dùng api.listTheaters() thay vì fetch hardcode
   useEffect(() => {
     const fetchTheaters = async () => {
       try {
-        const res = await fetch("http://localhost:8017/api/theaters");
-        const json = await res.json();
-        const opts = (json.data || []).map((c: any) => ({
-          label: c.name,
+        const data = await api.listTheaters();
+        // console.log("Debug - Dữ liệu rạp trả về:", data);
+
+        // --- SỬA ĐOẠN NÀY ---
+        // API trả về object { cinemas: [...] }, nên ta phải lấy data.cinemas
+        const list = Array.isArray(data) 
+          ? data 
+          : (data?.cinemas || data?.data || []); 
+        // --------------------
+
+        const opts = list.map((c: any) => ({
+          label: c.name, 
           value: c._id,
         }));
+        
         setTheaterOptions(opts);
       } catch (err) {
         console.error("❌ Lỗi tải danh sách rạp:", err);
@@ -24,90 +35,112 @@ export default function AdminRoomsSeats() {
     fetchTheaters();
   }, []);
 
-  // 🧩 Schema chuẩn theo BE Cinesta
+  // 2. Định nghĩa Schema
   const schema = {
-    name: "roomsseats", // gọi đúng endpoint /api/roomsseats
+    name: "cinemaHalls", 
     title: "Phòng & Ghế",
     columns: [
-      { key: "roomName", label: "Phòng" },
-      { key: "theaterName", label: "Rạp/Cụm" },
-      { key: "seatCount", label: "Số ghế" },
-      { key: "type", label: "Loại phòng" },
+      { key: "name", label: "Tên phòng" },
+      { key: "theater", label: "Rạp" },
+      { key: "seatCount", label: "Tổng ghế" },
+      { key: "cinemaType", label: "Loại" }, // Hiển thị cinemaType
     ],
     fields: [
-      { key: "roomName", label: "Tên phòng", type: "text", required: true },
+      { key: "name", label: "Tên phòng", type: "text", required: true },
       {
         key: "theater",
         label: "Rạp/Cụm",
         type: "select",
         options: theaterOptions,
         required: true,
-        placeholder: "Chọn rạp...",
       },
       {
-        key: "seatCount",
-        label: "Số ghế",
-        type: "number",
-        required: true,
-        placeholder: "VD: 80",
-      },
-      {
-        key: "type",
+        key: "cinemaType",
         label: "Loại phòng",
         type: "select",
         options: [
           { label: "2D", value: "2D" },
           { label: "3D", value: "3D" },
-          { label: "VIP", value: "VIP" },
+          { label: "IMAX", value: "IMAX" },
         ],
+        defaultValue: "2D"
       },
-      {
-        key: "layout",
-        label: "Cấu hình hàng ghế",
-        type: "layout",
-        placeholder: "Thêm hàng ghế (A, 10 ghế, loại STANDARD/VIP)",
+
+      // --- CÁC TRƯỜNG CẤU HÌNH MỚI ---
+      { 
+        key: "inputRows", 
+        label: "Danh sách Hàng (cách nhau dấu phẩy)", 
+        type: "text", 
+        placeholder: "A, B, C, D, E, F", 
+        required: true 
+      },
+      { 
+        key: "seatsPerRow", 
+        label: "Số ghế mỗi hàng", 
+        type: "number", 
+        placeholder: "10", 
+        required: true 
+      },
+      { 
+        key: "inputVip", 
+        label: "Hàng VIP (cách nhau dấu phẩy)", 
+        type: "text", 
+        placeholder: "C, D" 
+      },
+      { 
+        key: "inputCouple", 
+        label: "Hàng Đôi/Couple (cách nhau dấu phẩy)", 
+        type: "text", 
+        placeholder: "E, F" 
       },
     ],
 
-    // ⚙️ Map dữ liệu form → payload gửi lên BE
+    // ⚙️ QUAN TRỌNG: Map dữ liệu thành JSON cấu hình
     toPayload(form: any) {
-      // chuyển layout → seats[]
-      const seats = Array.isArray(form.layout)
-        ? form.layout.flatMap((row: any) =>
-            Array.from({ length: row.count }).map((_, i) => ({
-              seatNumber: `${row.row}${i + 1}`,
-              type: row.type,
-            }))
-          )
-        : [];
+      // Hàm tiện ích tách chuỗi "A, B" thành mảng ["A", "B"]
+      const splitStr = (str: string) => 
+        str ? str.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [];
 
       return {
-        roomName: form.roomName,
-        theater: form.theater,
-        seatCount: form.seatCount ?? seats.length,
-        type: form.type ?? "2D",
-        seats,
+        name: form.name,
+        cinemaId: form.theater, // ID Rạp
+        cinemaType: form.cinemaType || "2D",
+        
+        // 👉 Tạo đúng cấu trúc JSON bạn yêu cầu
+        seatLayout: {
+          rows: splitStr(form.inputRows), // ["A", "B", "C"...]
+          seatsPerRow: Number(form.seatsPerRow), // 10
+          vipRows: splitStr(form.inputVip),      // ["C", "D"]
+          coupleRows: splitStr(form.inputCouple) // ["E", "F"]
+        }
       };
     },
 
-    // 🧩 Map BE → form (để sửa)
+    // Map ngược lại khi bấm Sửa (Edit)
+    // 👉 SỬA ĐOẠN NÀY (Chiều về: API -> Form)
     toForm(item: any) {
-      if (!item?.seats) return item;
-      const grouped: Record<string, any[]> = {};
-      item.seats.forEach((s: any) => {
-        const row = s.seatNumber?.[0] || "?";
-        grouped[row] = grouped[row] || [];
-        grouped[row].push(s);
-      });
+      // 1. Map ID Rạp
+      // Kiểm tra nếu cinemaId là object (do populate) thì lấy _id, nếu không thì lấy chính nó
+      const theaterId = item.cinemaId && typeof item.cinemaId === 'object' 
+        ? item.cinemaId._id 
+        : item.cinemaId;
 
-      const layout = Object.entries(grouped).map(([row, arr]) => ({
-        row,
-        count: arr.length,
-        type: arr[0]?.type || "STANDARD",
-      }));
+      // 2. Map Cấu hình ghế (seatConfig) ra các ô input
+      // Nếu bản ghi có lưu seatConfig thì dùng nó, nếu không (data cũ) thì để trống
+      const config = item.seatConfig || {};
 
-      return { ...item, layout };
-    },
+      return {
+        ...item,
+        // Map lại ID rạp vào trường 'theater' của Form
+        theater: theaterId,
+
+        // Chuyển đổi Mảng -> Chuỗi (Ví dụ: ['A','B'] -> "A, B")
+        inputRows: config.rows?.join(', ') || "",
+        seatsPerRow: config.seatsPerRow || "",
+        inputVip: config.vipRows?.join(', ') || "",
+        inputCouple: config.coupleRows?.join(', ') || "",
+      };
+    }
   };
 
   return <CrudTable schema={schema as any} />;

@@ -44,14 +44,20 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
       api.listShowtimes()
     ]).then(([mRes, cRes, sRes]) => {
       if (mRes.status === 'fulfilled') {
-        const arr = (mRes.value as any)?.movies || mRes.value || [];
-        setMovieRows(arr as Movie[]);
+        const arr = (mRes.value as any)?.movies || (mRes.value as any)?.data || mRes.value || [];
+        setMovieRows(Array.isArray(arr) ? arr as Movie[] : []);
       }
       if (cRes.status === 'fulfilled') {
-        setCinemaRows(cRes.value as Cinema[]);
+        const raw = cRes.value as any
+        const arr = Array.isArray(raw) ? raw : (raw?.cinemas || raw?.theaters || raw?.data || [])
+        const list = (Array.isArray(arr) ? arr : []).map((t:any)=> ({ _id: t._id, id: t._id || t.id, name: t.name, city: t.city || t.location?.city || t.region }))
+        setCinemaRows(list as Cinema[]);
       }
       if (sRes.status === 'fulfilled') {
-        setShowtimeRows(sRes.value as Showtime[]);
+        const raw = sRes.value as any
+        const arr = Array.isArray(raw) ? raw : (raw?.showtimes || raw?.data || [])
+        const list = (Array.isArray(arr) ? arr : []).map((s:any)=> ({ _id: s._id, id: s._id || s.id, movieId: s.movieId || s.movie?._id || s.movie, theaterId: s.theaterId || s.cinemaId || s.cinema?._id, startTime: s.startTime || s.start || s.start_at }))
+        setShowtimeRows(list as Showtime[]);
       }
     });
   }, []);

@@ -1,214 +1,147 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
-import QRCode from "qrcode.react";
-import BookingBreadcrumb from "../../components/BookingBreadcrumb";
-import { api } from "../../../lib/backendApi";
+// src/ui/pages/booking/Confirm.tsx
+import React, { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import QRCode from 'qrcode.react' // Cần cài: npm install qrcode.react
+import BookingBreadcrumb from '../../components/BookingBreadcrumb'
+import { api } from '../../../lib/backendApi' // Chú ý: dùng backendApi thay vì api mock cũ
+import { CheckCircle, Calendar, MapPin, Clock } from 'lucide-react'
 
-interface LocationState {
-  id: string;
-  selected: string[];
-  ticketTotal: number;
-  comboTotal: number;
-  grandTotal: number;
-  qty?: Record<string, number>;
-  movieTitle?: string;
+// Định nghĩa kiểu dữ liệu cho Vé/Hóa đơn
+interface TicketData {
+  _id: string;
+  movieTitle: string;
+  cinemaName: string;
+  theaterName: string; // Tên phòng chiếu
+  startTime: string;
+  seatNumbers: string[];
+  totalPrice: number;
+  bookingCode?: string; // Mã đặt vé (nếu có)
 }
 
 export default function Confirm() {
-  const location = useLocation();
-  const state = (location.state as LocationState | undefined) || undefined;
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  // Lấy invoice từ state khi chuyển trang (từ Payment -> Confirm)
+  // Hoặc nếu user refresh, cần logic load lại từ API dựa vào ID trên URL (chưa implement ở đây)
+  const invoice = location.state?.invoice as TicketData | undefined
 
-  // ===== 1. Lấy query từ URL khi MoMo redirect về =====
-  const searchParams = useMemo(
-    () => new URLSearchParams(location.search),
-    [location.search]
-  );
-
-  const momoParams: Record<string, string> = {};
-  searchParams.forEach((value, key) => {
-    momoParams[key] = value;
-  });
-
-  const [amount, setAmount] = useState<number>(0);
-  const [invoice, setInvoice] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  // ===== 2. Tính số tiền tổng cộng để hiển thị =====
   useEffect(() => {
-    let a = 0;
-
-    if (state) {
-      const ticketTotal = state.ticketTotal ?? 0;
-      const comboTotal = state.comboTotal ?? 0;
-      a = state.grandTotal ?? ticketTotal + comboTotal;
+    // Nếu không có dữ liệu hóa đơn, quay về trang chủ
+    if (!invoice) {
+      // Có thể thêm logic check URL param để fetch lại vé nếu muốn
+      const timer = setTimeout(() => navigate('/'), 3000);
+      return () => clearTimeout(timer);
     }
+  }, [invoice, navigate])
 
-    if (momoParams.amount) {
-      const momoAmount = Number(momoParams.amount);
-      if (!Number.isNaN(momoAmount) && momoAmount > 0) {
-        a = momoAmount;
-      }
-    }
-
-    setAmount(a);
-  }, [state, momoParams.amount]);
-
-  // ===== 3. Gọi BE xác nhận MoMo, lấy booking (invoice) về =====
-  useEffect(() => {
-    if (!momoParams.orderId || !momoParams.resultCode) return;
-    if (momoParams.resultCode !== "0") return; // thất bại thì thôi
-
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await api.momoConfirm(momoParams);
-        setInvoice(res.invoice || null);
-      } catch (err: any) {
-        console.error(
-          "Xác nhận thanh toán MoMo thất bại:",
-          err?.response?.data || err
-        );
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [momoParams.orderId, momoParams.resultCode]);
-
-  // ===== 4. Xử lý ghế: ƯU TIÊN lấy từ booking (invoice.seats) =====
-  const seatLabels = useMemo(() => {
-    // 1. Nếu BE trả về seats từ booking
-    if (Array.isArray(invoice?.seats) && invoice.seats.length) {
-      const labels = invoice.seats
-        .map((s: any) => {
-          if (!s) return "";
-          return (
-            s.label ||
-            s.code ||
-            s.name ||
-            s.seatLabel ||
-            s.seatNumber ||
-            (s.row && s.number != null ? `${s.row}${s.number}` : "")
-          );
-        })
-        .filter(Boolean);
-      return labels.join(", ");
-    }
-
-    // 2. Fallback: nếu vẫn còn state.selected (trường hợp quay lại từ app)
-    if (state?.selected?.length) {
-      return state.selected.join(", ");
-    }
-
-    return "";
-  }, [invoice, state]);
-
-  // ===== 5. Payload đưa vào QR: ĐỔI TỪ JSON → TEXT DỄ ĐỌC =====
-  const bookingCode =
-    (invoice?.bookingId || invoice?._id || momoParams.orderId || "").toString();
-
-  const formatMoney = (v: number) =>
-    v.toLocaleString("vi-VN") + " đ";
-
-  const qrLines = [
-    "Cinesta - Vé xem phim",
-    bookingCode && `Mã đặt vé: ${bookingCode}`,
-    seatLabels && `Ghế: ${seatLabels}`,
-    amount > 0 && `Số tiền: ${formatMoney(amount)}`,
-    momoParams.transId && `Mã giao dịch: ${momoParams.transId}`,
-  ].filter(Boolean) as string[];
-
-  // Chuỗi text cuối cùng cho QR
-  const qrPayload = qrLines.join("\n");
-
-  // ===== 6. Giá trị hiển thị bên phải =====
-  const ticketTotal = state?.ticketTotal ?? amount;
-  const comboTotal = state?.comboTotal ?? 0;
-  const grandTotal = state?.grandTotal ?? amount;
+  if (!invoice) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <h2 className="text-xl font-bold text-gray-800">Không tìm thấy thông tin vé!</h2>
+        <p className="text-gray-500">Đang chuyển hướng về trang chủ...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <div className="md:col-span-2">
-        <BookingBreadcrumb currentStep="confirm" />
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="bg-gray-900 text-white pb-10 pt-4">
+          <div className="container mx-auto px-4">
+              <BookingBreadcrumb currentStep="confirm" />
+          </div>
       </div>
 
-      {/* BÊN TRÁI: QR */}
-      <div className="card text-center">
-        <div className="mb-2 text-xl font-semibold">Thanh toán thành công!</div>
-
-        <div className="flex justify-center">
-          <QRCode value={qrPayload} size={220} />
-        </div>
-
-        <div className="mt-3 space-y-1 text-sm text-gray-700">
-          <div>
-            Mã đặt vé:{" "}
-            <span className="font-semibold">
-              {bookingCode || "—"}
-            </span>
+      <div className="container mx-auto px-4 -mt-8">
+        <div className="bg-white rounded-lg shadow-lg max-w-2xl mx-auto overflow-hidden">
+          {/* Header Success */}
+          <div className="bg-green-600 p-6 text-center text-white">
+            <CheckCircle className="w-16 h-16 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold uppercase">Thanh toán thành công!</h1>
+            <p className="opacity-90 mt-2">Cảm ơn bạn đã đặt vé tại Movies App.</p>
           </div>
-          <div>
-            Số tiền:{" "}
-            <span className="font-semibold">
-              {amount.toLocaleString()} đ
-            </span>
-          </div>
-          <div>
-            Ghế:{" "}
-            <span className="font-semibold">
-              {seatLabels || "—"}
-            </span>
-          </div>
-        </div>
 
-        {loading && (
-          <div className="mt-2 text-xs text-gray-500">
-            Đang đồng bộ thông tin vé...
-          </div>
-        )}
-      </div>
-
-      {/* BÊN PHẢI: TÓM TẮT VÉ */}
-      <div className="card space-y-3">
-        <div className="text-base font-semibold">Tóm tắt vé</div>
-
-        {seatLabels && (
-          <div className="text-sm text-gray-700">
-            Ghế: <span className="font-semibold">{seatLabels}</span>
-          </div>
-        )}
-
-        {(ticketTotal || seatLabels) && (
-          <>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-base">
-                <span>Vé</span>
-                <b className="text-lg">{ticketTotal.toLocaleString()} đ</b>
-              </div>
-              {seatLabels && (
-                <div className="text-xs text-gray-500">
-                  Ghế: {seatLabels}
+          {/* Ticket Details */}
+          <div className="p-8">
+             <div className="flex flex-col md:flex-row gap-8 items-start">
+                {/* Left: QR Code */}
+                <div className="flex-shrink-0 mx-auto md:mx-0 text-center">
+                   <div className="border-4 border-gray-900 p-2 inline-block rounded-lg">
+                      <QRCode 
+                        value={invoice.bookingCode || invoice._id} 
+                        size={150} 
+                        level={"H"}
+                        includeMargin={true}
+                      />
+                   </div>
+                   <p className="mt-2 text-sm text-gray-500 font-mono font-bold tracking-widest">
+                     {invoice.bookingCode || "NO-CODE"}
+                   </p>
+                   <p className="text-xs text-gray-400">Đưa mã này cho nhân viên soát vé</p>
                 </div>
-              )}
-            </div>
 
-            {comboTotal > 0 && (
-              <div className="flex items-center justify-between text-base">
-                <span>Combo</span>
-                <b className="text-lg">{comboTotal.toLocaleString()} đ</b>
-              </div>
-            )}
+                {/* Right: Info */}
+                <div className="flex-grow space-y-4 text-gray-800">
+                    <h2 className="text-2xl font-bold text-primary">{invoice.movieTitle}</h2>
+                    
+                    <div className="grid grid-cols-1 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                           <MapPin className="w-5 h-5 text-gray-400" />
+                           <div>
+                              <p className="font-semibold">{invoice.cinemaName}</p>
+                              <p className="text-gray-500">{invoice.theaterName}</p>
+                           </div>
+                        </div>
 
-            <hr className="my-2 border-t border-dashed border-gray-300" />
-          </>
-        )}
+                        <div className="flex items-center gap-2">
+                           <Calendar className="w-5 h-5 text-gray-400" />
+                           <p className="font-semibold">
+                             {new Date(invoice.startTime).toLocaleDateString('vi-VN', {
+                                weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+                             })}
+                           </p>
+                        </div>
 
-        <div className="flex items-center justify-between text-xl font-bold">
-          <span>Tổng cộng</span>
-          <b className="text-2xl text-orange-600">
-            {grandTotal.toLocaleString()} đ
-          </b>
+                        <div className="flex items-center gap-2">
+                           <Clock className="w-5 h-5 text-gray-400" />
+                           <p className="font-semibold text-lg">
+                             {new Date(invoice.startTime).toLocaleTimeString('vi-VN', {
+                                hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh'
+                             })}
+                           </p>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-dashed my-4 pt-4">
+                        <div className="flex justify-between items-center mb-2">
+                           <span className="text-gray-500">Ghế:</span>
+                           <span className="font-bold text-lg">{invoice.seatNumbers.join(", ")}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xl text-primary font-bold">
+                           <span>Tổng tiền:</span>
+                           <span>{invoice.totalPrice?.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                    </div>
+                </div>
+             </div>
+
+             <div className="mt-8 text-center space-x-4">
+                <button 
+                  onClick={() => navigate('/')}
+                  className="px-6 py-2 bg-gray-100 hover:bg-gray-200 rounded-full font-semibold transition"
+                >
+                  Về trang chủ
+                </button>
+                <button 
+                  onClick={() => navigate('/profile')} 
+                  className="px-6 py-2 bg-primary text-white hover:bg-primary/90 rounded-full font-semibold transition"
+                >
+                  Xem vé của tôi
+                </button>
+             </div>
+          </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

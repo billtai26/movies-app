@@ -82,6 +82,8 @@ export default function CrudModal({
                       onChange={(v) => change(f.key, v)}
                       options={f.options || []}
                       placeholder="-- Chọn --"
+                      // 👉 THÊM DÒNG NÀY ĐỂ KHÓA Ô CHỌN
+                      disabled={isDisabled}
                     />
                   )
                 ) : f.type === "textarea" ? (

@@ -2,7 +2,8 @@
 // src/types/entities.ts
 // Schema definitions for admin CRUD rendering
 
-export type FieldType = "text" | "number" | "select" | "datetime" | "textarea" | "image" | "boolean";
+// 1. Thêm 'layout' vào FieldType
+export type FieldType = "text" | "number" | "select" | "datetime" | "textarea" | "image" | "boolean" | "layout";
 
 export interface FieldSchema {
   key: string;
@@ -11,6 +12,10 @@ export interface FieldSchema {
   required?: boolean;
   options?: { label: string; value: string }[]; // for select
   placeholder?: string;
+  // --- THÊM 2 DÒNG NÀY ---
+  disabled?: boolean;        // Luôn luôn khóa (nếu cần)
+  readonlyOnEdit?: boolean;  // Chỉ khóa khi đang Sửa (Edit)
+  // -----------------------
 }
 
 export interface EntitySchema {
@@ -21,22 +26,58 @@ export interface EntitySchema {
 }
 
 export const schemas: Record<string, EntitySchema> = {
-  movies: {
+ movies: {
     name: "movies",
     title: "Phim",
     columns: [
       { key: "title", label: "Tiêu đề" },
-      { key: "rating", label: "P" },
+      { key: "posterUrl", label: "Poster" },
       { key: "status", label: "Trạng thái" },
     ],
     fields: [
       { key: "title", label: "Tiêu đề", type: "text", required: true },
-      { key: "poster", label: "Poster (URL)", type: "image", required: true },
-      { key: "rating", label: "Phân loại (P)", type: "text" },
+      { key: "description", label: "Mô tả", type: "textarea", required: true },
+      
+      // --- CÁC TRƯỜNG MỚI/SỬA ---
+      { key: "director", label: "Đạo diễn", type: "text", required: true }, // Thêm mới
+      { key: "actors", label: "Diễn viên", type: "text" }, // (Optional: nếu Backend cần thì thêm)
+      
+      // Sửa key 'duration' thành 'durationInMinutes'
+      { key: "durationInMinutes", label: "Thời lượng (phút)", type: "number", required: true },
+      
+      { key: "releaseDate", label: "Ngày khởi chiếu", type: "datetime", required: true },
+      
+      // Thêm mới: Nhập chuỗi, BackendApi sẽ tách thành mảng
+      { key: "genres", label: "Thể loại (cách nhau dấu phẩy)", type: "text", required: true, placeholder: "Hành động, Hài hước" },
+      
+      { key: "trailerUrl", label: "Trailer URL", type: "text", required: true }, // Thêm mới
+      
+      // Giữ nguyên Poster Url
+      { key: "posterUrl", label: "Poster URL", type: "text", required: true }, 
+
+      // XÓA key 'rating' đi vì Backend báo "not allowed"
+      // { key: "rating", ... } -> Xóa
+      
       { key: "status", label: "Trạng thái", type: "select", options: [
-        { label: "Đang chiếu", value: "now" }, { label: "Sắp chiếu", value: "coming" }
+        { label: "Đang chiếu", value: "now_showing" }, 
+        { label: "Sắp chiếu", value: "coming_soon" }
+        // Lưu ý: Joi validation chỉ cho phép 'now_showing' hoặc 'coming_soon'. 
+        // Nếu chọn 'ended' sẽ bị lỗi validation, trừ khi sửa Backend.
       ]},
-      { key: "desc", label: "Mô tả", type: "textarea" },
+    ]
+  },
+  // --- THÊM ĐOẠN NÀY VÀO ---
+  genres: {
+    name: "genres", // Tên collection trong database/API
+    title: "Thể loại phim",
+    columns: [
+      { key: "name", label: "Tên thể loại" },
+      { key: "slug", label: "Slug" }, // Thường backend sẽ tự tạo slug, nhưng hiển thị ra để xem
+    ],
+    fields: [
+      { key: "name", label: "Tên thể loại", type: "text", required: true, placeholder: "Ví dụ: Hành động, Kinh dị..." },
+      // Nếu backend yêu cầu nhập slug thủ công thì mở dòng dưới, nếu tự động thì thôi
+      // { key: "slug", label: "Slug", type: "text" }, 
     ]
   },
   users: {
@@ -76,7 +117,7 @@ export const schemas: Record<string, EntitySchema> = {
     ]
   },
   theaters: {
-    name: "theaters",
+    name: "cinemas",
     title: "Rạp/Cụm",
     columns: [
       { key: "name", label: "Tên cụm rạp" },
@@ -152,4 +193,18 @@ export const schemas: Record<string, EntitySchema> = {
       ]},
     ]
   },
+  // 2. Thêm schema cinemaHalls (Phòng chiếu)
+  cinemaHalls: {
+    name: "cinemaHalls", // Tên này phải khớp với mapping trong backendApi
+    title: "Phòng chiếu",
+    columns: [
+      { key: "name", label: "Tên phòng" }, // BE thường trả về 'name'
+      { key: "theater", label: "Rạp" },    // Cần populate tên rạp
+      { key: "seatCount", label: "Số ghế" },
+    ],
+    fields: [
+       // Các field sẽ được override trong component để lấy options động
+      { key: "name", label: "Tên phòng", type: "text", required: true },
+    ]
+  }
 };
