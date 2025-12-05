@@ -14,11 +14,11 @@ interface LocationState {
   movieTitle?: string;
 }
 
-function Confirm() {
+export default function Confirm() {
   const location = useLocation();
   const state = (location.state as LocationState | undefined) || undefined;
 
-  // --- Lấy query từ URL khi MoMo redirect về ---
+  // ===== 1. Lấy query từ URL khi MoMo redirect về =====
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
     [location.search]
@@ -33,7 +33,7 @@ function Confirm() {
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // ====== 1. Tính số tiền tổng cộng để hiển thị ======
+  // ===== 2. Tính số tiền tổng cộng để hiển thị =====
   useEffect(() => {
     let a = 0;
 
@@ -53,10 +53,10 @@ function Confirm() {
     setAmount(a);
   }, [state, momoParams.amount]);
 
-  // ====== 2. Gọi BE xác nhận callback MoMo, cập nhật DB & lấy invoice ======
+  // ===== 3. Gọi BE xác nhận MoMo, lấy booking (invoice) về =====
   useEffect(() => {
     if (!momoParams.orderId || !momoParams.resultCode) return;
-    if (momoParams.resultCode !== "0") return;
+    if (momoParams.resultCode !== "0") return; // thất bại thì thôi
 
     (async () => {
       try {
@@ -74,32 +74,10 @@ function Confirm() {
     })();
   }, [momoParams.orderId, momoParams.resultCode]);
 
-  // ====== 3. Lấy tên user (từ localStorage auth) ======
-  const userName = useMemo(() => {
-    try {
-      const rawAuth =
-        localStorage.getItem("auth") || localStorage.getItem("auth-storage");
-      if (!rawAuth) return "Khách hàng";
-      const st = JSON.parse(rawAuth);
-      return (
-        st?.user?.username ||
-        st?.state?.user?.username ||
-        st?.state?.profile?.username ||
-        st?.user?.name ||
-        "Khách hàng"
-      );
-    } catch {
-      return "Khách hàng";
-    }
-  }, []);
-
-  // ====== 4. Xử lý ghế để hiển thị ======
+  // ===== 4. Xử lý ghế: ƯU TIÊN lấy từ booking (invoice.seats) =====
   const seatLabels = useMemo(() => {
-    if (state?.selected?.length) {
-      return state.selected.join(", ");
-    }
-
-    if (Array.isArray(invoice?.seats)) {
+    // 1. Nếu BE trả về seats từ booking
+    if (Array.isArray(invoice?.seats) && invoice.seats.length) {
       const labels = invoice.seats
         .map((s: any) => {
           if (!s) return "";
@@ -109,43 +87,43 @@ function Confirm() {
             s.name ||
             s.seatLabel ||
             s.seatNumber ||
-            (s.row && s.number ? `${s.row}${s.number}` : "")
+            (s.row && s.number != null ? `${s.row}${s.number}` : "")
           );
         })
         .filter(Boolean);
       return labels.join(", ");
     }
 
-    return "";
-  }, [state, invoice]);
+    // 2. Fallback: nếu vẫn còn state.selected (trường hợp quay lại từ app)
+    if (state?.selected?.length) {
+      return state.selected.join(", ");
+    }
 
+    return "";
+  }, [invoice, state]);
+
+  // ===== 5. Payload đưa vào QR: ĐỔI TỪ JSON → TEXT DỄ ĐỌC =====
+  const bookingCode =
+    (invoice?.bookingId || invoice?._id || momoParams.orderId || "").toString();
+
+  const formatMoney = (v: number) =>
+    v.toLocaleString("vi-VN") + " đ";
+
+  const qrLines = [
+    "Cinesta - Vé xem phim",
+    bookingCode && `Mã đặt vé: ${bookingCode}`,
+    seatLabels && `Ghế: ${seatLabels}`,
+    amount > 0 && `Số tiền: ${formatMoney(amount)}`,
+    momoParams.transId && `Mã giao dịch: ${momoParams.transId}`,
+  ].filter(Boolean) as string[];
+
+  // Chuỗi text cuối cùng cho QR
+  const qrPayload = qrLines.join("\n");
+
+  // ===== 6. Giá trị hiển thị bên phải =====
   const ticketTotal = state?.ticketTotal ?? amount;
   const comboTotal = state?.comboTotal ?? 0;
   const grandTotal = state?.grandTotal ?? amount;
-
-  const bookingCode =
-    invoice?.bookingId || invoice?._id || momoParams.orderId || "—";
-
-  // ====== 5. TEXT encode vào QR ======
-  const qrText = useMemo(() => {
-    const lines: string[] = [
-      "CINESTAR MOVIE TICKET",
-      `Tên: ${userName}`,
-      `Ghế: ${seatLabels || "Không xác định"}`,
-      `Số tiền: ${amount.toLocaleString("vi-VN")} đ`,
-      `Mã đặt vé: ${bookingCode}`,
-    ];
-
-    if (state?.movieTitle) {
-      lines.splice(1, 0, `Phim: ${state.movieTitle}`);
-    }
-
-    if (momoParams.transId) {
-      lines.push(`Mã giao dịch: ${momoParams.transId}`);
-    }
-
-    return lines.join("\n");
-  }, [userName, seatLabels, amount, bookingCode, state?.movieTitle, momoParams.transId]);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -158,28 +136,27 @@ function Confirm() {
         <div className="mb-2 text-xl font-semibold">Thanh toán thành công!</div>
 
         <div className="flex justify-center">
-          <QRCode value={qrText} size={220} />
+          <QRCode value={qrPayload} size={220} />
         </div>
 
         <div className="mt-3 space-y-1 text-sm text-gray-700">
           <div>
             Mã đặt vé:{" "}
-            <span className="font-semibold">{bookingCode}</span>
+            <span className="font-semibold">
+              {bookingCode || "—"}
+            </span>
           </div>
           <div>
             Số tiền:{" "}
             <span className="font-semibold">
-              {amount.toLocaleString("vi-VN")} đ
+              {amount.toLocaleString()} đ
             </span>
           </div>
-          {seatLabels && (
-            <div>
-              Ghế: <span className="font-semibold">{seatLabels}</span>
-            </div>
-          )}
           <div>
-            Tên khách hàng:{" "}
-            <span className="font-semibold">{userName}</span>
+            Ghế:{" "}
+            <span className="font-semibold">
+              {seatLabels || "—"}
+            </span>
           </div>
         </div>
 
@@ -200,26 +177,24 @@ function Confirm() {
           </div>
         )}
 
-        {state && (
+        {(ticketTotal || seatLabels) && (
           <>
             <div className="space-y-1">
               <div className="flex items-center justify-between text-base">
                 <span>Vé</span>
-                <b className="text-lg">
-                  {ticketTotal.toLocaleString("vi-VN")} đ
-                </b>
+                <b className="text-lg">{ticketTotal.toLocaleString()} đ</b>
               </div>
               {seatLabels && (
-                <div className="text-xs text-gray-500">Ghế: {seatLabels}</div>
+                <div className="text-xs text-gray-500">
+                  Ghế: {seatLabels}
+                </div>
               )}
             </div>
 
             {comboTotal > 0 && (
               <div className="flex items-center justify-between text-base">
                 <span>Combo</span>
-                <b className="text-lg">
-                  {comboTotal.toLocaleString("vi-VN")} đ
-                </b>
+                <b className="text-lg">{comboTotal.toLocaleString()} đ</b>
               </div>
             )}
 
@@ -230,13 +205,10 @@ function Confirm() {
         <div className="flex items-center justify-between text-xl font-bold">
           <span>Tổng cộng</span>
           <b className="text-2xl text-orange-600">
-            {grandTotal.toLocaleString("vi-VN")} đ
+            {grandTotal.toLocaleString()} đ
           </b>
         </div>
       </div>
     </div>
   );
 }
-
-// 👇 QUAN TRỌNG: default export
-export default Confirm;
