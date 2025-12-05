@@ -1,4 +1,3 @@
-// file: src/lib/backendApi.ts
 import axios from 'axios'
 import { BASE_URL, AUTH_ENDPOINTS } from './config'
 
@@ -20,14 +19,15 @@ const getAuthToken = () => {
   return null;
 }
 
+// Helper tạo config header
+const getHeader = () => {
+  const token = getAuthToken()
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+}
+
 export const api = {
   // --- 1. CÁC HÀM GET DỮ LIỆU CỤ THỂ ---
-  async listMovies(params?: { 
-    status?: 'now_showing' | 'coming_soon'; 
-    limit?: number; 
-    page?: number;
-    q?: string; 
-  }) {
+  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number; q?: string }) {
     const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },
@@ -38,13 +38,11 @@ export const api = {
   },
 
   async listTheaters() {
-    const res = await axios.get(`${BASE_URL}/cinemas`) // Endpoint khác tên collection
+    const res = await axios.get(`${BASE_URL}/cinemas`)
     return res.data
   },
 
-  // 1. Cập nhật hàm listRooms để nhận params linh động hơn (cho phân trang/filter)
   async listRooms(params?: any) {
-    // params có thể là { theaterId: '...' } hoặc { page: 1, limit: 10 }
     const res = await axios.get(`${BASE_URL}/cinemahalls`, { params })
     return res.data
   },
@@ -70,8 +68,7 @@ export const api = {
   },
 
   async listUsers(params?: any) {
-    // Cập nhật để nhận params (phân trang)
-    const res = await axios.get(`${BASE_URL}/users`, { params })
+    const res = await axios.get(`${BASE_URL}/users`, { params, ...getHeader() })
     return res.data
   },
 
@@ -86,59 +83,58 @@ export const api = {
   },
 
   async listComments(movieId?: string) {
-    const token = getAuthToken();
-    const cfg: any = {};
-    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
     const url = movieId ? `${BASE_URL}/comments/movie/${movieId}` : `${BASE_URL}/comments`
-    const res = await axios.get(url, cfg)
+    const res = await axios.get(url, getHeader())
     return res.data
   },
 
-  async listTickets(params?: { page?: number; limit?: number }){
-    const token = getAuthToken();
-    const cfg: any = {};
-    if (params) cfg.params = params;
-    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
-    const res = await axios.get(`${BASE_URL}/tickets`, cfg)
+  async listTickets(params?: { page?: number; limit?: number; q?: string; status?: string }){
+    const res = await axios.get(`${BASE_URL}/tickets`, { params, ...getHeader() })
     return res.data
   },
 
   async getTicket(id: string){
-    const token = getAuthToken();
-    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
-    const res = await axios.get(`${BASE_URL}/tickets/${id}`, cfg)
+    const res = await axios.get(`${BASE_URL}/tickets/${id}`, getHeader())
     return res.data
   },
+  
+  // --- [MỚI] API CHO STAFF ---
+  async checkInTicket(ticketCode: string) {
+    const res = await axios.post(`${BASE_URL}/tickets/check-in`, { code: ticketCode }, getHeader());
+    return res.data;
+  },
 
+  async listOrders(params?: any) {
+    const res = await axios.get(`${BASE_URL}/orders`, { params, ...getHeader() });
+    return res.data;
+  },
+
+  async listStaffReports() {
+    const res = await axios.get(`${BASE_URL}/staff-reports`, getHeader());
+    return res.data;
+  },
+  
   // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
-  // Hàm này giúp CrudTable gọi đúng API dựa vào tên collection (schema.name)
-  // 2. Cập nhật hàm list tổng quát
   async list(collection: string, params?: any) {
-    // console.log(`API Generic List: ${collection}`, params);
-    
+    // Map tên collection từ UI sang endpoint của Backend
     if (collection === 'movies') return this.listMovies(params);
     if (collection === 'users') return this.listUsers(params);
-    if (collection === 'theaters') return this.listTheaters(); // map theaters -> cinemas endpoint
-    if (collection === 'promotions') return this.listPromos();
-    if (collection === 'tickets') return this.listTickets(params);
-    
-    // --> THÊM DÒNG NÀY: Map tên collection 'cinemaHalls' vào hàm listRooms
+    if (collection === 'theaters') return this.listTheaters();
     if (collection === 'cinemaHalls') return this.listRooms(params);
-
-    // --- THÊM ĐOẠN NÀY ---
     if (collection === 'showtimes') {
-      const data = await this.listShowtimes();
-      // Nếu API trả về { showtimes: [...], pagination: ... } thì lấy mảng showtimes
-      return (data as any).showtimes || data;
+       const data = await this.listShowtimes();
+       return (data as any).showtimes || data;
     }
     
-    // Mặc định
-    const token = getAuthToken();
-    const cfg: any = { params };
-    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
+    // Map các endpoint Staff mới
+    if (collection === 'combos') return this.listCombos();
+    if (collection === 'staff-reports') return this.listStaffReports();
+    if (collection === 'orders') return this.listOrders(params);
+    if (collection === 'tickets') return this.listTickets(params);
     
+    // Mặc định
     try {
-      const res = await axios.get(`${BASE_URL}/${collection}`, cfg);
+      const res = await axios.get(`${BASE_URL}/${collection}`, { params, ...getHeader() });
       return res.data;
     } catch (error) {
       console.error(`Error listing ${collection}`, error);
@@ -146,253 +142,167 @@ export const api = {
     }
   },
 
-  // --- 3. HÀM UPLOAD POSTER RIÊNG ---
+  // --- 3. CÁC HÀM THAO TÁC DỮ LIỆU (CREATE, UPDATE, DELETE) ---
+
   async uploadMoviePoster(id: string, file: File) {
-    const token = getAuthToken();
     const formData = new FormData();
     formData.append('poster', file); 
-
     const res = await axios.patch(`${BASE_URL}/movies/${id}/poster`, formData, {
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      }
-    });
+      ...getHeader(),
+      'Content-Type': 'multipart/form-data',
+    } as any);
     return res.data;
   },
 
-  // --- 4. HÀM CREATE (CÓ XỬ LÝ UPLOAD ẢNH CHO PHIM) ---
   async create<T>(collection: string, item: T) {
-    const token = getAuthToken();
-    
-    // XỬ LÝ ĐẶC BIỆT CHO MOVIES
+    // Xử lý riêng cho Movies (convert dữ liệu)
     if (collection === 'movies') {
-       const rawMovieData = item as any;
-
-       // Chỉ cần xử lý chuyển đổi dữ liệu (String -> Number/Array)
-       const moviePayload = {
-         ...rawMovieData,
-         
-         // 1. Chuyển đổi số
-         durationInMinutes: Number(rawMovieData.durationInMinutes),
-         
-         // 2. Chuyển chuỗi "Hành động, Hài" thành mảng ["Hành động", "Hài"]
-         genres: typeof rawMovieData.genres === 'string' 
-            ? rawMovieData.genres.split(',').map((g: string) => g.trim()) 
-            : rawMovieData.genres,
-
-         // 3. Chuyển chuỗi diễn viên thành mảng
-         actors: typeof rawMovieData.actors === 'string'
-            ? rawMovieData.actors.split(',').map((a: string) => a.trim())
-            : rawMovieData.actors,
-         
-         // 4. posterUrl lấy trực tiếp từ những gì bạn nhập (không cần upload nữa)
-         posterUrl: rawMovieData.posterUrl, 
+       const raw = item as any;
+       const payload = {
+         ...raw,
+         durationInMinutes: Number(raw.durationInMinutes),
+         genres: typeof raw.genres === 'string' ? raw.genres.split(',').map((g:string)=>g.trim()) : raw.genres,
+         actors: typeof raw.actors === 'string' ? raw.actors.split(',').map((a:string)=>a.trim()) : raw.actors,
+         posterUrl: raw.posterUrl, 
        };
+       delete (payload as any).duration; 
+       delete (payload as any).rating;
 
-       // Xóa các trường thừa
-       delete (moviePayload as any).duration; 
-       delete (moviePayload as any).rating;
-
-       // GỌI 1 API DUY NHẤT
-       const res = await axios.post(`${BASE_URL}/movies`, moviePayload, {
-         headers: { Authorization: `Bearer ${token}` }
-       });
-       
+       const res = await axios.post(`${BASE_URL}/movies`, payload, getHeader());
        return res.data;
     }
 
-    // ... (Giữ nguyên logic cho các collection khác) ...
-    const url = collection === 'comments' ? `${BASE_URL}/comments` : `${BASE_URL}/${collection}`
-    const payload = collection === 'comments' ? ({
-      movieId: (item as any)?.movieId,
-      content: (item as any)?.content,
-      parentId: (item as any)?.parentId ?? null
-    }) : item
-    
-    const res = await axios.post(url, payload, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
-    return res.data
+    // Mặc định cho các collection khác
+    let endpoint = collection;
+    if (collection === 'staff-reports') endpoint = 'staff-reports';
+    if (collection === 'comments') endpoint = 'comments';
+
+    const res = await axios.post(`${BASE_URL}/${endpoint}`, item, getHeader());
+    return res.data;
   },
 
-  // --- 5. HÀM UPDATE (CÓ XỬ LÝ UPLOAD ẢNH CHO PHIM) ---
   async update<T>(collection: string, id: string, item: T) {
-    const token = getAuthToken();
-
-    // XỬ LÝ ĐẶC BIỆT CHO MOVIES
+    // Xử lý riêng cho Movies
     if (collection === 'movies') {
-       const rawMovieData = item as any;
-       
-       const moviePayload = {
-         ...rawMovieData,
-         // Logic chuyển đổi dữ liệu (giữ nguyên như cũ)
-         durationInMinutes: Number(rawMovieData.durationInMinutes),
-         genres: typeof rawMovieData.genres === 'string' 
-            ? rawMovieData.genres.split(',').map((g: string) => g.trim()) 
-            : rawMovieData.genres,
-         actors: typeof rawMovieData.actors === 'string'
-            ? rawMovieData.actors.split(',').map((a: string) => a.trim())
-            : rawMovieData.actors,
+       const raw = item as any;
+       const payload = {
+         ...raw,
+         durationInMinutes: Number(raw.durationInMinutes),
+         genres: typeof raw.genres === 'string' ? raw.genres.split(',').map((g:string)=>g.trim()) : raw.genres,
+         actors: typeof raw.actors === 'string' ? raw.actors.split(',').map((a:string)=>a.trim()) : raw.actors,
        };
+       // Cleanup fields
+       ['_id', 'duration', 'rating', 'averageRating', 'reviewCount', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete (payload as any)[k]);
 
-       // --- KHU VỰC DỌN DẸP DỮ LIỆU ---
-       // Xóa các trường thừa hoặc trường hệ thống mà Backend cấm update
-       delete (moviePayload as any)._id; 
-       delete (moviePayload as any).duration; 
-       delete (moviePayload as any).rating;
-
-       // -> THÊM CÁC DÒNG NÀY ĐỂ FIX LỖI:
-       delete (moviePayload as any).averageRating;
-       delete (moviePayload as any).reviewCount;
-       delete (moviePayload as any).createdAt;
-       delete (moviePayload as any).updatedAt;
-       delete (moviePayload as any)._destroy;
-       delete (moviePayload as any).slug; // Xóa luôn slug nếu có (thường slug tự generate)
-
-       // GỌI API
-       const res = await axios.put(`${BASE_URL}/movies/${id}`, moviePayload, {
-         headers: { Authorization: `Bearer ${token}` }
-       });
-       
+       const res = await axios.put(`${BASE_URL}/movies/${id}`, payload, getHeader());
        return res.data;
     }
 
-    // GỘP CASE: Xử lý cho cinemaHalls, cinemas, theaters, genres
-    if (['cinemas', 'theaters', 'genres', 'cinemaHalls', 'showtimes'].includes(collection)) {
-        
-        let endpoint = collection;
-        if (collection === 'theaters') endpoint = 'cinemas';
-        if (collection === 'cinemaHalls') endpoint = 'cinemahalls';
+    // Xử lý chung cho các danh mục Admin/Staff
+    let endpoint = collection;
+    if (['theaters'].includes(collection)) endpoint = 'cinemas';
+    if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
+    
+    const payload = { ...item } as any;
+    ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
 
-        const url = `${BASE_URL}/${endpoint}/${id}`;
-        
-        const payload = { ...item } as any; 
-        
-        // 1. Xóa các trường hệ thống chung
-        delete payload._id;
-        delete payload.createdAt;
-        delete payload.updatedAt;
-        delete payload._destroy;
-        delete payload.slug; 
-
-        // 2. --- THÊM LOGIC NÀY CHO SHOWTIMES ---
-        // Nếu là showtimes, xóa tiếp các trường bị Backend cấm sửa
-        if (collection === 'showtimes') {
-            delete payload.cinemaId;
-            delete payload.movieId;
-            delete payload.theaterId;
-            delete payload.seats; // Không gửi danh sách ghế khi update lịch
-            
-            // Backend validation cũng yêu cầu loại bỏ basePrice/vipPrice nếu không dùng tới
-            // Nhưng thường ta chỉ cần gửi startTime là đủ
-        }
-        // ----------------------------------------
-
-        const res = await axios.patch(url, payload, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
+    if (collection === 'showtimes') {
+        delete payload.cinemaId; delete payload.movieId; delete payload.theaterId; delete payload.seats;
     }
 
-    // ... (Giữ nguyên phần còn lại) ...
-    const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
-    const res = await axios.put(url, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
-    return res.data
+    // Gọi PUT hoặc PATCH tùy backend
+    const method = (collection === 'orders' || collection === 'tickets') ? 'patch' : 'put';
+    
+    const res = await (axios as any)[method](`${BASE_URL}/${endpoint}/${id}`, payload, getHeader());
+    return res.data;
   },
 
-  // --- 6. HÀM REMOVE (BỊ THIẾU NÊN BÁO LỖI) ---
   async remove(collection: string, id: string) {
-    const token = getAuthToken();
-    const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
-    const res = await axios.delete(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
-    return res.data
+    let endpoint = collection;
+    if (collection === 'theaters') endpoint = 'cinemas';
+    
+    const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
+    return res.data;
   },
 
-  // --- 7. AUTH & USER UTILS ---
+  // --- 4. AUTH & USER UTILS ---
   async login(email: string, password: string){
-    const path = AUTH_ENDPOINTS.login[0]
-    const url = `${BASE_URL}${path}`
-    const res = await axios.post(url, { email, password })
+    const res = await axios.post(`${BASE_URL}${AUTH_ENDPOINTS.login[0]}`, { email, password })
     return res.data
   },
 
-  async register(payload: { username: string; email: string; password: string }){
-    const path = AUTH_ENDPOINTS.register[0]
-    const url = `${BASE_URL}${path}`
-    const res = await axios.post(url, payload)
+  async register(payload: any){
+    const res = await axios.post(`${BASE_URL}${AUTH_ENDPOINTS.register[0]}`, payload)
     return res.data
   },
 
   async requestPasswordReset(email: string){
-    const path = AUTH_ENDPOINTS.forgotPassword[0]
-    const url = `${BASE_URL}${path}`
-    const res = await axios.post(url, { email })
+    const res = await axios.post(`${BASE_URL}${AUTH_ENDPOINTS.forgotPassword[0]}`, { email })
     return res.data
   },
 
   async resetPassword(token: string, password: string) {
-    const url = `${BASE_URL}/users/reset-password/${token}`
-    const res = await axios.put(url, { password })
+    const res = await axios.put(`${BASE_URL}/users/reset-password/${token}`, { password })
     return res.data
   },
 
   async getProfile() {
-    const token = getAuthToken();
-    if (!token) return null;
-    const res = await axios.get(`${BASE_URL}/users/profile`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await axios.get(`${BASE_URL}/users/profile`, getHeader());
     return res.data;
   },
 
-  async updateProfileUser(data: { username?: string; phone?: string; dob?: string }) {
-    const token = getAuthToken();
-    const res = await axios.put(`${BASE_URL}/users/profile`, data, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  async updateProfileUser(data: any) {
+    const res = await axios.put(`${BASE_URL}/users/profile`, data, getHeader());
     return res.data;
   },
 
   async updateAvatarUser(file: File) {
-    const token = getAuthToken();
     const formData = new FormData();
     formData.append('avatar', file);
     const res = await axios.patch(`${BASE_URL}/users/profile/avatar`, formData, {
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      }
-    });
+      ...getHeader(),
+      'Content-Type': 'multipart/form-data',
+    } as any);
+    return res.data;
+  },
+  
+  async listMyTickets(params?: any) {
+    const res = await axios.get(`${BASE_URL}/tickets/my-tickets`, { params, ...getHeader() });
+    return res.data;
+  },
+
+  async getMyTicket(id: string) {
+    const res = await axios.get(`${BASE_URL}/tickets/my-tickets/${id}`, getHeader());
     return res.data;
   },
 
   async applyVoucher(code: string, total: number) {
-    const token = getAuthToken();
-    if (!token) throw new Error('Bạn cần đăng nhập để áp dụng voucher');
-    const res = await axios.post(`${BASE_URL}/vouchers/apply`, 
-      { code, total },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const res = await axios.post(`${BASE_URL}/vouchers/apply`, { code, total }, getHeader());
     return res.data; 
   },
 
   async holdSeats(showtimeId: string, seatNumbers: string[]) {
-    const token = getAuthToken();
-    if (!token) throw new Error('Vui lòng đăng nhập để chọn ghế.');
-    const res = await axios.post(
-      `${BASE_URL}/showtimes/${showtimeId}/hold-seats`,
-      { seatNumbers },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const res = await axios.post(`${BASE_URL}/showtimes/${showtimeId}/hold-seats`, { seatNumbers }, getHeader());
     return res.data;
   },
 
   async releaseSeats(showtimeId: string, seatNumbers: string[]) {
-    const token = getAuthToken();
-    if (!token) return;
-    await axios.post(
-      `${BASE_URL}/showtimes/${showtimeId}/release-seats`,
-      { seatNumbers },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    await axios.post(`${BASE_URL}/showtimes/${showtimeId}/release-seats`, { seatNumbers }, getHeader());
   },
+  
+  // --- HÀM THANH TOÁN MOMO (Đã thêm ở đây) ---
+  async momoCreate(body: any) {
+     const res = await axios.post(`${BASE_URL}/payment/momo`, body, getHeader());
+     return res.data;
+  },
+  
+  async aiChat(userId: string, message: string) {
+      const res = await axios.post(`${BASE_URL}/ai/chat`, { userId, message });
+      return res.data;
+  },
+
+  async aiHistory(userId: string) {
+      const res = await axios.get(`${BASE_URL}/ai/history/${userId}`);
+      return res.data;
+  }
 }
