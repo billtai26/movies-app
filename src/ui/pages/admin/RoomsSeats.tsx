@@ -40,11 +40,21 @@ export default function AdminRoomsSeats() {
     name: "cinemaHalls", 
     title: "Phòng & Ghế",
     columns: [
-      { key: "name", label: "Tên phòng" },
-      { key: "theater", label: "Rạp" },
-      { key: "seatCount", label: "Tổng ghế" },
-      { key: "cinemaType", label: "Loại" }, // Hiển thị cinemaType
-    ],
+    { key: "name", label: "Tên phòng" },
+    
+    // --- SỬA ĐOẠN NÀY ---
+    { 
+      key: "cinemaId", // Key chính để lấy dữ liệu (là object)
+      label: "Rạp",
+      // Thêm hàm render để lấy tên rạp từ trong object
+      // Dùng ?.name để tránh lỗi nếu cinemaId bị null/undefined
+      render: (row: any) => row.cinemaId?.name || "" 
+    },
+    // --------------------
+
+    { key: "totalSeats", label: "Tổng ghế" },
+    { key: "cinemaType", label: "Loại" },
+  ],
     fields: [
       { key: "name", label: "Tên phòng", type: "text", required: true },
       {
