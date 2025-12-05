@@ -1,8 +1,10 @@
 import React from 'react'
 
-interface Column<T> {
-  key: keyof T
-  label: string
+// 1. Cập nhật Interface: Thêm tùy chọn `render`
+export interface Column<T> {
+  key: string; // Nên đổi thành string để linh hoạt hơn, hoặc giữ keyof T cũng được
+  label: string;
+  render?: (row: T) => React.ReactNode; // <--- THÊM DÒNG NÀY
 }
 
 interface DataTableProps<T> {
@@ -32,8 +34,9 @@ export default function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((r, idx) => {
-            const isSelected =
-              selectedRow && (selectedRow as any).id === (r as any).id
+            // Lưu ý: check id an toàn hơn
+            const isSelected = selectedRow && (selectedRow as any)._id === (r as any)._id 
+            
             return (
               <tr
                 key={idx}
@@ -46,7 +49,11 @@ export default function DataTable<T>({
               >
                 {columns.map((c) => (
                   <td key={String(c.key)} className="p-2">
-                    {String(r[c.key])}
+                    {/* 2. CẬP NHẬT LOGIC HIỂN THỊ */}
+                    {c.render 
+                      ? c.render(r) // Nếu có hàm render, hãy gọi nó!
+                      : (r as any)[c.key] // Nếu không, lấy giá trị mặc định
+                    }
                   </td>
                 ))}
               </tr>

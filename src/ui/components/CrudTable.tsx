@@ -144,12 +144,21 @@ export default function CrudTable({
 
                 return (
                   <tr key={originalRow.id || originalRow._id} className="border-t hover:bg-gray-50">
-                    {schema.columns.map((c) => (
+                    {schema.columns.map((c: any) => (
                       <td key={c.key} className="px-3 py-2 align-middle">
-                        {c.key === "poster" || c.key === "posterUrl" ? (
-                           <img src={displayRow[c.key]} alt="" className="h-10 w-8 object-cover rounded" />
-                        ) : (
-                           String(displayRow[c.key] || "") // Bây giờ nó sẽ hiển thị Tên thay vì ID hoặc rỗng
+                        {/* ƯU TIÊN 1: Nếu cột có hàm render, chạy hàm đó */}
+                        {c.render ? (
+                          c.render(displayRow)
+                        ) : 
+                        
+                        /* ƯU TIÊN 2: Xử lý hiển thị ảnh (giữ nguyên logic cũ của bạn) */
+                        c.key === "poster" || c.key === "posterUrl" ? (
+                          <img src={displayRow[c.key]} alt="" className="h-10 w-8 object-cover rounded" />
+                        ) : 
+                        
+                        /* ƯU TIÊN 3: Hiển thị mặc định (ép kiểu string) */
+                        (
+                          String(displayRow[c.key] || "")
                         )}
                       </td>
                     ))}
