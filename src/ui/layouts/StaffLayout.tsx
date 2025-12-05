@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react"; // Bỏ useEffect
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DarkToggle from "../components/DarkToggle";
@@ -16,16 +16,11 @@ import {
 } from "lucide-react";
 
 export default function StaffLayout() {
-  const { role, logout } = useAuth();
+  const { logout } = useAuth(); // Bỏ role ở đây vì Router đã chặn rồi
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
 
-  // 🧩 Bảo vệ route - chỉ cho phép role staff/admin
-  useEffect(() => {
-    if (!role || (role !== "staff" && role !== "admin")) {
-      nav("/auth/login");
-    }
-  }, [role, nav]);
+  // --- ĐÃ XÓA useEffect CHECK QUYỀN TẠI ĐÂY ĐỂ TRÁNH XUNG ĐỘT ---
 
   // Danh sách menu bên trái
   const items = [
@@ -75,7 +70,6 @@ export default function StaffLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <DarkToggle />
             <button
               className="btn-outline text-sm px-3 py-1"
               onClick={() => {
