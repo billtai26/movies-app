@@ -22,7 +22,12 @@ const getAuthToken = () => {
 
 export const api = {
   // --- 1. CÁC HÀM GET DỮ LIỆU CỤ THỂ ---
-  async listMovies(params?: any) {
+  async listMovies(params?: { 
+    status?: 'now_showing' | 'coming_soon'; 
+    limit?: number; 
+    page?: number;
+    q?: string; 
+  }) {
     const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },
@@ -75,11 +80,6 @@ export const api = {
     return res.data
   },
 
-  async listGenres() {
-    const res = await axios.get(`${BASE_URL}/genres`)
-    return res.data
-  },
-
   async listArticles() {
     const res = await axios.get(`${BASE_URL}/articles`)
     return res.data
@@ -110,53 +110,6 @@ export const api = {
     return res.data
   },
 
-  async listMyTickets(params?: { page?: number; limit?: number }){
-    const token = getAuthToken();
-    const cfg: any = {};
-    if (params) cfg.params = params;
-    if (token) cfg.headers = { Authorization: `Bearer ${token}` };
-    const endpoints = [
-      '/tickets',
-      '/orders',
-      '/bookings',
-      '/users/tickets',
-      '/tickets/me'
-    ];
-    for (const ep of endpoints){
-      try {
-        const res = await axios.get(`${BASE_URL}${ep}`, cfg);
-        return res.data;
-      } catch (e: any) {
-        const s = e?.response?.status;
-        if (s === 404 || s === 401) continue;
-        continue;
-      }
-    }
-    throw new Error('Không tìm thấy endpoint vé');
-  },
-
-  async getMyTicket(id: string){
-    const token = getAuthToken();
-    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
-    const endpoints = [
-      `/tickets/${id}`,
-      `/orders/${id}`,
-      `/bookings/${id}`,
-      `/users/tickets/${id}`
-    ];
-    for (const ep of endpoints){
-      try {
-        const res = await axios.get(`${BASE_URL}${ep}`, cfg);
-        return res.data;
-      } catch (e: any) {
-        const s = e?.response?.status;
-        if (s === 404 || s === 401) continue;
-        continue;
-      }
-    }
-    throw new Error('Không tìm thấy vé');
-  },
-
   // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
   // Hàm này giúp CrudTable gọi đúng API dựa vào tên collection (schema.name)
   // 2. Cập nhật hàm list tổng quát
@@ -172,6 +125,13 @@ export const api = {
     // --> THÊM DÒNG NÀY: Map tên collection 'cinemaHalls' vào hàm listRooms
     if (collection === 'cinemaHalls') return this.listRooms(params);
 
+    // --- THÊM ĐOẠN NÀY ---
+    if (collection === 'showtimes') {
+      const data = await this.listShowtimes();
+      // Nếu API trả về { showtimes: [...], pagination: ... } thì lấy mảng showtimes
+      return (data as any).showtimes || data;
+    }
+    
     // Mặc định
     const token = getAuthToken();
     const cfg: any = { params };
@@ -297,8 +257,8 @@ export const api = {
     }
 
     // GỘP CASE: Xử lý cho cinemaHalls, cinemas, theaters, genres
-    if (['cinemas', 'theaters', 'genres', 'cinemaHalls'].includes(collection)) {
-        // Map collection name sang endpoint thực tế nếu cần
+    if (['cinemas', 'theaters', 'genres', 'cinemaHalls', 'showtimes'].includes(collection)) {
+        
         let endpoint = collection;
         if (collection === 'theaters') endpoint = 'cinemas';
         if (collection === 'cinemaHalls') endpoint = 'cinemahalls';
@@ -307,23 +267,33 @@ export const api = {
         
         const payload = { ...item } as any; 
         
-        // Xóa các trường hệ thống
+        // 1. Xóa các trường hệ thống chung
         delete payload._id;
         delete payload.createdAt;
         delete payload.updatedAt;
         delete payload._destroy;
         delete payload.slug; 
 
-        // Riêng cinemaHalls: API có thể không cho update trực tiếp mảng seats nếu quá lớn, 
-        // nhưng tạm thời cứ gửi cả payload.
-        
+        // 2. --- THÊM LOGIC NÀY CHO SHOWTIMES ---
+        // Nếu là showtimes, xóa tiếp các trường bị Backend cấm sửa
+        if (collection === 'showtimes') {
+            delete payload.cinemaId;
+            delete payload.movieId;
+            delete payload.theaterId;
+            delete payload.seats; // Không gửi danh sách ghế khi update lịch
+            
+            // Backend validation cũng yêu cầu loại bỏ basePrice/vipPrice nếu không dùng tới
+            // Nhưng thường ta chỉ cần gửi startTime là đủ
+        }
+        // ----------------------------------------
+
         const res = await axios.patch(url, payload, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return res.data;
     }
 
-    // ... (Giữ nguyên logic cũ cho các collection khác)
+    // ... (Giữ nguyên phần còn lại) ...
     const url = collection === 'comments' ? `${BASE_URL}/comments/${id}` : `${BASE_URL}/${collection}/${id}`
     const res = await axios.put(url, item, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return res.data
@@ -425,73 +395,4 @@ export const api = {
       { headers: { Authorization: `Bearer ${token}` } }
     );
   },
-
-   // ================= AI CHAT =================
-  async aiHistory(userId: string) {
-    const res = await axios.get(`${BASE_URL}/ai/history`, {
-      params: { userId }
-    });
-    return res.data; // mảng [{role, content}]
-  },
-
-  async aiChat(userId: string | null, message: string) {
-    const res = await axios.post(`${BASE_URL}/ai/chat`, {
-      userId,
-      message
-    });
-    return res.data; // { reply: string }
-  },
-     // 🔥 MoMo QR Payment
-momoCreate: async (data: any) => {
-  const token = getAuthToken();
-
-  const res = await axios.post(
-    // ĐÚNG: /v1/payments/momo/payment
-    `${BASE_URL}/payments/momo/payment`,
-    data,
-    {
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : undefined
-    }
-  );
-
-  // BE trả về { success, data: {...} }
-  // => trả thẳng data bên trong cho Payment.tsx
-  return res.data?.data || res.data;
-},
-
-  momoConfirm: async (params: any) => {
-  // Thường callback từ MoMo không cần token, nhưng có cũng không sao
-  const token = getAuthToken();
-
-  const res = await axios.post(
-    `${BASE_URL}/payments/momo/callback`,
-    params,
-    token
-      ? { headers: { Authorization: `Bearer ${token}` } }
-      : undefined
-  );
-
-  // BE trả về { ... , invoice }
-  return res.data;
-},
-
-  async createMyTicket(payload: any){
-    const token = getAuthToken();
-    const cfg: any = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
-    const endpoints = ['/orders', '/tickets', '/bookings'];
-    for (const ep of endpoints){
-      try{
-        const res = await axios.post(`${BASE_URL}${ep}`, payload, cfg);
-        return res.data;
-      }catch(e:any){
-        const s = e?.response?.status;
-        if (s === 404 || s === 401) continue;
-        continue;
-      }
-    }
-    throw new Error('Không tạo được vé');
-  },
 }
-
