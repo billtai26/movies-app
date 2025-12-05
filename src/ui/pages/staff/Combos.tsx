@@ -1,28 +1,28 @@
-import React, { useEffect } from "react";
+import React from "react";
 import CrudTable from "../../components/CrudTable";
-
 import { useAuth } from "../../../store/auth";
 
-const schema = {
-  name: "combos",
-  title: "Combo bắp nước",
-  columns: [
-    { key: "imageUrl", label: "Ảnh" },
-    { key: "name", label: "Tên" },
-    { key: "price", label: "Giá" },
-    { key: "desc", label: "Mô tả" },
-  ],
-  fields: [
-    { key: "imageUrl", label: "Ảnh (URL)", type: "text", placeholder: "https://..." },
-    { key: "name", label: "Tên", type: "text" },
-    { key: "price", label: "Giá", type: "number" },
-    { key: "desc", label: "Mô tả", type: "textarea" },
-  ]
-} as any;
-
-export default function Combos(){
-  useEffect(()=>{ seedAll(); },[]);
+export default function Combos() {
   const { role } = useAuth();
-  const canEdit = role === "admin"; // Admin full CRUD, Staff read-only
-  return <CrudTable schema={schema} canEdit={canEdit} />;
+  // Chỉ Admin mới được quyền thêm/sửa/xóa, Staff chỉ xem
+  const canEdit = role === "admin"; 
+
+  const schema = {
+    name: "combos", // Tên này khớp với API endpoint (GET /combos)
+    title: "Quản lý Combo & Bắp nước",
+    columns: [
+      { key: "imageUrl", label: "Ảnh" },
+      { key: "name", label: "Tên Combo" },
+      { key: "price", label: "Giá bán" },
+      { key: "description", label: "Mô tả" }, // Kiểm tra lại key này với Backend
+    ],
+    fields: [
+      { key: "name", label: "Tên Combo", type: "text", required: true },
+      { key: "price", label: "Giá (VNĐ)", type: "number", required: true },
+      { key: "description", label: "Mô tả chi tiết", type: "textarea" },
+      { key: "imageUrl", label: "Link ảnh (URL)", type: "text", placeholder: "https://..." },
+    ]
+  };
+
+  return <CrudTable schema={schema as any} canEdit={canEdit} />;
 }

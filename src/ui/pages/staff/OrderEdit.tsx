@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useCollection } from "../../../lib/mockCrud";
-
+import { api } from "../../../lib/api"; // ✅ Dùng API thật
 import CustomSelect from "../../../ui/components/CustomSelect";
+import toast from "react-hot-toast";
+import LoadingOverlay from "../../components/LoadingOverlay"; // Thêm loading
 
 export default function OrderEdit() {
-  const { rows: orders = [], update, remove } = useCollection<any>("orders");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  
   const [editing, setEditing] = useState<any | null>(null);
   const [status, setStatus] = useState("pending");
   const [keyword, setKeyword] = useState("");
@@ -13,34 +16,77 @@ export default function OrderEdit() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  useEffect(() => {
+  // 1. Tải danh sách đơn hàng
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      // Gọi API lấy danh sách
+      const res = await api.list("orders");
+      const list = Array.isArray(res) ? res : (res.data || []);
+      // Sắp xếp đơn mới nhất lên đầu
+      setOrders(list.sort((a: any, b: any) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      ));
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể tải danh sách đơn hàng");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    fetchOrders();
   }, []);
 
   const handleEdit = (order: any) => {
     setEditing(order);
-    setStatus(order.status);
+    setStatus(order.status || "pending");
   };
 
-  const handleDelete = (order: any) => {
-    if (confirm(`Bạn có chắc muốn xóa đơn #${order.id}?`)) {
-      remove(order.id);
-      if (editing?.id === order.id) setEditing(null);
+  const handleDelete = async (order: any) => {
+    if (confirm(`Bạn có chắc muốn xóa đơn #${order.id || order._id}?`)) {
+      try {
+        setLoading(true);
+        await api.remove("orders", order._id || order.id);
+        toast.success("Đã xóa đơn hàng");
+        setOrders(prev => prev.filter(o => (o._id || o.id) !== (order._id || order.id)));
+        if (editing?.id === order.id) setEditing(null);
+      } catch (error) {
+        toast.error("Lỗi khi xóa đơn hàng");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editing) return;
-    update(editing.id, { status });
-    setEditing(null);
+    try {
+      setLoading(true);
+      await api.update("orders", editing.id || editing._id, { status });
+      
+      // Cập nhật lại UI
+      setOrders(prev => prev.map(o => 
+        (o.id === editing.id || o._id === editing._id) ? { ...o, status } : o
+      ));
+      
+      toast.success("Cập nhật trạng thái thành công!");
+      setEditing(null);
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Search filter
-  const filtered = orders.filter(
-    (o) =>
-      o.id.toString().includes(keyword.toLowerCase()) ||
-      o.status.toLowerCase().includes(keyword.toLowerCase())
-  );
+  // Search filter (Client-side cho nhanh với list nhỏ, hoặc gọi API nếu cần)
+  const filtered = orders.filter((o) => {
+    const id = String(o.id || o._id || "");
+    const st = String(o.status || "");
+    const kw = keyword.toLowerCase();
+    return id.toLowerCase().includes(kw) || st.toLowerCase().includes(kw);
+  });
 
   // Pagination logic
   const total = filtered.length;
@@ -54,7 +100,7 @@ export default function OrderEdit() {
   }, [keyword, pageSize]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow space-y-5">
+    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow space-y-5 relative min-h-[400px]">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -62,29 +108,23 @@ export default function OrderEdit() {
         </h2>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-          {/* Số dòng/trang */}
           <select
             className="border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-1 text-sm bg-white dark:bg-gray-800"
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
           >
             {[5, 10, 20].map((n) => (
-              <option key={n} value={n}>
-                {n} / trang
-              </option>
+              <option key={n} value={n}>{n} / trang</option>
             ))}
           </select>
 
-          {/* Ô tìm kiếm */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Tìm kiếm đơn hàng..."
-              className="input sm:w-56"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Tìm kiếm đơn hàng..."
+            className="input sm:w-56"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
         </div>
       </div>
 
@@ -94,6 +134,7 @@ export default function OrderEdit() {
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
               <th className="text-left px-3 py-2">Mã đơn</th>
+              <th className="text-left px-3 py-2">Ngày tạo</th>
               <th className="text-left px-3 py-2">Tổng tiền (₫)</th>
               <th className="text-left px-3 py-2">Trạng thái</th>
               <th className="text-center px-3 py-2">Thao tác</th>
@@ -102,16 +143,27 @@ export default function OrderEdit() {
           <tbody>
             {pageRows.map((order) => (
               <tr
-                key={order.id}
+                key={order.id || order._id}
                 className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
               >
                 <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                  #{order.id}
+                  #{order.id || order._id}
+                </td>
+                <td className="px-3 py-2 text-gray-500">
+                  {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : '—'}
+                </td>
+                <td className="px-3 py-2 font-medium text-blue-600">
+                  {(order.total || order.amount || 0).toLocaleString("vi-VN")}
                 </td>
                 <td className="px-3 py-2">
-                  {order.total?.toLocaleString("vi-VN")}
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                    order.status === 'paid' ? 'bg-green-100 text-green-700' :
+                    order.status === 'refunded' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {order.status}
+                  </span>
                 </td>
-                <td className="px-3 py-2 capitalize">{order.status}</td>
                 <td className="px-3 py-2 text-center">
                   <div className="flex justify-center gap-2">
                     <button
@@ -132,10 +184,7 @@ export default function OrderEdit() {
             ))}
             {pageRows.length === 0 && (
               <tr>
-                <td
-                  colSpan={4}
-                  className="text-center py-6 text-gray-500 italic"
-                >
+                <td colSpan={5} className="text-center py-6 text-gray-500 italic">
                   Không có đơn hàng nào
                 </td>
               </tr>
@@ -145,55 +194,35 @@ export default function OrderEdit() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+      <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-gray-600 dark:text-gray-300">
-          Hiển thị {total === 0 ? 0 : `${start + 1}–${Math.min(end, total)}`} /
-          Tổng {total}
+          Hiển thị {total === 0 ? 0 : `${start + 1}–${Math.min(end, total)}`} / Tổng {total}
         </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-              page <= 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
-            }`}
+            className="px-3 py-1 rounded border disabled:opacity-50"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
-            Trang trước
+            Trước
           </button>
-
-          <span className="px-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-            {page} / {totalPages}
-          </span>
-
           <button
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-              page >= totalPages
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
-            }`}
+            className="px-3 py-1 rounded border disabled:opacity-50"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
-            Trang sau
+            Sau
           </button>
         </div>
       </div>
 
       {/* Form chỉnh sửa */}
       {editing && (
-        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4 animate-fadeIn">
           <div className="text-base font-semibold mb-2">
-            Đang chỉnh sửa đơn{" "}
-            <span className="text-blue-500">#{editing.id}</span>
+            Đang chỉnh sửa đơn <span className="text-blue-500">#{editing.id || editing._id}</span>
           </div>
-          <div className="text-sm text-gray-500 mb-3">
-            Tổng: {editing.total?.toLocaleString()}₫ — Trạng thái hiện tại:{" "}
-            {editing.status}
-          </div>
-
+          
           <div className="label mb-1">Trạng thái mới</div>
           <div className="max-w-xs">
             <CustomSelect
@@ -203,6 +232,7 @@ export default function OrderEdit() {
                 { value: "pending", label: "Chờ xử lý" },
                 { value: "paid", label: "Đã thanh toán" },
                 { value: "refunded", label: "Hoàn tiền" },
+                { value: "cancelled", label: "Đã hủy" },
               ]}
             />
           </div>
@@ -210,19 +240,21 @@ export default function OrderEdit() {
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={() => setEditing(null)}
-              className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+              className="px-3 py-1 rounded-md border hover:bg-gray-100"
             >
               Hủy
             </button>
             <button
               onClick={handleSave}
-              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm"
+              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md"
             >
               Lưu thay đổi
             </button>
           </div>
         </div>
       )}
+      
+      <LoadingOverlay isLoading={loading} message="Đang xử lý..." />
     </div>
   );
 }
