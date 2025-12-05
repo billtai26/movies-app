@@ -212,8 +212,17 @@ export const api = {
         delete payload.cinemaId; delete payload.movieId; delete payload.theaterId; delete payload.seats;
     }
 
+    // --- 3. THÊM ĐOẠN NÀY: Xử lý riêng cho 'users' để tránh lỗi Joi ---
+    if (collection === 'users') {
+        delete payload.email;     // Backend cấm sửa email
+        delete payload.password;  // Backend cấm sửa password qua API này
+        delete payload.googleId;  // Backend cấm sửa googleId
+        delete payload.facebookId;
+        // Nếu payload có các trường null/undefined mà backend không chịu, hãy xóa nốt tại đây nếu cần
+    }
+
     // Gọi PUT hoặc PATCH tùy backend
-    const method = (collection === 'orders' || collection === 'tickets') ? 'patch' : 'put';
+    const method = (collection === 'orders' || collection === 'tickets' || collection === 'users') ? 'patch' : 'put';
     
     const res = await (axios as any)[method](`${BASE_URL}/${endpoint}/${id}`, payload, getHeader());
     return res.data;
