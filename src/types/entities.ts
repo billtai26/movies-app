@@ -12,6 +12,10 @@ export interface FieldSchema {
   required?: boolean;
   options?: { label: string; value: string }[]; // for select
   placeholder?: string;
+  // --- THÊM 2 DÒNG NÀY ---
+  disabled?: boolean;        // Luôn luôn khóa (nếu cần)
+  readonlyOnEdit?: boolean;  // Chỉ khóa khi đang Sửa (Edit)
+  // -----------------------
 }
 
 export interface EntitySchema {
