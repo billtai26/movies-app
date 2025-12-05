@@ -1,142 +1,233 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SeatMap from "../../components/SeatMap";
 import { api } from "../../../lib/api";
+import { toast } from "react-toastify";
+
+// Định nghĩa lại các type tương thích với SeatMap
+type SeatState = 'empty'|'held'|'booked'|'selected';
+type Seat = { 
+  id: string; 
+  row: string; 
+  col: number; 
+  type: 'normal'|'vip'|'couple'; 
+  state: SeatState; 
+  price: number; 
+};
 
 export default function SeatChange() {
   const [ticketCode, setTicketCode] = useState("");
   const [ticket, setTicket] = useState<any | null>(null);
-  const [newSeats, setNewSeats] = useState<string[]>([]);
-  const [message, setMessage] = useState("");
+  
+  // State quản lý danh sách tất cả các ghế để hiển thị lên Map
+  const [seats, setSeats] = useState<Seat[]>([]);
+  
+  // Danh sách ID các ghế MỚI được chọn để đổi
+  const [newSelectedIds, setNewSelectedIds] = useState<string[]>([]);
+  
   const [loading, setLoading] = useState(false);
 
-  // 🧠 Mock fallback vé mẫu (chạy khi API lỗi)
-  const mockTicket = (code: string) => ({
-    _id: "mock-" + code,
-    movie: { title: "Inception" },
-    showtime: { startTime: new Date().toISOString() },
-    seats: ["C4", "C5"],
-  });
-
-  // 🔍 Tìm vé
+  // 🔍 1. Tìm vé và tải sơ đồ ghế
   const handleFind = async () => {
     if (!ticketCode.trim()) {
-      setMessage("⚠️ Vui lòng nhập mã vé!");
+      toast.warning("Vui lòng nhập mã vé!");
       return;
     }
     setLoading(true);
+    setTicket(null);
+    setSeats([]);
+    setNewSelectedIds([]);
+
     try {
-      const res = await api.getTicket(ticketCode);
-      if (!res || !res._id) throw new Error("Not found");
-      setTicket(res);
-      setMessage("");
-    } catch (e) {
-      // Nếu không có API thật thì tạo vé giả
-      console.warn("⚠️ API getTicket thất bại — đang dùng mock demo");
-      setTicket(mockTicket(ticketCode));
-      setMessage("💡 Đang hiển thị vé demo (mock)");
+      // B1: Lấy thông tin vé
+      const t = await api.getTicket(ticketCode);
+      if (!t || (!t._id && !t.id)) {
+        throw new Error("Không tìm thấy thông tin vé");
+      }
+      setTicket(t);
+
+      // B2: Lấy thông tin suất chiếu (showtime) để có sơ đồ ghế
+      const showtimeId = t.showtimeId || t.showtime?._id;
+      if (showtimeId) {
+        const st = await api.getShowtime(showtimeId);
+        if (st && st.seats) {
+          // Map dữ liệu từ API sang format của SeatMap component
+          const mapData: Seat[] = st.seats.map((s: any) => {
+            // Tách hàng/cột từ seatNumber (VD: "A12" -> Row A, Col 12)
+            const rowMatch = s.seatNumber.match(/[A-Z]+/);
+            const colMatch = s.seatNumber.match(/\d+/);
+            const row = rowMatch ? rowMatch[0] : "A";
+            const col = colMatch ? parseInt(colMatch[0]) : 1;
+
+            // Xác định trạng thái ghế
+            // Ghế đã đặt (booked) sẽ không chọn được
+            let state: SeatState = 'empty';
+            if (s.status === 'booked') state = 'booked';
+            if (s.heldBy) state = 'held';
+
+            return {
+              id: s.seatNumber,
+              row,
+              col,
+              type: s.type || 'normal',
+              state,
+              price: s.price
+            };
+          });
+          setSeats(mapData);
+        }
+      } else {
+        toast.error("Vé không có thông tin suất chiếu hợp lệ.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Lỗi: ${e.response?.data?.message || e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔁 Đổi ghế
+  // 🖱️ Xử lý khi click vào ghế
+  const handleToggleSeat = (seatId: string) => {
+    setSeats(prev => prev.map(s => {
+      if (s.id !== seatId) return s;
+      
+      // Nếu ghế đang trống -> Chọn
+      if (s.state === 'empty') {
+        return { ...s, state: 'selected' };
+      }
+      // Nếu đang chọn -> Bỏ chọn
+      if (s.state === 'selected') {
+        return { ...s, state: 'empty' };
+      }
+      return s;
+    }));
+  };
+
+  // Cập nhật danh sách ID ghế mới mỗi khi seats thay đổi
+  useEffect(() => {
+    const ids = seats.filter(s => s.state === 'selected').map(s => s.id);
+    setNewSelectedIds(ids);
+  }, [seats]);
+
+  // 🔁 2. Gửi yêu cầu đổi ghế
   const handleChange = async () => {
     if (!ticket) return;
-    if (newSeats.length === 0) {
-      setMessage("⚠️ Vui lòng chọn ghế mới trước khi xác nhận!");
+    
+    // Kiểm tra số lượng ghế mới có khớp ghế cũ không (tuỳ logic nghiệp vụ)
+    const oldSeatsCount = Array.isArray(ticket.seats) ? ticket.seats.length : ticket.seats.split(',').length;
+    if (newSelectedIds.length === 0) {
+      toast.warning("Vui lòng chọn ghế mới!");
       return;
     }
+    // Nếu muốn bắt buộc số lượng bằng nhau:
+    if (newSelectedIds.length !== oldSeatsCount) {
+       toast.warning(`Vui lòng chọn đúng ${oldSeatsCount} ghế mới (Đang chọn: ${newSelectedIds.length})`);
+       return;
+    }
+
     setLoading(true);
     try {
-      await api.update?.("tickets", ticket._id, { seats: newSeats });
-      setMessage("✅ Đổi ghế thành công!");
+      const ticketId = ticket._id || ticket.id;
+      // Gọi API update vé
+      await api.update("tickets", ticketId, { seats: newSelectedIds });
+      
+      toast.success("✅ Đổi ghế thành công!");
+      
+      // Reset form
       setTicket(null);
       setTicketCode("");
-      setNewSeats([]);
-    } catch (e) {
-      console.warn("⚠️ API update thất bại — giả lập thành công");
-      setMessage("✅ (Demo) Ghế đã được đổi thành công!");
-      setTicket(null);
-      setTicketCode("");
-      setNewSeats([]);
+      setSeats([]);
+      setNewSelectedIds([]);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Lỗi đổi ghế: ${e.response?.data?.message || e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Tiêu đề */}
+    // ĐÃ SỬA: Xóa 'max-w-5xl mx-auto', thay bằng 'w-full' để căn trái và full màn hình
+    <div className="p-6 space-y-6 w-full">
       <h1 className="text-2xl font-bold text-blue-600 flex items-center gap-2">
         🔁 Đổi ghế tại quầy
       </h1>
 
-      {/* Nhập mã vé */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Input tìm vé */}
+      {/* ĐÃ SỬA: Thêm 'w-fit' để khung trắng bao quanh input gọn lại, không bị kéo dài hết màn hình */}
+      <div className="flex gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-200 w-fit">
         <input
           value={ticketCode}
           onChange={(e) => setTicketCode(e.target.value)}
-          placeholder="Nhập mã vé..."
-          className="border rounded-md p-2 w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          placeholder="Nhập mã vé (VD: X8J92K)"
+          className="border rounded-lg px-4 py-2 w-64 focus:ring-2 focus:ring-blue-500 outline-none"
+          onKeyDown={(e) => e.key === 'Enter' && handleFind()}
         />
         <button
           onClick={handleFind}
-          className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
           disabled={loading}
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
         >
           {loading ? "Đang tìm..." : "Tìm vé"}
         </button>
       </div>
 
-      {/* Thông tin vé */}
       {ticket && (
-        <div className="space-y-4">
-          <div className="border rounded-xl p-4 bg-gray-50 shadow-sm">
-            <h2 className="font-semibold text-lg text-gray-800 mb-2">Thông tin vé</h2>
-            <p>
-              🎬 <b>Phim:</b> {ticket.movie?.title ?? "--"}
-            </p>
-            <p>
-              🕒 <b>Suất chiếu:</b>{" "}
-              {ticket.showtime?.startTime
-                ? new Date(ticket.showtime.startTime).toLocaleString()
-                : "--"}
-            </p>
-            <p>
-              💺 <b>Ghế cũ:</b>{" "}
-              {ticket.seats?.length ? ticket.seats.join(", ") : "--"}
-            </p>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Thông tin vé cũ */}
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col sm:flex-row justify-between gap-4 shadow-sm">
+            <div>
+              <h3 className="font-bold text-blue-800 text-lg mb-1">
+                {ticket.movie?.title || ticket.movieTitle || "Tên phim"}
+              </h3>
+              <p className="text-blue-600 text-sm flex items-center gap-2">
+                🕒 {ticket.showtime?.startTime 
+                  ? new Date(ticket.showtime.startTime).toLocaleString('vi-VN') 
+                  : "---"}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-gray-500 text-sm">Ghế hiện tại</div>
+              <div className="font-bold text-xl text-gray-800">
+                {Array.isArray(ticket.seats) ? ticket.seats.join(", ") : ticket.seats}
+              </div>
+            </div>
           </div>
 
           {/* Sơ đồ ghế */}
-          <div className="bg-gray-50 rounded-xl shadow-sm p-4">
-            <SeatMap
-              rows={12}
-              leftCols={3}
-              midCols={10}
-              rightCols={3}
-              vipRows={["A", "B"]}
-              coupleRows={["K", "L"]}
-              onChange={setNewSeats}
-            />
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-gray-700">Chọn ghế mới</h3>
+              <div className="text-sm">
+                Đang chọn: <span className="font-bold text-orange-600">{newSelectedIds.join(", ")}</span>
+              </div>
+            </div>
+            
+            {/* Render SeatMap với đúng Props */}
+            {seats.length > 0 ? (
+              <SeatMap
+                seats={seats}
+                onToggle={handleToggleSeat}
+                onToggleMany={(ids) => ids.forEach(id => handleToggleSeat(id))}
+              />
+            ) : (
+              <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-lg border border-dashed">
+                Không tải được sơ đồ ghế hoặc suất chiếu không tồn tại.
+              </div>
+            )}
           </div>
 
-          {/* Xác nhận */}
-          <div className="flex justify-end border-t pt-4">
+          {/* Action Bar */}
+          <div className="flex justify-end pt-4 border-t border-gray-200">
             <button
               onClick={handleChange}
-              className="px-6 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
-              disabled={loading}
+              disabled={loading || newSelectedIds.length === 0}
+              className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
             >
               {loading ? "Đang xử lý..." : "Xác nhận đổi ghế"}
             </button>
           </div>
         </div>
-      )}
-
-      {/* Thông báo */}
-      {message && (
-        <p className="text-center text-gray-600 font-medium">{message}</p>
       )}
     </div>
   );
