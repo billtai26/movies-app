@@ -1,4 +1,3 @@
-
 // src/types/entities.ts
 // Schema definitions for admin CRUD rendering
 
@@ -84,20 +83,36 @@ export const schemas: Record<string, EntitySchema> = {
     name: "users",
     title: "Người dùng",
     columns: [
-      { key: "name", label: "Họ tên" },
+      { key: "username", label: "Username" },
       { key: "email", label: "Email" },
       { key: "role", label: "Vai trò" },
     ],
     fields: [
-      { key: "name", label: "Họ tên", type: "text", required: true },
-      { key: "email", label: "Email", type: "text", required: true },
+      { key: "username", label: "Username", type: "text", required: true },
+      { 
+        key: "email", 
+        label: "Email", 
+        type: "text", 
+        required: true, 
+        disabled: true // Email vẫn nên khóa
+      },
+      { 
+        key: "password", 
+        label: "Mật khẩu", 
+        type: "text", 
+        // Đổi thành false để khi Sửa không bắt buộc nhập
+        required: false, 
+        // Bỏ dòng readonlyOnEdit: true đi để cho phép sửa
+        placeholder: "Nhập mật khẩu" 
+      },
       { key: "role", label: "Vai trò", type: "select", options: [
-        { label: "User", value: "user" }, { label: "Staff", value: "staff" }, { label: "Admin", value: "admin" }
+        { label: "Người dùng", value: "user" }, 
+        { label: "Nhân viên", value: "staff" }, 
+        { label: "Quản trị viên", value: "admin" }
       ]},
-      { key: "phone", label: "SĐT", type: "text" },
-      { key: "status", label: "Trạng thái", type: "select", options: [
-        { label: "Hoạt động", value: "active" }, { label: "Khoá", value: "locked" }
-      ]},
+      // Thêm các trường khác nếu Backend cho phép sửa
+      { key: "phone", label: "Số điện thoại", type: "text" },
+      { key: "loyaltyPoints", label: "Điểm tích lũy", type: "text" }
     ]
   },
   promotions: {
@@ -149,7 +164,9 @@ export const schemas: Record<string, EntitySchema> = {
     name: "comments",
     title: "Bình luận",
     columns: [
-      { key: "author", label: "Người dùng" },
+      // Lưu ý: Nếu backend trả về object author (populate), cột này có thể cần xử lý riêng ở Frontend
+      // Nếu backend chỉ trả về string tên người comment, giữ nguyên key này.
+      { key: "author", label: "Người dùng" }, 
       { key: "content", label: "Nội dung" },
     ],
     fields: [
