@@ -37,6 +37,7 @@ import Login from './ui/pages/auth/Login'
 import Register from './ui/pages/auth/Register'
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
+import AdminCombos from './ui/pages/admin/Combos'
 
 // --- COMPONENT BẢO VỆ ROUTE ---
 export const RequireAuth: React.FC<{ roles?: ('user' | 'staff' | 'admin')[] }> = ({ roles }) => {
@@ -120,6 +121,7 @@ export const router = createBrowserRouter([
           { path: "theaters", element: <AdminTheaters /> },
           // { path: "showtimes", element: <AdminShowtimes /> },
           // { path: "tickets", element: <AdminTickets /> },
+          { path: "combos", element: <AdminCombos /> },
         ]
       }
     ]

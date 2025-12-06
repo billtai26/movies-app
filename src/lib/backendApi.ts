@@ -65,8 +65,9 @@ export const api = {
     return res.data
   },
 
+  // SỬA HÀM listCombos (hoặc để nguyên dùng cho user, ta sửa trong hàm list bên dưới)
   async listCombos() {
-    const res = await axios.get(`${BASE_URL}/combos`)
+    const res = await axios.get(`${BASE_URL}/combos`) // No Header
     return res.data
   },
 
@@ -120,6 +121,26 @@ export const api = {
     // 2. Rạp & Phòng (Frontend gọi 'theaters', 'rooms' -> Backend 'cinemas', 'cinemahalls')
     if (collection === 'theaters') return this.listTheaters();
     if (collection === 'cinemaHalls' || collection === 'rooms') return this.listRooms(params);
+    // Map tên collection từ UI sang endpoint của Backend
+    if (collection === 'movies') return this.listMovies(params);
+    if (collection === 'users') return this.listUsers(params);
+    if (collection === 'theaters') return this.listTheaters();
+    if (collection === 'cinemaHalls') return this.listRooms(params);
+    if (collection === 'showtimes') {
+       const data = await this.listShowtimes();
+       return (data as any).showtimes || data;
+    }
+    
+    // Map các endpoint Staff mới
+    // Thêm block xử lý riêng cho combos (giống vouchers)
+    if (collection === 'combos') {
+        // Gọi endpoint Admin List để lấy đầy đủ dữ liệu
+        const res = await axios.get(`${BASE_URL}/combos/admin/list`, getHeader());
+        return res.data;
+    }
+    if (collection === 'staff-reports') return this.listStaffReports();
+    if (collection === 'orders') return this.listOrders(params);
+    if (collection === 'tickets') return this.listTickets(params);
     
     // 3. Lịch chiếu
     if (collection === 'showtimes') {
