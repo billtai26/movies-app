@@ -6,6 +6,21 @@ import { api } from "../../lib/backendApi";
 import { toast } from "react-toastify";
 import ConfirmModal from "./ConfirmModal";
 
+// 1. Thêm hàm helper này ở bên ngoài component hoặc bên trong đều được
+const formatDateForInput = (isoString: any) => {
+  if (!isoString) return "";
+  try {
+    const date = new Date(isoString);
+    // Chuyển đổi sang giờ địa phương để hiển thị đúng trên input
+    // (Trick: trừ đi offset múi giờ để toISOString trả về giờ Local thay vì UTC)
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
+    return localDate.toISOString().slice(0, 16); // Lấy "YYYY-MM-DDTHH:mm"
+  } catch (e) {
+    return "";
+  }
+};
+
 export default function CrudTable({
   schema,
   canEdit = true,
@@ -94,7 +109,23 @@ export default function CrudTable({
 
   const onCreate = () => { setEditing(null); setOpen(true); };
   const onEdit = (r: any) => {
-    const formData = (schema as any).toForm ? (schema as any).toForm(r) : r;
+    // Clone dữ liệu gốc để không ảnh hưởng bảng
+    let formData = { ...r };
+
+    // --- ĐOẠN CODE MỚI CẦN THÊM ---
+    // Duyệt qua các field, nếu là 'datetime' thì format lại value
+    schema.fields.forEach((field) => {
+      if (field.type === 'datetime' && formData[field.key]) {
+        formData[field.key] = formatDateForInput(formData[field.key]);
+      }
+    });
+    // -----------------------------
+
+    // Logic cũ của bạn (nếu có toForm)
+    if ((schema as any).toForm) {
+       formData = (schema as any).toForm(formData);
+    }
+
     setEditing(formData);
     setOpen(true);
   };

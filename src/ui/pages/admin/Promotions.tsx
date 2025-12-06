@@ -5,7 +5,7 @@ import { schemas } from "../../../types/entities";
 export default function AdminPromotions() {
   return (
     <div className="w-full">
-      <CrudTable schema={schemas["vouchers"]} />
+      <CrudTable schema={schemas["promotions"]} />
     </div>
   );
 }

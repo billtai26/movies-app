@@ -32,7 +32,7 @@ export default function AdminLayout() {
     { to: "/admin/rooms-seats", label: "Phòng & Ghế", icon: <Rows3 size={16} /> },
     { to: "/admin/showtimes", label: "Lịch chiếu", icon: <CalendarClock size={16} /> },
     { to: "/admin/users", label: "Người dùng", icon: <Users size={16} /> },
-    { to: "/admin/vouchers", label: "Khuyến mãi", icon: <Percent size={16} /> }, // ✅ đổi endpoint
+    { to: "/admin/promotions", label: "Khuyến mãi", icon: <Percent size={16} /> }, // ✅ đổi endpoint
     { to: "/admin/combos", label: "Combo", icon: <Rows3 size={16} /> },
     { to: "/admin/comments", label: "Bình luận", icon: <MessageSquare size={16} /> },
     { to: "/admin/notifications", label: "Thông báo", icon: <Bell size={16} /> },
