@@ -256,5 +256,25 @@ export const schemas: Record<string, EntitySchema> = {
        // Các field sẽ được override trong component để lấy options động
       { key: "name", label: "Tên phòng", type: "text", required: true },
     ]
-  }
+  },
+  combos: {
+    name: "combos",
+    title: "Combo Bắp Nước",
+    columns: [
+      { key: "name", label: "Tên Combo" },
+      { key: "price", label: "Giá" },
+      // Sửa key cột hiển thị nếu cần
+      { key: "imageUrl", label: "Ảnh" }, 
+    ],
+    fields: [
+      { key: "name", label: "Tên Combo", type: "text", required: true },
+      { key: "price", label: "Giá", type: "number", required: true },
+      
+      // 1. Sửa 'items' thành 'description'
+      { key: "description", label: "Chi tiết (VD: 2 Bắp + 1 Nước)", type: "textarea", required: true },
+      
+      // 2. Sửa 'image' thành 'imageUrl'
+      { key: "imageUrl", label: "Ảnh URL", type: "text", required: true }, 
+    ]
+  },
 };
