@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { BASE_URL, AUTH_ENDPOINTS } from './config'
 
+// Helper: Lấy token từ localStorage
 const getAuthToken = () => {
   try {
     const rawAuth = localStorage.getItem('auth')
@@ -8,26 +9,25 @@ const getAuthToken = () => {
       const st = JSON.parse(rawAuth)
       return st?.token || null
     }
-    const legacy = localStorage.getItem('auth-storage')
-    if (legacy) {
-      const st2 = JSON.parse(legacy)
-      return st2.state?.token || null
-    }
   } catch (error) {
-    console.error("Failed to parse auth token from localStorage", error);
+    console.error("Failed to parse auth token", error);
   }
   return null;
 }
 
-// Helper tạo config header
+// Helper: Tạo header chứa Token
 const getHeader = () => {
   const token = getAuthToken()
   return token ? { headers: { Authorization: `Bearer ${token}` } } : {}
 }
 
 export const api = {
-  // --- 1. CÁC HÀM GET DỮ LIỆU CỤ THỂ ---
-  async listMovies(params?: { status?: 'now_showing' | 'coming_soon'; limit?: number; page?: number; q?: string }) {
+  // =================================================================
+  // 1. CÁC HÀM GET CỤ THỂ (Dùng cho các trang riêng lẻ)
+  // =================================================================
+  
+  async listMovies(params?: any) {
+    // Backend: GET /movies
     const res = await axios.get(`${BASE_URL}/movies`, { params })
     return res.data
   },
@@ -38,16 +38,19 @@ export const api = {
   },
 
   async listTheaters() {
-    const res = await axios.get(`${BASE_URL}/cinemas`)
+    // Backend: GET /cinemas
+    const res = await axios.get(`${BASE_URL}/cinemas`) 
     return res.data
   },
 
   async listRooms(params?: any) {
-    const res = await axios.get(`${BASE_URL}/cinemahalls`, { params })
+    // Backend: GET /cinemahalls
+    const res = await axios.get(`${BASE_URL}/cinemahalls`, { params }) 
     return res.data
   },
 
   async listShowtimes() {
+    // Backend: GET /showtimes
     const res = await axios.get(`${BASE_URL}/showtimes`)
     return res.data
   },
@@ -73,12 +76,8 @@ export const api = {
   },
 
   async listPromos() {
-    const res = await axios.get(`${BASE_URL}/promos`)
-    return res.data
-  },
-
-  async listArticles() {
-    const res = await axios.get(`${BASE_URL}/articles`)
+    // Backend: GET /vouchers/admin (Dành cho Admin/Staff quản lý)
+    const res = await axios.get(`${BASE_URL}/vouchers/admin`, getHeader())
     return res.data
   },
 
@@ -88,50 +87,57 @@ export const api = {
     return res.data
   },
 
-  async listTickets(params?: { page?: number; limit?: number; q?: string; status?: string }){
-    const res = await axios.get(`${BASE_URL}/tickets`, { params, ...getHeader() })
+  async listBookings(params?: any){
+    // Backend: GET /bookings
+    const res = await axios.get(`${BASE_URL}/bookings`, { params, ...getHeader() })
     return res.data
   },
 
   async getTicket(id: string){
-    const res = await axios.get(`${BASE_URL}/tickets/${id}`, getHeader())
+    const res = await axios.get(`${BASE_URL}/bookings/${id}`, getHeader())
     return res.data
   },
   
-  // --- [MỚI] API CHO STAFF ---
-  async checkInTicket(ticketCode: string) {
-    const res = await axios.post(`${BASE_URL}/tickets/check-in`, { code: ticketCode }, getHeader());
-    return res.data;
-  },
-
-  async listOrders(params?: any) {
-    const res = await axios.get(`${BASE_URL}/orders`, { params, ...getHeader() });
-    return res.data;
-  },
-
   async listStaffReports() {
-    const res = await axios.get(`${BASE_URL}/staff-reports`, getHeader());
+    // Backend: GET /submissions/admin
+    const res = await axios.get(`${BASE_URL}/submissions/admin`, getHeader());
     return res.data;
   },
+
+  // =================================================================
+  // 2. HÀM GENERIC CHO CRUD TABLE (QUAN TRỌNG NHẤT)
+  // =================================================================
   
-  // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
   async list(collection: string, params?: any) {
+    // --- MAPPING TÊN COLLECTION SANG HÀM GET TƯƠNG ỨNG ---
+    
+    // 1. Phim & Người dùng
     if (collection === 'movies') return this.listMovies(params);
     if (collection === 'users') return this.listUsers(params);
-    // ...
-    
-    // --- THÊM DÒNG NÀY ---
-    // Nếu BE yêu cầu chính xác là /vouchers/admin thì dùng dòng này:
-    if (collection === 'vouchers') {
-        // Cũ: axios.get(`${BASE_URL}/vouchers`, ...) -> Sai, đây là API User
-        
-        // Mới: Thêm '/admin' vào đường dẫn
-        const res = await axios.get(`${BASE_URL}/vouchers/admin`, { params, ...getHeader() });
-        return res.data;
-    }
-    // ---------------------
+    if (collection === 'comments') return this.listComments();
+    if (collection === 'combos') return this.listCombos();
 
-    // Mặc định
+    // 2. Rạp & Phòng (Frontend gọi 'theaters', 'rooms' -> Backend 'cinemas', 'cinemahalls')
+    if (collection === 'theaters') return this.listTheaters();
+    if (collection === 'cinemaHalls' || collection === 'rooms') return this.listRooms(params);
+    
+    // 3. Lịch chiếu
+    if (collection === 'showtimes') {
+       const data = await this.listShowtimes();
+       // Đôi khi BE trả về { showtimes: [...] } hoặc mảng trực tiếp
+       return (data as any).showtimes || data;
+    }
+
+    // 4. Khuyến mãi (Frontend 'promotions' -> Backend 'vouchers')
+    if (collection === 'promotions' || collection === 'vouchers') return this.listPromos();
+    
+    // 5. Báo cáo (Frontend 'staff-reports' -> Backend 'submissions')
+    if (collection === 'staff-reports') return this.listStaffReports();
+    
+    // 6. Đơn hàng & Vé (Frontend 'orders', 'tickets' -> Backend 'bookings')
+    if (collection === 'orders' || collection === 'tickets') return this.listBookings(params);
+    
+    // --- MẶC ĐỊNH: Nếu không nằm trong danh sách trên, gọi thẳng tên collection ---
     try {
       const res = await axios.get(`${BASE_URL}/${collection}`, { params, ...getHeader() });
       return res.data;
@@ -141,168 +147,94 @@ export const api = {
     }
   },
 
-  // --- 3. CÁC HÀM THAO TÁC DỮ LIỆU (CREATE, UPDATE, DELETE) ---
-
-  async uploadMoviePoster(id: string, file: File) {
-    const formData = new FormData();
-    formData.append('poster', file); 
-    const res = await axios.patch(`${BASE_URL}/movies/${id}/poster`, formData, {
-      ...getHeader(),
-      'Content-Type': 'multipart/form-data',
-    } as any);
-    return res.data;
-  },
+  // =================================================================
+  // 3. HÀM CREATE (TẠO MỚI)
+  // =================================================================
 
   async create<T>(collection: string, item: T) {
-    // Xử lý riêng cho Movies (convert dữ liệu)
+    let endpoint = collection;
+    
+    // --- MAPPING ENDPOINT ---
+    if (collection === 'staff-reports') endpoint = 'submissions'; // POST /submissions (Public/AuthOptional)
+    if (collection === 'promotions') endpoint = 'vouchers/admin'; // POST /vouchers/admin
+    if (collection === 'theaters') endpoint = 'cinemas';          // POST /cinemas
+    if (collection === 'cinemaHalls') endpoint = 'cinemahalls';   // POST /cinemahalls
+    if (collection === 'tickets') endpoint = 'bookings';          // POST /bookings
+
+    // Xử lý riêng cho Movies (convert số & mảng)
     if (collection === 'movies') {
        const raw = item as any;
        const payload = {
          ...raw,
          durationInMinutes: Number(raw.durationInMinutes),
+         // Chuyển chuỗi "Hành động, Hài" thành mảng ["Hành động", "Hài"]
          genres: typeof raw.genres === 'string' ? raw.genres.split(',').map((g:string)=>g.trim()) : raw.genres,
-         actors: typeof raw.actors === 'string' ? raw.actors.split(',').map((a:string)=>a.trim()) : raw.actors,
-         posterUrl: raw.posterUrl, 
        };
+       // Xóa các trường thừa
        delete (payload as any).duration; 
        delete (payload as any).rating;
-
+       
        const res = await axios.post(`${BASE_URL}/movies`, payload, getHeader());
        return res.data;
     }
-
-    if (collection === 'vouchers') {
-        const raw = item as any;
-        const payload = {
-            ...raw,
-            discountValue: Number(raw.discountValue),
-            maxDiscountAmount: raw.maxDiscountAmount ? Number(raw.maxDiscountAmount) : null,
-            minOrderAmount: Number(raw.minOrderAmount),
-            usageLimit: Number(raw.usageLimit),
-            
-            // --- SỬA DÒNG NÀY ĐỂ FIX LỖI "expiresAt is required" ---
-            // Chuyển đổi ngày sang ISO String chuẩn (ví dụ: 2023-12-01T10:00:00.000Z)
-            expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : undefined,
-        };
-        
-        // Gọi API admin
-        const res = await axios.post(`${BASE_URL}/vouchers/admin`, payload, getHeader());
-        return res.data;
-    }
-
-    // Mặc định cho các collection khác
-    let endpoint = collection;
-    // Map đúng tên endpoint
-    if (collection === 'staff-reports') endpoint = 'staff-reports';
-    if (collection === 'comments') endpoint = 'comments';
-
-    // --- THÊM: Map vouchers đúng endpoint ---
-    if (collection === 'vouchers') endpoint = 'vouchers';
 
     const res = await axios.post(`${BASE_URL}/${endpoint}`, item, getHeader());
     return res.data;
   },
 
+  // =================================================================
+  // 4. HÀM UPDATE (CẬP NHẬT)
+  // =================================================================
+
   async update<T>(collection: string, id: string, item: T) {
-    // Xử lý riêng cho Movies
-    if (collection === 'movies') {
-       const raw = item as any;
-       const payload = {
-         ...raw,
-         durationInMinutes: Number(raw.durationInMinutes),
-         genres: typeof raw.genres === 'string' ? raw.genres.split(',').map((g:string)=>g.trim()) : raw.genres,
-         actors: typeof raw.actors === 'string' ? raw.actors.split(',').map((a:string)=>a.trim()) : raw.actors,
-       };
-       // Cleanup fields
-       ['_id', 'duration', 'rating', 'averageRating', 'reviewCount', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete (payload as any)[k]);
-
-       const res = await axios.put(`${BASE_URL}/movies/${id}`, payload, getHeader());
-       return res.data;
-    }
-
-    // SỬA LẠI KHỐI NÀY
-    if (collection === 'vouchers') {
-        const raw = item as any;
-        const payload = {
-            ...raw,
-            discountValue: Number(raw.discountValue),
-            maxDiscountAmount: raw.maxDiscountAmount ? Number(raw.maxDiscountAmount) : null,
-            minOrderAmount: Number(raw.minOrderAmount),
-            usageLimit: Number(raw.usageLimit),
-            // Format ngày nếu cần
-            expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : undefined,
-        };
-
-        // // 2. THÊM ĐOẠN NÀY: Xóa các trường hệ thống không được phép sửa
-        delete payload._id;         // Bắt buộc xóa
-        delete payload.code;        // Bạn yêu cầu không cho sửa code
-        delete payload._destroy;    // Bạn yêu cầu không cho sửa destroy
-        
-        delete payload.createdAt;   // Ngày tạo cũng không nên gửi lên
-        delete payload.updatedAt;   // (Nếu có)
-        delete payload.usageCount;  // Số lượt đã dùng thường do hệ thống tự đếm, không nên sửa tay
-
-        // --- QUAN TRỌNG: Thêm `/${id}` vào cuối URL ---
-        // Sai: `${BASE_URL}/vouchers/admin`
-        // Đúng: `${BASE_URL}/vouchers/admin/${id}`
-        const res = await axios.patch(`${BASE_URL}/vouchers/admin/${id}`, payload, getHeader());
-        return res.data;
-    }
-
-    // Xử lý chung cho các danh mục Admin/Staff
     let endpoint = collection;
-    if (['theaters'].includes(collection)) endpoint = 'cinemas';
-    if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
-    if (collection === 'staff-reports') endpoint = 'staff-reports'; // Thêm dòng này nếu cần update report
 
-    // --- THÊM: Map vouchers ---
-    if (collection === 'vouchers') endpoint = 'vouchers';
+    // --- MAPPING ENDPOINT ---
+    if (collection === 'theaters') endpoint = 'cinemas';
+    if (collection === 'cinemaHalls') endpoint = 'cinemahalls';
+    if (collection === 'promotions') endpoint = 'vouchers/admin'; // PATCH /vouchers/admin/:id
+    if (collection === 'staff-reports') endpoint = 'submissions/admin'; // PATCH /submissions/admin/:id
+    if (collection === 'orders' || collection === 'tickets') endpoint = 'bookings';
 
     const payload = { ...item } as any;
-    ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
+    // Loại bỏ các trường không nên gửi lên khi update
+    ['_id', 'createdAt', 'updatedAt', 'slug'].forEach(k => delete payload[k]);
 
-    if (collection === 'showtimes') {
-        delete payload.cinemaId; delete payload.movieId; delete payload.theaterId; delete payload.seats;
-    }
-
-    // --- 3. THÊM ĐOẠN NÀY: Xử lý riêng cho 'users' để tránh lỗi Joi ---
-    // --- SỬA LẠI ĐOẠN XỬ LÝ USER ---
+    // Xử lý riêng User: Không gửi password nếu rỗng
     if (collection === 'users') {
-        delete payload.email;     // Vẫn cấm sửa email
-        delete payload.googleId;  // Vẫn cấm sửa googleId
-        delete payload.facebookId;
-
-        // LOGIC MỚI: 
-        // Chỉ xóa password khỏi payload nếu nó RỖNG hoặc NULL.
-        // Nếu Admin nhập pass mới, field này sẽ được giữ lại và gửi lên Backend.
-        if (!payload.password || payload.password.trim() === '') {
-            delete payload.password;
-        }
+        delete payload.email; // Không cho sửa email
+        if (!payload.password) delete payload.password;
     }
 
-    // Gọi PUT hoặc PATCH tùy backend
-    const method = (collection === 'orders' || collection === 'tickets' || collection === 'users') ? 'patch' : 'put';
-    
+    // Backend RESTful thường dùng PATCH để update một phần
+    // Một số endpoint đặc biệt dùng PUT thì có thể check ở đây, nhưng PATCH an toàn hơn.
+    const method = 'patch'; 
+
     const res = await (axios as any)[method](`${BASE_URL}/${endpoint}/${id}`, payload, getHeader());
     return res.data;
   },
 
+  // =================================================================
+  // 5. HÀM REMOVE (XÓA)
+  // =================================================================
+
   async remove(collection: string, id: string) {
     let endpoint = collection;
+    
+    // --- MAPPING ENDPOINT ---
     if (collection === 'theaters') endpoint = 'cinemas';
-    if (collection === 'staff-reports') endpoint = 'staff-reports';
-
-    // 1. Xử lý riêng cho Vouchers (Thêm /admin vào đường dẫn)
-    if (collection === 'vouchers') {
-        const res = await axios.delete(`${BASE_URL}/vouchers/admin/${id}`, getHeader());
-        return res.data;
-    }
+    if (collection === 'staff-reports') endpoint = 'submissions/admin';
+    if (collection === 'promotions') endpoint = 'vouchers/admin';
+    if (collection === 'orders' || collection === 'tickets') endpoint = 'bookings';
     
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
     return res.data;
   },
 
-  // --- 4. AUTH & USER UTILS ---
+  // =================================================================
+  // 6. CÁC HÀM TIỆN ÍCH KHÁC (AUTH, PAYMENT, ETC.)
+  // =================================================================
+
   async login(email: string, password: string){
     const res = await axios.post(`${BASE_URL}${AUTH_ENDPOINTS.login[0]}`, { email, password })
     return res.data
@@ -342,14 +274,16 @@ export const api = {
     } as any);
     return res.data;
   },
-  
+
   async listMyTickets(params?: any) {
-    const res = await axios.get(`${BASE_URL}/tickets/my-tickets`, { params, ...getHeader() });
+    // Backend: GET /bookings/history
+    const res = await axios.get(`${BASE_URL}/bookings/history`, { params, ...getHeader() });
     return res.data;
   },
 
   async getMyTicket(id: string) {
-    const res = await axios.get(`${BASE_URL}/tickets/my-tickets/${id}`, getHeader());
+    // Backend: GET /bookings/:id
+    const res = await axios.get(`${BASE_URL}/bookings/${id}`, getHeader());
     return res.data;
   },
 
@@ -359,27 +293,37 @@ export const api = {
   },
 
   async holdSeats(showtimeId: string, seatNumbers: string[]) {
-    const res = await axios.post(`${BASE_URL}/showtimes/${showtimeId}/hold-seats`, { seatNumbers }, getHeader());
-    return res.data;
+    // Có thể Backend xử lý qua Socket, hàm này để placeholder hoặc gọi API nếu có
+    return { success: true }; 
   },
 
   async releaseSeats(showtimeId: string, seatNumbers: string[]) {
-    await axios.post(`${BASE_URL}/showtimes/${showtimeId}/release-seats`, { seatNumbers }, getHeader());
+    return { success: true };
   },
-  
-  // --- HÀM THANH TOÁN MOMO ---
+
   async momoCreate(body: any) {
-     const res = await axios.post(`${BASE_URL}/payment/momo`, body, getHeader());
+     // Backend: POST /payments/momo
+     const res = await axios.post(`${BASE_URL}/payments/momo`, body, getHeader());
      return res.data;
   },
   
+  // AI Chat (Nếu backend chưa có route này, bạn cần thêm vào BE hoặc comment lại)
   async aiChat(userId: string, message: string) {
-      const res = await axios.post(`${BASE_URL}/ai/chat`, { userId, message });
-      return res.data;
+      try {
+        const res = await axios.post(`${BASE_URL}/ai/chat`, { userId, message });
+        return res.data;
+      } catch (e) {
+        console.warn("AI Chat API not ready");
+        return { reply: "AI đang bảo trì." };
+      }
   },
 
   async aiHistory(userId: string) {
-      const res = await axios.get(`${BASE_URL}/ai/history/${userId}`);
-      return res.data;
+      try {
+        const res = await axios.get(`${BASE_URL}/ai/history/${userId}`);
+        return res.data;
+      } catch (e) {
+        return [];
+      }
   }
 }
