@@ -99,6 +99,13 @@ export const api = {
     return res.data
   },
   
+  // --- [BỔ SUNG TỪ CODE 2] Hàm này Code 1 chưa có ---
+  async listBookings(params?: any){
+    const res = await axios.get(`${BASE_URL}/bookings`, { params, ...getHeader() })
+    return res.data
+  },
+  // --------------------------------------------------
+
   // --- [MỚI] API CHO STAFF ---
   async checkInTicket(ticketCode: string) {
     const res = await axios.post(`${BASE_URL}/tickets/check-in`, { code: ticketCode }, getHeader());
@@ -148,6 +155,20 @@ export const api = {
         return res.data;
     }
     // ---------------------
+
+    // --- [BỔ SUNG TỪ CODE 2] Xử lý các collection/alias mà code 1 thiếu ---
+    if (collection === 'comments') return this.listComments();
+    if (collection === 'rooms') return this.listRooms(params); // Code 2 dùng alias 'rooms'
+    
+    // Code 2 map 'promotions' thành 'vouchers'
+    if (collection === 'promotions') {
+        // Gọi hàm list của vouchers đã định nghĩa ở trên (hoặc gọi trực tiếp API admin)
+        const res = await axios.get(`${BASE_URL}/vouchers/admin`, { params, ...getHeader() });
+        return res.data;
+    }
+    // Code 2 map 'bookings'
+    if (collection === 'bookings') return this.listBookings(params);
+    // ----------------------------------------------------------------------
 
     // Mặc định
     try {
@@ -217,6 +238,13 @@ export const api = {
     // --- THÊM: Map vouchers đúng endpoint ---
     if (collection === 'vouchers') endpoint = 'vouchers';
 
+    // --- [BỔ SUNG TỪ CODE 2] Mapping thêm các alias ---
+    if (collection === 'promotions') endpoint = 'vouchers/admin';
+    if (collection === 'cinemaHalls') endpoint = 'cinemahalls';
+    // Code 2 map 'bookings' (hoặc 'tickets' kiểu mới) vào /bookings
+    if (collection === 'bookings') endpoint = 'bookings'; 
+    // --------------------------------------------------
+
     const res = await axios.post(`${BASE_URL}/${endpoint}`, item, getHeader());
     return res.data;
   },
@@ -276,6 +304,11 @@ export const api = {
     // --- THÊM: Map vouchers ---
     if (collection === 'vouchers') endpoint = 'vouchers';
 
+    // --- [BỔ SUNG TỪ CODE 2] Mapping thêm các alias ---
+    if (collection === 'promotions') endpoint = 'vouchers/admin';
+    if (collection === 'bookings') endpoint = 'bookings';
+    // --------------------------------------------------
+
     const payload = { ...item } as any;
     ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
 
@@ -299,7 +332,7 @@ export const api = {
     }
 
     // Gọi PUT hoặc PATCH tùy backend
-    const method = (collection === 'orders' || collection === 'tickets' || collection === 'users') ? 'patch' : 'put';
+    const method = (collection === 'orders' || collection === 'tickets' || collection === 'users' || collection === 'bookings') ? 'patch' : 'put';
     
     const res = await (axios as any)[method](`${BASE_URL}/${endpoint}/${id}`, payload, getHeader());
     return res.data;
@@ -315,7 +348,7 @@ export const api = {
         const res = await axios.delete(`${BASE_URL}/vouchers/admin/${id}`, getHeader());
         return res.data;
     }
-    
+
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
     return res.data;
   },
@@ -385,13 +418,40 @@ export const api = {
     await axios.post(`${BASE_URL}/showtimes/${showtimeId}/release-seats`, { seatNumbers }, getHeader());
   },
   
-  // --- HÀM THANH TOÁN MOMO ---
-  async momoCreate(body: any) {
-     // SỬA DÒNG NÀY:
-     // Cũ (Sai): `${BASE_URL}/payment/momo`
-     // Mới (Đúng): `${BASE_URL}/payments/momo/payment`  <-- Chú ý chữ 'payments' số nhiều và thêm '/payment' ở cuối
-     const res = await axios.post(`${BASE_URL}/payments/momo/payment`, body, getHeader());
-     return res.data;
+  // 🔥 MoMo QR Payment
+  momoCreate: async (data: any) => {
+    const token = getAuthToken();
+
+    const res = await axios.post(
+      // ĐÚNG: /v1/payments/momo/payment
+      `${BASE_URL}/payments/momo/payment`,
+      data,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : undefined
+      }
+    );
+
+    // BE trả về { success, data: {...} }
+    // => trả thẳng data bên trong cho Payment.tsx
+    return res.data?.data || res.data;
+  },
+
+    momoConfirm: async (params: any) => {
+    // Thường callback từ MoMo không cần token, nhưng có cũng không sao
+    const token = getAuthToken();
+
+    const res = await axios.post(
+      `${BASE_URL}/payments/momo/callback`,
+      params,
+      token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : undefined
+    );
+
+    // BE trả về { ... , invoice }
+    return res.data;
   },
   
   async aiChat(userId: string, message: string) {
