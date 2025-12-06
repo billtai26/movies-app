@@ -387,7 +387,10 @@ export const api = {
   
   // --- HÀM THANH TOÁN MOMO ---
   async momoCreate(body: any) {
-     const res = await axios.post(`${BASE_URL}/payment/momo`, body, getHeader());
+     // SỬA DÒNG NÀY:
+     // Cũ (Sai): `${BASE_URL}/payment/momo`
+     // Mới (Đúng): `${BASE_URL}/payments/momo/payment`  <-- Chú ý chữ 'payments' số nhiều và thêm '/payment' ở cuối
+     const res = await axios.post(`${BASE_URL}/payments/momo/payment`, body, getHeader());
      return res.data;
   },
   

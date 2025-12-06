@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../../lib/api'
@@ -306,7 +305,8 @@ export default function MovieDetail() {
             {/* Theo rạp */}
               <div className="space-y-3">
                 {filteredTheaters.map(t => (
-                  <div key={t.id} className="rounded-xl border bg-[#fcfcfc] p-4 shadow-sm">
+                  // ĐÃ SỬA LỖI KEY TẠI ĐÂY: Dùng _id (của Mongo) làm key ưu tiên
+                  <div key={(t as any)._id || t.id} className="rounded-xl border bg-[#fcfcfc] p-4 shadow-sm">
                     <div className="font-semibold mb-2">{t.name}</div>
                     <div className="flex flex-wrap gap-2">
                       {t.showtimes.map(s => (
