@@ -116,22 +116,21 @@ export const api = {
   
   // --- 2. HÀM LIST TỔNG HỢP (QUAN TRỌNG CHO CRUD TABLE) ---
   async list(collection: string, params?: any) {
-    // Map tên collection từ UI sang endpoint của Backend
     if (collection === 'movies') return this.listMovies(params);
     if (collection === 'users') return this.listUsers(params);
-    if (collection === 'theaters') return this.listTheaters();
-    if (collection === 'cinemaHalls') return this.listRooms(params);
-    if (collection === 'showtimes') {
-       const data = await this.listShowtimes();
-       return (data as any).showtimes || data;
+    // ...
+    
+    // --- THÊM DÒNG NÀY ---
+    // Nếu BE yêu cầu chính xác là /vouchers/admin thì dùng dòng này:
+    if (collection === 'vouchers') {
+        // Cũ: axios.get(`${BASE_URL}/vouchers`, ...) -> Sai, đây là API User
+        
+        // Mới: Thêm '/admin' vào đường dẫn
+        const res = await axios.get(`${BASE_URL}/vouchers/admin`, { params, ...getHeader() });
+        return res.data;
     }
-    
-    // Map các endpoint Staff mới
-    if (collection === 'combos') return this.listCombos();
-    if (collection === 'staff-reports') return this.listStaffReports();
-    if (collection === 'orders') return this.listOrders(params);
-    if (collection === 'tickets') return this.listTickets(params);
-    
+    // ---------------------
+
     // Mặc định
     try {
       const res = await axios.get(`${BASE_URL}/${collection}`, { params, ...getHeader() });
@@ -172,11 +171,33 @@ export const api = {
        return res.data;
     }
 
+    if (collection === 'vouchers') {
+        const raw = item as any;
+        const payload = {
+            ...raw,
+            discountValue: Number(raw.discountValue),
+            maxDiscountAmount: raw.maxDiscountAmount ? Number(raw.maxDiscountAmount) : null,
+            minOrderAmount: Number(raw.minOrderAmount),
+            usageLimit: Number(raw.usageLimit),
+            
+            // --- SỬA DÒNG NÀY ĐỂ FIX LỖI "expiresAt is required" ---
+            // Chuyển đổi ngày sang ISO String chuẩn (ví dụ: 2023-12-01T10:00:00.000Z)
+            expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : undefined,
+        };
+        
+        // Gọi API admin
+        const res = await axios.post(`${BASE_URL}/vouchers/admin`, payload, getHeader());
+        return res.data;
+    }
+
     // Mặc định cho các collection khác
     let endpoint = collection;
     // Map đúng tên endpoint
     if (collection === 'staff-reports') endpoint = 'staff-reports';
     if (collection === 'comments') endpoint = 'comments';
+
+    // --- THÊM: Map vouchers đúng endpoint ---
+    if (collection === 'vouchers') endpoint = 'vouchers';
 
     const res = await axios.post(`${BASE_URL}/${endpoint}`, item, getHeader());
     return res.data;
@@ -199,12 +220,44 @@ export const api = {
        return res.data;
     }
 
+    // SỬA LẠI KHỐI NÀY
+    if (collection === 'vouchers') {
+        const raw = item as any;
+        const payload = {
+            ...raw,
+            discountValue: Number(raw.discountValue),
+            maxDiscountAmount: raw.maxDiscountAmount ? Number(raw.maxDiscountAmount) : null,
+            minOrderAmount: Number(raw.minOrderAmount),
+            usageLimit: Number(raw.usageLimit),
+            // Format ngày nếu cần
+            expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : undefined,
+        };
+
+        // // 2. THÊM ĐOẠN NÀY: Xóa các trường hệ thống không được phép sửa
+        delete payload._id;         // Bắt buộc xóa
+        delete payload.code;        // Bạn yêu cầu không cho sửa code
+        delete payload._destroy;    // Bạn yêu cầu không cho sửa destroy
+        
+        delete payload.createdAt;   // Ngày tạo cũng không nên gửi lên
+        delete payload.updatedAt;   // (Nếu có)
+        delete payload.usageCount;  // Số lượt đã dùng thường do hệ thống tự đếm, không nên sửa tay
+
+        // --- QUAN TRỌNG: Thêm `/${id}` vào cuối URL ---
+        // Sai: `${BASE_URL}/vouchers/admin`
+        // Đúng: `${BASE_URL}/vouchers/admin/${id}`
+        const res = await axios.patch(`${BASE_URL}/vouchers/admin/${id}`, payload, getHeader());
+        return res.data;
+    }
+
     // Xử lý chung cho các danh mục Admin/Staff
     let endpoint = collection;
     if (['theaters'].includes(collection)) endpoint = 'cinemas';
     if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
     if (collection === 'staff-reports') endpoint = 'staff-reports'; // Thêm dòng này nếu cần update report
-    
+
+    // --- THÊM: Map vouchers ---
+    if (collection === 'vouchers') endpoint = 'vouchers';
+
     const payload = { ...item } as any;
     ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
 
@@ -238,6 +291,12 @@ export const api = {
     let endpoint = collection;
     if (collection === 'theaters') endpoint = 'cinemas';
     if (collection === 'staff-reports') endpoint = 'staff-reports';
+
+    // 1. Xử lý riêng cho Vouchers (Thêm /admin vào đường dẫn)
+    if (collection === 'vouchers') {
+        const res = await axios.delete(`${BASE_URL}/vouchers/admin/${id}`, getHeader());
+        return res.data;
+    }
     
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
     return res.data;

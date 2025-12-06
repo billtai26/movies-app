@@ -28,7 +28,9 @@ import StaffPromoControl from './ui/pages/staff/PromoControl'
 // Admin Pages
 import AdminDashboard from './ui/pages/admin/Dashboard'
 import AdminMovies from './ui/pages/admin/Movies'
-// ... import các trang admin khác nếu cần
+import AdminPromotions from './ui/pages/admin/Promotions' 
+import AdminUsers from './ui/pages/admin/Users'           // Ví dụ thêm Users
+import AdminTheaters from './ui/pages/admin/Theaters'
 
 // Auth Pages
 import Login from './ui/pages/auth/Login'
@@ -109,7 +111,15 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: "movies", element: <AdminMovies /> },
-          // ... thêm các route admin khác
+          
+          // 2. THÊM DÒNG NÀY: Đăng ký route cho trang Khuyến mãi
+          { path: "promotions", element: <AdminPromotions /> },
+          
+          // Bạn nên thêm luôn các route khác tương ứng với file đã tạo trong folder admin:
+          { path: "users", element: <AdminUsers /> },
+          { path: "theaters", element: <AdminTheaters /> },
+          // { path: "showtimes", element: <AdminShowtimes /> },
+          // { path: "tickets", element: <AdminTickets /> },
         ]
       }
     ]

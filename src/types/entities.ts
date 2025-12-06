@@ -116,20 +116,53 @@ export const schemas: Record<string, EntitySchema> = {
     ]
   },
   promotions: {
-    name: "promotions",
+    name: "vouchers", // Endpoint BE
     title: "Khuyến mãi",
+    
+    // Cập nhật cột hiển thị cho dễ nhìn hơn
     columns: [
-      { key: "title", label: "Tiêu đề" },
-      { key: "code", label: "Mã" },
-      { key: "discount", label: "Giảm (%)" },
+      { key: "code", label: "Mã Voucher" },
+      { key: "discountType", label: "Loại" },
+      { key: "discountValue", label: "Giá trị" },
+      { key: "usageLimit", label: "SL" },       // Hiển thị số lượng
+      { key: "expiresAt", label: "Hết hạn" },   // Hiển thị ngày hết hạn
     ],
+
     fields: [
-      { key: "title", label: "Tiêu đề", type: "text", required: true },
-      { key: "image", label: "Ảnh (URL)", type: "image" },
-      { key: "code", label: "Mã", type: "text" },
-      { key: "discount", label: "Giảm (%)", type: "number" },
-      { key: "desc", label: "Mô tả", type: "textarea" },
-    ]
+      // 1. Mã Voucher
+      { key: "code", label: "Mã (VD: SALE10)", type: "text", required: true },
+      
+      // 2. Loại giảm giá & Giá trị
+      { 
+        key: "discountType", 
+        label: "Loại giảm giá", 
+        type: "select", 
+        required: true,
+        options: [
+            { label: "Theo phần trăm (%)", value: "percent" },
+            { label: "Tiền mặt (VND)", value: "fixed" } // Nếu BE hỗ trợ fixed
+        ]
+      },
+      { key: "discountValue", label: "Giá trị giảm (VD: 10 hoặc 50000)", type: "text", required: true },
+
+      // --- CÁC TRƯỜNG MỚI BẠN CẦN THÊM ---
+      
+      // 3. Giảm tối đa (thường dùng cho % - VD: Giảm 10% tối đa 50k)
+      { key: "maxDiscountAmount", label: "Giảm tối đa (VND)", type: "number", placeholder: "VD: 50000" },
+      
+      // 4. Đơn tối thiểu để áp dụng
+      { key: "minOrderAmount", label: "Đơn hàng tối thiểu (VND)", type: "number", placeholder: "VD: 100000", required: true },
+      
+      // 5. Giới hạn số lượng
+      { key: "usageLimit", label: "Tổng số lượng phát hành", type: "number", placeholder: "VD: 100", required: true },
+      
+      // 6. Thời gian hết hạn
+      { key: "expiresAt", label: "Thời gian hết hạn", type: "datetime", required: true },
+
+      // Nếu BE không cần title/desc/image thì bạn có thể comment lại hoặc để đó nếu muốn lưu thêm
+      { key: "title", label: "Tiêu đề hiển thị (Optional)", type: "text" },
+      { key: "desc", label: "Mô tả (Optional)", type: "textarea" },
+    ],
   },
   theaters: {
     name: "cinemas",
