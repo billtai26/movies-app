@@ -213,12 +213,18 @@ export const api = {
     }
 
     // --- 3. THÊM ĐOẠN NÀY: Xử lý riêng cho 'users' để tránh lỗi Joi ---
+    // --- SỬA LẠI ĐOẠN XỬ LÝ USER ---
     if (collection === 'users') {
-        delete payload.email;     // Backend cấm sửa email
-        delete payload.password;  // Backend cấm sửa password qua API này
-        delete payload.googleId;  // Backend cấm sửa googleId
+        delete payload.email;     // Vẫn cấm sửa email
+        delete payload.googleId;  // Vẫn cấm sửa googleId
         delete payload.facebookId;
-        // Nếu payload có các trường null/undefined mà backend không chịu, hãy xóa nốt tại đây nếu cần
+
+        // LOGIC MỚI: 
+        // Chỉ xóa password khỏi payload nếu nó RỖNG hoặc NULL.
+        // Nếu Admin nhập pass mới, field này sẽ được giữ lại và gửi lên Backend.
+        if (!payload.password || payload.password.trim() === '') {
+            delete payload.password;
+        }
     }
 
     // Gọi PUT hoặc PATCH tùy backend
