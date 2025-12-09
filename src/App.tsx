@@ -103,7 +103,7 @@ export default function App(){
           <Route path="blog/actors/:id" element={<ActorDetail />} />
           <Route path="booking/:showtimeId" element={<Booking/>} />
           <Route path="checkout" element={<Checkout/>} />
-          <Route element={<RequireAuth roles={['user']} />}>
+          <Route element={<RequireAuth roles={['user', 'staff', 'admin']} />}>
           <Route path="tickets" element={<Tickets/>} />
           <Route path="profile" element={<Profile/>} />
           

@@ -38,6 +38,7 @@ import Register from './ui/pages/auth/Register'
 import ForgotPassword from './ui/pages/auth/ForgotPassword'
 import ResetPassword from './ui/pages/auth/ResetPassword'
 import AdminCombos from './ui/pages/admin/Combos'
+import Tickets from './ui/pages/user/Tickets'
 
 // --- COMPONENT BẢO VỆ ROUTE ---
 export const RequireAuth: React.FC<{ roles?: ('user' | 'staff' | 'admin')[] }> = ({ roles }) => {
@@ -49,9 +50,10 @@ export const RequireAuth: React.FC<{ roles?: ('user' | 'staff' | 'admin')[] }> =
   }
 
   // 2. Đã đăng nhập nhưng sai quyền -> Về trang chủ
-  if (roles && role && !roles.includes(role)) {
+  // FIX: Chuyển role về chữ thường (toLowerCase) để so sánh chính xác
+  if (roles && role && !roles.includes(role.toLowerCase() as any)) {
     // Nếu là staff cố vào admin -> về staff dashboard
-    if (role === 'staff') return <Navigate to="/staff" replace />
+    if (role.toLowerCase() === 'staff') return <Navigate to="/staff" replace />
     return <Navigate to="/" replace />
   }
 
@@ -75,6 +77,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "booking/:id", element: <Booking /> },
           { path: "profile", element: <Profile /> },
+          { path: "tickets", element: <Tickets /> },
         ]
       }
     ]

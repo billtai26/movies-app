@@ -395,12 +395,14 @@ export const api = {
   },
   
   async listMyTickets(params?: any) {
-    const res = await axios.get(`${BASE_URL}/tickets/my-tickets`, { params, ...getHeader() });
+  // Sửa đường dẫn từ /tickets/my-tickets thành /bookings/history
+    const res = await axios.get(`${BASE_URL}/bookings/history`, { params, ...getHeader() });
     return res.data;
   },
 
   async getMyTicket(id: string) {
-    const res = await axios.get(`${BASE_URL}/tickets/my-tickets/${id}`, getHeader());
+    // SỬA DÒNG NÀY: Trỏ về /bookings/history/:id
+    const res = await axios.get(`${BASE_URL}/bookings/history/${id}`, getHeader());
     return res.data;
   },
 
