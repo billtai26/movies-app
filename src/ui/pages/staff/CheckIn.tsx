@@ -81,7 +81,7 @@ export default function CheckIn() {
       {/* --- Header & Bộ lọc --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-          <CheckCircle className="text-blue-600" /> Soát Vé / Check-in
+<CheckCircle className="text-blue-600" /> Soát Vé / Check-in
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -156,7 +156,7 @@ export default function CheckIn() {
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
-                    {t.code || t.invoiceCode || "NO-CODE"}
+{t.code || t.invoiceCode || "NO-CODE"}
                   </span>
                   {isDone && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium flex items-center gap-1">

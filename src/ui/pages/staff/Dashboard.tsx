@@ -81,7 +81,7 @@ export default function StaffDashboard() {
         const label = getDayLabel(d.toISOString());
         // Key là label (T2, T3...), Value là obj data
         if (!daysMap.has(label)) {
-            daysMap.set(label, { day: label, checkin: 0, revenue: 0 });
+daysMap.set(label, { day: label, checkin: 0, revenue: 0 });
         }
       }
 
@@ -161,7 +161,7 @@ export default function StaffDashboard() {
           </div>
         </div>
         <div className="card p-4 border rounded-xl shadow-sm bg-white dark:bg-gray-800">
-          <div className="text-sm opacity-70 text-gray-800 dark:text-gray-300">
+<div className="text-sm opacity-70 text-gray-800 dark:text-gray-300">
             Sự cố mới
           </div>
           <div className="text-3xl font-bold mt-1 text-red-600 dark:text-red-400">
@@ -232,8 +232,8 @@ export default function StaffDashboard() {
           <BarChart data={weekData}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
             <XAxis dataKey="day" stroke={axisColor} tickLine={false} axisLine={false} />
-            <YAxis stroke={axisColor} tickLine={false} axisLine={false} 
-                   tickFormatter={(val) => `${val/1000}k`} />
+            <YAxis stroke={axisColor} tickLine={false} axisLine={false}
+tickFormatter={(val) => `${val/1000}k`} />
             <Tooltip
               cursor={{ fill: 'transparent' }}
               formatter={(v: number) => v.toLocaleString("vi-VN") + " ₫"}

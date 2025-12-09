@@ -160,12 +160,13 @@ export const api = {
     if (collection === 'comments') return this.listComments();
     if (collection === 'rooms') return this.listRooms(params); // Code 2 dùng alias 'rooms'
     
-    // Code 2 map 'promotions' thành 'vouchers'
-    if (collection === 'promotions') {
-        // Gọi hàm list của vouchers đã định nghĩa ở trên (hoặc gọi trực tiếp API admin)
-        const res = await axios.get(`${BASE_URL}/vouchers/admin`, { params, ...getHeader() });
+    // --- THÊM ĐOẠN NÀY ---
+    if (collection === 'notifications') {
+        // Gọi đúng API Admin để lấy toàn bộ danh sách
+        const res = await axios.get(`${BASE_URL}/notifications/admin`, { params, ...getHeader() });
         return res.data;
     }
+
     // Code 2 map 'bookings'
     if (collection === 'bookings') return this.listBookings(params);
     // ----------------------------------------------------------------------
@@ -231,6 +232,12 @@ export const api = {
 
     // Mặc định cho các collection khác
     let endpoint = collection;
+
+    // --- THÊM ĐOẠN NÀY ---
+    if (collection === 'notifications') {
+        endpoint = 'notifications/admin';
+    }
+
     // Map đúng tên endpoint
     if (collection === 'staff-reports') endpoint = 'staff-reports';
     if (collection === 'comments') endpoint = 'comments';
@@ -301,6 +308,9 @@ export const api = {
     if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
     if (collection === 'staff-reports') endpoint = 'staff-reports'; // Thêm dòng này nếu cần update report
 
+    // 1. Thêm dòng này để trỏ đúng đường dẫn admin
+    if (collection === 'notifications') endpoint = 'notifications/admin';
+
     // --- THÊM: Map vouchers ---
     if (collection === 'vouchers') endpoint = 'vouchers';
 
@@ -331,8 +341,23 @@ export const api = {
         }
     }
 
+    // --- THÊM ĐOẠN NÀY: Xử lý riêng cho notifications ---
+    if (collection === 'notifications') {
+        // Validation backend không cho phép sửa các trường này, nên phải xóa khỏi payload
+        delete payload.type;
+        delete payload.target;
+        delete payload.userId;
+        delete payload.username; // Nếu bạn đã đổi sang dùng username
+        delete payload.user;     // Nếu object user dính vào từ lúc get list
+    }
+
     // Gọi PUT hoặc PATCH tùy backend
-    const method = (collection === 'orders' || collection === 'tickets' || collection === 'users' || collection === 'bookings') ? 'patch' : 'put';
+    const method = (
+      collection === 'orders' || 
+      collection === 'tickets' || 
+      collection === 'users' || 
+      collection === 'bookings' || 
+      collection === 'notifications') ? 'patch' : 'put';
     
     const res = await (axios as any)[method](`${BASE_URL}/${endpoint}/${id}`, payload, getHeader());
     return res.data;
@@ -347,6 +372,11 @@ export const api = {
     if (collection === 'vouchers') {
         const res = await axios.delete(`${BASE_URL}/vouchers/admin/${id}`, getHeader());
         return res.data;
+    }
+
+    // --- THÊM ĐOẠN NÀY: Map notifications sang endpoint admin ---
+    if (collection === 'notifications') {
+        endpoint = 'notifications/admin';
     }
 
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());

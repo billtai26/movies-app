@@ -91,7 +91,7 @@ export default function OrderEdit() {
   // Pagination logic
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
+const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const pageRows = filtered.slice(start, end);
 
@@ -159,7 +159,7 @@ export default function OrderEdit() {
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${
                     order.status === 'paid' ? 'bg-green-100 text-green-700' :
                     order.status === 'refunded' ? 'bg-red-100 text-red-700' :
-                    'bg-yellow-100 text-yellow-700'
+'bg-yellow-100 text-yellow-700'
                   }`}>
                     {order.status}
                   </span>
@@ -240,7 +240,7 @@ export default function OrderEdit() {
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={() => setEditing(null)}
-              className="px-3 py-1 rounded-md border hover:bg-gray-100"
+className="px-3 py-1 rounded-md border hover:bg-gray-100"
             >
               Hủy
             </button>

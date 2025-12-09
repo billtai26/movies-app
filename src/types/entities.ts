@@ -256,14 +256,36 @@ export const schemas: Record<string, EntitySchema> = {
     title: "Thông báo",
     columns: [
       { key: "title", label: "Tiêu đề" },
+      { key: "type", label: "Loại" },
       { key: "target", label: "Đối tượng" },
     ],
     fields: [
+      { key: "type", label: "Loại thông báo", type: "select", required: true, options: [
+        { label: "Hệ thống (System)", value: "system" },
+        { label: "Khuyến mãi (Promotion)", value: "promotion" }
+      ]},
+
       { key: "title", label: "Tiêu đề", type: "text", required: true },
       { key: "message", label: "Nội dung", type: "textarea", required: true },
-      { key: "target", label: "Đối tượng", type: "select", options: [
-        { label: "Tất cả", value: "all" }, { label: "User", value: "user" }, { label: "Staff", value: "staff" }
+      
+      { key: "target", label: "Đối tượng", type: "select", required: true, options: [
+        { label: "Tất cả (Broadcast)", value: "all" }, 
+        { label: "Cụ thể 1 User", value: "user" } 
       ]},
+
+      // --- SỬA ĐOẠN NÀY ---
+      // Thay userId bằng username
+      { 
+        key: "username", 
+        label: "Username người nhận", 
+        type: "text", 
+        placeholder: "Nhập chính xác tên đăng nhập (nếu gửi riêng)",
+        // Logic: Chỉ hiện/bắt buộc nếu Backend yêu cầu, ở FE ta cứ để text bình thường
+        // Bạn có thể xử lý ẩn hiện bằng code React riêng nếu muốn, hoặc để thế này user tự hiểu.
+      },
+      // --------------------
+      
+      { key: "link", label: "Link liên kết (Optional)", type: "text" }
     ]
   },
   tickets: {
