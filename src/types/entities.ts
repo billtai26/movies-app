@@ -22,6 +22,9 @@ export interface EntitySchema {
   title: string;         // human title
   columns: { key: string; label: string; width?: string }[];
   fields: FieldSchema[];
+  transformRow?: (row: any) => any; // Hàm biến đổi dữ liệu trước khi hiển thị lên bảng
+  toForm?: (row: any) => any;       // Hàm biến đổi dữ liệu trước khi đưa vào form Sửa
+  toPayload?: (row: any) => any;    // Hàm biến đổi dữ liệu trước khi gửi lên API
 }
 
 export const schemas: Record<string, EntitySchema> = {
@@ -196,19 +199,56 @@ export const schemas: Record<string, EntitySchema> = {
   comments: {
     name: "comments",
     title: "Bình luận",
+    
+    // 1. Thêm hàm transformRow để lấy username từ object user
+    transformRow: (row: any) => ({
+      ...row,
+      // Lấy username từ user.username HOẶC row.username, nếu không có thì để 'Ẩn danh'
+      author: row?.user?.username || row?.username || "Người dùng ẩn danh"
+    }),
+
+    // 2. Thêm hàm toForm để khi bấm Sửa cũng hiện tên người dùng
+    toForm: (row: any) => ({
+      ...row,
+      author: row?.user?.username || row?.username || "Người dùng ẩn danh"
+    }),
+
     columns: [
-      // Lưu ý: Nếu backend trả về object author (populate), cột này có thể cần xử lý riêng ở Frontend
-      // Nếu backend chỉ trả về string tên người comment, giữ nguyên key này.
       { key: "author", label: "Người dùng" }, 
       { key: "content", label: "Nội dung" },
+      { key: "status", label: "Trạng thái" }, // Nên hiển thị thêm cột trạng thái
     ],
     fields: [
-      { key: "author", label: "Người dùng", type: "text", required: true },
-      { key: "content", label: "Nội dung", type: "textarea", required: true },
-      { key: "movieId", label: "ID Phim", type: "text" },
-      { key: "status", label: "Trạng thái", type: "select", options: [
-        { label: "Hiển thị", value: "shown" }, { label: "Ẩn", value: "hidden" }
-      ]},
+      { 
+        key: "author", 
+        label: "Người dùng", 
+        type: "text", 
+        required: true,
+        disabled: true // Khóa trường này lại vì không nên sửa tác giả bình luận
+      },
+      { 
+        key: "content", 
+        label: "Nội dung", 
+        type: "textarea", 
+        required: true, 
+        disabled: true 
+      },
+      { 
+        key: "movieId", 
+        label: "ID Phim", 
+        type: "text", 
+        disabled: true 
+      }, // Nên khóa ID phim
+      { 
+        key: "status", 
+        label: "Trạng thái (Ẩn/Hiện)", // <--- ĐÂY LÀ TRƯỜNG DUY NHẤT SỬA ĐƯỢC
+        type: "select", 
+        required: true,
+        options: [
+          { label: "Hiển thị", value: "shown" }, 
+          { label: "Ẩn (Vi phạm)", value: "hidden" }
+        ]
+      },
     ]
   },
   notifications: {

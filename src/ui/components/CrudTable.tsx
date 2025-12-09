@@ -24,9 +24,17 @@ const formatDateForInput = (isoString: any) => {
 export default function CrudTable({
   schema,
   canEdit = true,
+  canCreate = true, // <--- 1. THÊM PROP NÀY (mặc định là true để không ảnh hưởng trang khác)
+  canDelete = true, // <--- 2. THÊM PROP NÀY (mặc định là true)
+  // Thêm prop mới này:
+  renderRowActions,
 }: {
   schema: EntitySchema;
   canEdit?: boolean;
+  canCreate?: boolean; // Khai báo kiểu
+  canDelete?: boolean; // Khai báo kiểu
+  // Định nghĩa kiểu cho prop
+  renderRowActions?: (row: any, utils: { reload: () => void }) => React.ReactNode;
 }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,7 +155,7 @@ export default function CrudTable({
           <div className="text-lg font-semibold">{schema.title}</div>
           <div className="flex items-center gap-2">
              <input className="input" placeholder="Tìm kiếm..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-              {canEdit && <button className="btn-primary whitespace-nowrap shrink-0" onClick={onCreate}>+ Thêm</button>}
+              {canEdit && canCreate && <button className="btn-primary whitespace-nowrap shrink-0" onClick={onCreate}>+ Thêm</button>}
           </div>
         </div>
       </div>
@@ -195,8 +203,18 @@ export default function CrudTable({
                     ))}
                     <td className="px-3 py-2 text-center">
                       <div className="flex justify-center gap-2">
-                         <button className="text-blue-600" onClick={() => onEdit(originalRow)}>Sửa</button>
-                         <button className="text-red-600 hover:underline" onClick={() => handleDeleteClick(originalRow.id || originalRow._id)}> Xóa </button>
+                         {/* --- SỬA ĐOẠN NÀY --- */}
+                         {renderRowActions ? (
+                           // Nếu có renderRowActions thì dùng nó (cho trang Comments)
+                           renderRowActions(originalRow, { reload: fetchData })
+                         ) : (
+                           // Nếu không thì hiển thị mặc định (Sửa/Xóa)
+                           <>
+                             {canEdit && <button className="text-blue-600" onClick={() => onEdit(originalRow)}>Sửa</button>}
+                             <button className="text-red-600 hover:underline" onClick={() => handleDeleteClick(originalRow.id || originalRow._id)}> Xóa </button>
+                           </>
+                         )}
+                         {/* ------------------- */}
                       </div>
                     </td>
                   </tr>
