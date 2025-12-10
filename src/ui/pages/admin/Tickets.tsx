@@ -6,28 +6,24 @@ import { api } from "../../../lib/api";
 export default function AdminTickets() {
   const [users, setUsers] = useState<any[]>([]);
   const [showtimes, setShowtimes] = useState<any[]>([]);
-  const [movies, setMovies] = useState<any[]>([]); // 1. Thêm state lưu danh sách phim
+  const [movies, setMovies] = useState<any[]>([]);
 
-  // 🟢 Load User, Showtime và Movies
+  // 🟢 Load dữ liệu
   useEffect(() => {
     (async () => {
       try {
-        // Thêm params { limit: 1000 } để lấy nhiều dữ liệu nhất có thể
-        // Lưu ý: Đây là giải pháp frontend, tốt nhất vẫn là BE populate
         const [uData, sData, mData] = await Promise.all([
-            api.list("users", { limit: 1000 }),     // <--- THÊM LIMIT
-            api.list("showtimes", { limit: 1000 }), // <--- THÊM LIMIT
-            api.list("movies", { limit: 1000 })     // <--- THÊM LIMIT
+            api.list("users", { limit: 1000 }),
+            api.list("showtimes", { limit: 1000 }),
+            api.list("movies", { limit: 1000 })
         ]);
 
         const safeArray = (data: any) => {
             if (Array.isArray(data)) return data;
-            // Kiểm tra các trường hợp trả về có phân trang
             if (data?.data && Array.isArray(data.data)) return data.data; 
             if (data?.users && Array.isArray(data.users)) return data.users;
             if (data?.showtimes && Array.isArray(data.showtimes)) return data.showtimes;
             if (data?.movies && Array.isArray(data.movies)) return data.movies;
-            // Trường hợp backend trả về { results: [...] }
             if (data?.results && Array.isArray(data.results)) return data.results;
             return [];
         };
@@ -35,22 +31,52 @@ export default function AdminTickets() {
         setUsers(safeArray(uData));
         setShowtimes(safeArray(sData));
         setMovies(safeArray(mData));
-        
       } catch (err) {
         console.error("❌ Lỗi tải dữ liệu:", err);
       }
     })();
   }, []);
 
+  // ========================================================================
+  // 🕒 HÀM XỬ LÝ THỜI GIAN (Chọn 1 trong 2 cách dưới đây)
+  // ========================================================================
+  // CÁCH 2: Dùng nếu data lưu sai (07:00Z -> Bạn vẫn muốn hiện 07:00)
+  // Bỏ comment hàm này và dùng nó nếu Cách 1 ra 14:00 mà bạn lại muốn 07:00
+  const formatTime = (isoString: string) => {
+      if (!isoString) return "";
+      // Cắt chuỗi lấy yyyy-mm-ddThh:mm bỏ chữ Z
+      const raw = isoString.replace("Z", ""); 
+      const d = new Date(raw);
+      return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')} ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+  };
+  
+  // ========================================================================
+
+
   const schema = {
     name: "tickets",
     title: "Vé / Hóa đơn",
 
-    // Fix lỗi hiển thị ghế [object Object] khi nhấn Sửa
+    // 🛠️ FIX QUAN TRỌNG: Chuyển Object thành ID để Form hiểu
     toForm: (data: any) => {
       const clone = { ...data };
+      
+      // 1. Xử lý Showtimes: Nếu là object có _id thì lấy _id, ngược lại giữ nguyên
+      if (clone.showtimeId && typeof clone.showtimeId === 'object') {
+          clone.showtimeId = clone.showtimeId._id || clone.showtimeId.id;
+      }
+
+      // 2. Xử lý User
+      if (clone.userId && typeof clone.userId === 'object') {
+          clone.userId = clone.userId._id || clone.userId.id;
+      }
+
+      // 3. Xử lý Ghế
       if (Array.isArray(clone.seats)) {
-        clone.seats = clone.seats.map((s: any) => `${s.row}${s.number}`).join(",");
+        clone.seats = clone.seats.map((s: any) => {
+            if (typeof s === 'object') return `${s.row}${s.number}`;
+            return s;
+        }).join(",");
       }
       return clone;
     },
@@ -61,69 +87,45 @@ export default function AdminTickets() {
         key: "userId", 
         label: "Người đặt",
         render: (row: any) => {
-            // 1. ƯU TIÊN: Nếu userId là Object (đã populate từ BE) -> Lấy username
             if (row.userId && typeof row.userId === 'object') {
                 return row.userId.username || row.userId.email || "Khách ẩn danh";
             }
-
-            // 2. DỰ PHÒNG: Nếu userId là String -> Tìm trong danh sách users đã tải về
-            if (typeof row.userId === 'string') {
-              const user = users.find(u => u._id === row.userId);
-              if (user) return user.username || user.email || "Khách ẩn danh";
-            }
-
-            // 3. Cuối cùng: Trả về giá trị mặc định
-            return "Khách ẩn danh";
+            const user = users.find(u => u._id === row.userId);
+            return user ? (user.username || user.email) : "Khách ẩn danh";
         }
       },
       {
           key: "showtimeId",
-          label: "Phim",
+          label: "Phim & Suất chiếu", 
           render: (row: any) => {
-              let foundShowtime = null;
+              // Tìm showtime object từ row (nếu có sẵn) hoặc từ state
+              let s = (row.showtimeId && typeof row.showtimeId === 'object') 
+                    ? row.showtimeId 
+                    : showtimes.find(x => x._id === row.showtimeId);
 
-              // Trường hợp 1: row.showtimeId là Object (BE đã populate)
-              if (row.showtimeId && typeof row.showtimeId === 'object') {
-                  foundShowtime = row.showtimeId;
-              } 
-              // Trường hợp 2: row.showtimeId là String ID -> Tìm trong state showtimes
-              else if (typeof row.showtimeId === 'string') {
-                  foundShowtime = showtimes.find(s => s._id === row.showtimeId);
+              if (!s) return "---";
+
+              // Tìm tên phim
+              let mTitle = "Phim ẩn";
+              if (s.movieId && typeof s.movieId === 'object') mTitle = s.movieId.title;
+              else {
+                  const m = movies.find(x => x._id === s.movieId);
+                  if (m) mTitle = m.title;
               }
 
-              if (!foundShowtime) return "---";
-
-              // Sau khi có showtime, ta tìm Movie
-              // Movie có thể nằm trực tiếp trong showtime (nếu showtime đã populate movie)
-              if (foundShowtime.movieId && typeof foundShowtime.movieId === 'object') {
-                  return foundShowtime.movieId.title || "Tên phim ẩn";
-              }
-              
-              // Hoặc movie chỉ là ID -> Tìm trong state movies
-              if (typeof foundShowtime.movieId === 'string') {
-                const foundMovie = movies.find(m => m._id === foundShowtime.movieId);
-                return foundMovie ? foundMovie.title : "Phim không tồn tại";
-              }
-
-              return "---";
+              return `${mTitle} (${formatTime(s.startTime)})`; 
           }
       },
       { 
         key: "seats", 
         label: "Ghế",
         render: (row: any) => {
-          // Xử lý ghế: Nếu là mảng object ghế -> map ra tên ghế
           if (Array.isArray(row.seats)) {
-            // Kiểm tra xem phần tử con là object hay string
-            return row.seats.map((s: any) => {
-                if (typeof s === 'object') return `${s.row}${s.number}`;
-                return s; 
-            }).join(", ");
+            return row.seats.map((s: any) => (typeof s === 'object' ? `${s.row}${s.number}` : s)).join(", ");
           }
           return row.seats || "";
         }
       },
-      { key: "paymentStatus", label: "Thanh toán" },
       { 
           key: "totalAmount", 
           label: "Tổng tiền",
@@ -136,7 +138,7 @@ export default function AdminTickets() {
         label: "Người đặt",
         type: "select",
         required: true,
-        options: (Array.isArray(users) ? users : []).map((u) => ({ 
+        options: users.map((u) => ({ 
             label: u.name || u.email || "Unknown", 
             value: u._id 
         })),
@@ -146,19 +148,12 @@ export default function AdminTickets() {
         label: "Lịch chiếu",
         type: "select",
         required: true,
-        // 3. Map showtimes kết hợp với movies để ra label đúng
-        options: (Array.isArray(showtimes) ? showtimes : []).map((s) => {
-            // Tìm movie tương ứng
-            const movie = movies.find(m => m._id === s.movieId); // s.movieId là liên kết
+        // Map options với format giờ đã chuẩn hóa
+        options: showtimes.map((s) => {
+            const movie = movies.find(m => m._id === s.movieId);
             const movieName = movie ? movie.title : (s.movieTitle || "Phim chưa rõ");
-            
-            // Format ngày chiếu
-            const time = new Date(s.startTime).toLocaleString("vi-VN", {
-                hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit"
-            });
-
             return {
-                label: `${movieName} - ${time}`,
+                label: `${movieName} - ${formatTime(s.startTime)}`, // Hiển thị giờ ở đây
                 value: s._id,
             };
         }),
@@ -167,7 +162,7 @@ export default function AdminTickets() {
           key: "seats", 
           label: "Ghế (Chỉ xem)", 
           type: "text", 
-          required: true,
+          required: true, 
           readonlyOnEdit: true 
       },
       { key: "totalAmount", label: "Tổng tiền (₫)", type: "number", required: true },
