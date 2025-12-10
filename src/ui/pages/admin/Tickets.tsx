@@ -65,6 +65,17 @@ export default function AdminTickets() {
       return clone;
     },
 
+    // 👇 THÊM HÀM NÀY: Xử lý dữ liệu từ Form gửi lên API
+    toPayload: (formData: any) => {
+      // Chỉ return về object chứa các trường Backend cho phép sửa
+      return {
+        paymentStatus: formData.paymentStatus,
+        bookingStatus: formData.bookingStatus,
+        // Nếu muốn cho phép sửa phương thức thanh toán thì thêm dòng dưới, nếu không thì bỏ
+        // paymentMethod: formData.paymentMethod, 
+      };
+    },
+
     columns: [
       { key: "_id", label: "Mã vé" },
       { 
