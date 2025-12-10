@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../../../lib/api"; // ✅ Dùng API thật
+import { api } from "../../../lib/api"; 
 import { toast } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
 
@@ -15,8 +15,12 @@ interface Report {
 export default function Reports() {
   const [loading, setLoading] = useState(false);
   
-  // --- Thống kê vé ---
-  const [ticketStats, setTicketStats] = useState({ total: 0, done: 0, pending: 0 });
+  // --- Thống kê (Cập nhật theo data Backend trả về) ---
+  const [stats, setStats] = useState({ 
+    totalTickets: 0, 
+    totalRevenue: 0, 
+    totalBookings: 0 
+  });
 
   // --- Báo cáo ---
   const [reports, setReports] = useState<Report[]>([]);
@@ -31,27 +35,26 @@ export default function Reports() {
     const fetchData = async () => {
       setLoading(true);
       
-      // ✅ Dùng Promise.allSettled để API nào lỗi thì chỉ API đó fail, không kéo theo cái khác
-      const [ticketsResult, reportsResult] = await Promise.allSettled([
-        api.list("tickets", { limit: 1000 }), // Lấy số lượng lớn để tính toán
-        api.list("staff-reports")
+      // Gọi song song 2 API: 1 cho thống kê, 1 cho danh sách báo cáo
+      const [statsResult, reportsResult] = await Promise.allSettled([
+        api.getStaffReportStats(), // Gọi endpoint thống kê riêng
+        api.list("staff-reports")       // Gọi endpoint danh sách báo cáo
       ]);
 
-      // --- Xử lý kết quả Vé ---
-      if (ticketsResult.status === "fulfilled") {
-        const res = ticketsResult.value;
-        // Xử lý linh hoạt response trả về (mảng hoặc object chứa data)
-        const tickets = Array.isArray(res) ? res : (res.tickets || res.data || []);
-        
-        const total = tickets.length;
-        const done = tickets.filter((t: any) => t.status === "done" || t.status === "paid").length;
-        setTicketStats({ total, done, pending: total - done });
+      // --- Xử lý kết quả Thống kê ---
+      if (statsResult.status === "fulfilled") {
+        const res = statsResult.value;
+        // Backend trả về: { totalRevenue, totalTickets, totalBookings }
+        setStats({
+          totalTickets: res.totalTickets || 0,
+          totalRevenue: res.totalRevenue || 0,
+          totalBookings: res.totalBookings || 0
+        });
       } else {
-        console.error("❌ Lỗi API Tickets:", ticketsResult.reason);
-        // Không toast lỗi vé để tránh làm phiền nếu chỉ là lỗi mạng nhỏ
+        console.error("❌ Lỗi API Stats:", statsResult.reason);
       }
 
-      // --- Xử lý kết quả Báo cáo ---
+      // --- Xử lý kết quả Danh sách Báo cáo ---
       if (reportsResult.status === "fulfilled") {
         const res = reportsResult.value;
         const reportList = Array.isArray(res) ? res : (res.data || []);
@@ -62,7 +65,6 @@ export default function Reports() {
         ));
       } else {
         console.error("❌ Lỗi API Reports:", reportsResult.reason);
-        // Có thể API /staff-reports chưa được backend implement
         toast.warning("Chưa thể tải danh sách báo cáo cũ.");
       }
 
@@ -89,6 +91,7 @@ export default function Reports() {
         status: "Chưa duyệt",
       };
 
+      // Gọi API tạo báo cáo
       const newReport = await api.create("staff-reports", payload);
       
       // Cập nhật UI ngay lập tức
@@ -109,19 +112,27 @@ export default function Reports() {
 
   return (
     <div className="space-y-10 relative">
-      {/* --- Phần thống kê vé --- */}
+      {/* --- Phần thống kê (Hiển thị theo dữ liệu API Stats) --- */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="card p-4 bg-white shadow rounded-xl text-center">
-          <div className="text-sm opacity-70 text-gray-600">Tổng vé hôm nay</div>
-          <div className="text-3xl font-bold text-blue-600">{ticketStats.total}</div>
+        <div className="card p-4 bg-white shadow rounded-xl text-center border border-blue-100">
+          <div className="text-sm opacity-70 text-gray-600">Tổng vé bán ra</div>
+          <div className="text-3xl font-bold text-blue-600">
+            {stats.totalTickets.toLocaleString()}
+          </div>
         </div>
-        <div className="card p-4 bg-white shadow rounded-xl text-center">
-          <div className="text-sm opacity-70 text-gray-600">Đã vào rạp</div>
-          <div className="text-3xl font-bold text-green-500">{ticketStats.done}</div>
+        
+        <div className="card p-4 bg-white shadow rounded-xl text-center border border-green-100">
+          <div className="text-sm opacity-70 text-gray-600">Doanh thu (VND)</div>
+          <div className="text-3xl font-bold text-green-600">
+            {stats.totalRevenue.toLocaleString()}
+          </div>
         </div>
-        <div className="card p-4 bg-white shadow rounded-xl text-center">
-          <div className="text-sm opacity-70 text-gray-600">Chưa vào</div>
-          <div className="text-3xl font-bold text-yellow-500">{ticketStats.pending}</div>
+        
+        <div className="card p-4 bg-white shadow rounded-xl text-center border border-yellow-100">
+          <div className="text-sm opacity-70 text-gray-600">Tổng đơn hàng</div>
+          <div className="text-3xl font-bold text-yellow-600">
+            {stats.totalBookings.toLocaleString()}
+          </div>
         </div>
       </div>
 
@@ -137,7 +148,7 @@ export default function Reports() {
               type="text"
               value={staffName}
               onChange={(e) => setStaffName(e.target.value)}
-              className="input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
               placeholder="Nhập tên của bạn"
             />
           </div>
@@ -148,7 +159,7 @@ export default function Reports() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
               placeholder="Ví dụ: Máy in vé bị lỗi"
             />
           </div>
@@ -158,12 +169,12 @@ export default function Reports() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="input w-full h-28 resize-none border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="input w-full h-28 resize-none border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
               placeholder="Mô tả chi tiết sự cố..."
             />
           </div>
 
-          <button type="submit" className="btn-primary bg-[#f26b38] hover:bg-[#d95d2f] text-white px-6 py-2 rounded-lg font-medium transition-colors">
+          <button type="submit" className="bg-[#f26b38] hover:bg-[#d95d2f] text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">
             Gửi báo cáo
           </button>
         </form>
@@ -205,7 +216,7 @@ export default function Reports() {
               ))}
               {reports.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="text-center py-8 text-gray-500">
+                  <td colSpan={4} className="text-center py-8 text-gray-500 italic">
                     Chưa có báo cáo nào
                   </td>
                 </tr>

@@ -501,5 +501,14 @@ export const api = {
   async aiHistory(userId: string) {
       const res = await axios.get(`${BASE_URL}/ai/history/${userId}`);
       return res.data;
-  }
+  },
+
+  // Thêm hàm này:
+  async getStaffReportStats(fromDate?: string, toDate?: string) {
+    const res = await axios.get(`${BASE_URL}/staff-reports/stats`, { 
+      params: { fromDate, toDate }, 
+      ...getHeader() 
+    });
+    return res.data;
+  },
 }

@@ -1,33 +1,35 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { api } from "../../../lib/api"; // ✅ Import API thật
+import { api } from "../../../lib/api";
 import toast from "react-hot-toast";
 import { Search, Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
-import { useDebounce } from "../../../lib/useDebounce"; // Dùng debounce để tối ưu tìm kiếm
+import { useDebounce } from "../../../lib/useDebounce";
 
 export default function CheckIn() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("all"); // 'all' | 'used' | 'unused'
 
-  // Debounce search để tránh gọi API quá nhiều khi gõ
   const debouncedSearch = useDebounce(search, 500);
 
   // 📥 1. Hàm lấy danh sách vé từ API
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
-      // Gọi API list tickets với tham số tìm kiếm
-      const params: any = { limit: 50 }; // Lấy 50 vé gần nhất
+      const params: any = { limit: 50 };
       if (debouncedSearch) params.q = debouncedSearch;
-      if (filter !== 'all') params.status = filter;
+      
+      // Map bộ lọc Frontend sang Backend
+      // Lưu ý: Backend lọc theo 'isUsed' (boolean), không phải status string
+      if (filter === 'done') params.isUsed = true; 
+      if (filter === 'pending') params.isUsed = false;
 
       const res = await api.list("tickets", params);
       
-      // Xử lý dữ liệu trả về (hỗ trợ nhiều cấu trúc response)
+      // Xử lý dữ liệu trả về linh hoạt
       const list = Array.isArray(res) 
         ? res 
-        : (res.data || res.tickets || []);
+        : (res.data || res.bookings || res.tickets || []);
         
       setTickets(list);
     } catch (err) {
@@ -38,40 +40,43 @@ export default function CheckIn() {
     }
   }, [debouncedSearch, filter]);
 
-  // Gọi fetchTickets khi filter hoặc search thay đổi
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
-  // 🔄 2. Xử lý Check-in / Check-out
+  // 🔄 2. Xử lý Check-in / Check-out (SỬA LOGIC TẠI ĐÂY)
   const toggleStatus = async (t: any) => {
-    const isDone = t.status === "done";
-    const newStatus = isDone ? "pending" : "done"; // Đảo ngược trạng thái
-    const now = new Date().toISOString();
+    // Dùng trường 'isUsed' thay vì 'status'
+    const currentIsUsed = t.isUsed; 
+    const newIsUsed = !currentIsUsed; // Đảo ngược trạng thái
     const id = t._id || t.id;
 
-    // Optimistic update (Cập nhật giao diện trước cho mượt)
+    // Optimistic update (Cập nhật giao diện ngay lập tức)
     setTickets(prev => prev.map(item => 
       (item._id === id || item.id === id) 
-        ? { ...item, status: newStatus, checkinTime: newStatus === "done" ? now : null } 
+        ? { 
+            ...item, 
+            isUsed: newIsUsed, 
+            updatedAt: newIsUsed ? new Date().toISOString() : item.updatedAt 
+          } 
         : item
     ));
 
     try {
-      // Gọi API update status
+      // --- SỬA QUAN TRỌNG ---
+      // Chỉ gửi 'isUsed', KHÔNG gửi 'status' hay 'checkinTime'
       await api.update("tickets", id, {
-        status: newStatus,
-        checkinTime: newStatus === "done" ? now : null,
+        isUsed: newIsUsed
       });
 
       toast.success(
-        newStatus === "done" 
+        newIsUsed 
           ? `✅ Đã check-in vé ${t.code || ""}` 
-          : `↩️ Đã hủy check-in vé ${t.code || ""}`
+          : `↩️ Đã hoàn tác vé ${t.code || ""}`
       );
     } catch (err: any) {
-      // Revert lại nếu lỗi
-      toast.error(err?.message || "Lỗi cập nhật trạng thái");
+      // Revert nếu lỗi
+      toast.error(err?.response?.data?.message || err?.message || "Lỗi cập nhật trạng thái");
       fetchTickets(); // Tải lại dữ liệu gốc
     }
   };
@@ -81,7 +86,7 @@ export default function CheckIn() {
       {/* --- Header & Bộ lọc --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-<CheckCircle className="text-blue-600" /> Soát Vé / Check-in
+          <CheckCircle className="text-blue-600" /> Soát Vé / Check-in
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -93,7 +98,7 @@ export default function CheckIn() {
               placeholder="Tìm mã vé, phim, SĐT..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input pl-10"
+              className="input w-full !pl-10"
             />
           </div>
 
@@ -104,8 +109,8 @@ export default function CheckIn() {
             className="input w-full sm:w-40"
           >
             <option value="all">Tất cả</option>
-            <option value="pending">Chưa vào</option>
-            <option value="done">Đã vào</option>
+            <option value="pending">Chưa vào (Chưa dùng)</option>
+            <option value="done">Đã vào (Đã dùng)</option>
           </select>
 
           {/* Nút Refresh */}
@@ -135,9 +140,12 @@ export default function CheckIn() {
         )}
 
         {tickets.map((t) => {
-          const isDone = t.status === "done";
-          const displayTime = t.checkinTime 
-            ? new Date(t.checkinTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) 
+          // SỬA: Dùng biến isUsed để xác định trạng thái hiển thị
+          const isDone = t.isUsed; 
+          
+          // Backend không lưu checkinTime riêng, ta dùng updatedAt nếu vé đã dùng
+          const displayTime = (isDone && t.updatedAt)
+            ? new Date(t.updatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) 
             : null;
 
           return (
@@ -156,7 +164,7 @@ export default function CheckIn() {
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
-{t.code || t.invoiceCode || "NO-CODE"}
+                    {t.code || t.transactionId || t._id?.substring(0,8).toUpperCase() || "NO-CODE"}
                   </span>
                   {isDone && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium flex items-center gap-1">
@@ -166,12 +174,19 @@ export default function CheckIn() {
                 </div>
                 
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  {t.movieTitle || t.movie || "Tên phim đang cập nhật"}
+                  {t.movieTitle || t.movie?.title || "Phim không xác định"}
                 </h3>
                 
                 <div className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-4 gap-y-1">
-                  <span>📍 {t.theaterName || t.cinema || "Rạp chưa rõ"}</span>
-                  <span>💺 Ghế: <b className="text-gray-800 dark:text-gray-200">{Array.isArray(t.seats) ? t.seats.join(", ") : t.seats}</b></span>
+                  <span>📍 {t.theaterName || t.cinema?.name || "Rạp không xác định"}</span>
+                  <span>💺 Ghế: 
+                    <b className="text-gray-800 dark:text-gray-200 ml-1">
+                      {/* Xử lý hiển thị ghế nếu là object hoặc string */}
+                      {Array.isArray(t.seats) 
+                        ? t.seats.map((s: any) => typeof s === 'object' ? `${s.row}${s.number}` : s).join(", ") 
+                        : t.seats}
+                    </b>
+                  </span>
                   {t.startTime && (
                     <span>🕒 {new Date(t.startTime).toLocaleString('vi-VN')}</span>
                   )}

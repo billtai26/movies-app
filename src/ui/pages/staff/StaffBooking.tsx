@@ -60,10 +60,18 @@ export default function StaffBooking() {
     if (selectedMovie) {
       api.listShowtimesByMovie(selectedMovie)
         .then((res) => {
+          // Lấy mảng showtimes từ response
           const list = res.showtimes || (Array.isArray(res) ? res : []);
+          
+          // [DEBUG] Log dữ liệu ra để xem cấu trúc thực tế
+          console.log("API Showtimes Data:", list); 
+          
           setShowtimes(list);
         })
-        .catch(() => setShowtimes([]));
+        .catch((err) => {
+          console.error(err);
+          setShowtimes([]);
+        });
     } else {
       setShowtimes([]);
     }
@@ -220,11 +228,24 @@ export default function StaffBooking() {
             disabled={!selectedMovie}
           >
             <option value="">-- Chọn suất chiếu --</option>
-            {showtimes.map((s) => (
-              <option key={s._id || s.id} value={s._id || s.id}>
-                {`${new Date(s.startTime).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} - ${s.room?.name || "Phòng ?"}`}
-              </option>
-            ))}
+            {showtimes.map((s) => {
+              // --- SỬA ĐỔI TẠI ĐÂY ---
+              // 1. Ép hiển thị theo UTC để giống hệt API (07:00Z -> 07:00)
+              const timeDisplay = new Date(s.startTime).toLocaleTimeString('vi-VN', {
+                hour: '2-digit', 
+                minute: '2-digit', 
+                timeZone: 'UTC' // <--- Giữ nguyên giờ gốc
+              });
+
+              // 2. Lấy tên phòng từ object room (Backend đã join)
+              const roomName = s.room?.name || "Phòng ?";
+
+              return (
+                <option key={s._id || s.id} value={s._id || s.id}>
+                  {`${timeDisplay} - ${roomName}`}
+                </option>
+              );
+            })}
           </select>
         </div>
 
