@@ -37,41 +37,25 @@ export default function AdminTickets() {
     })();
   }, []);
 
-  // ========================================================================
-  // 🕒 HÀM XỬ LÝ THỜI GIAN (Chọn 1 trong 2 cách dưới đây)
-  // ========================================================================
-  // CÁCH 2: Dùng nếu data lưu sai (07:00Z -> Bạn vẫn muốn hiện 07:00)
-  // Bỏ comment hàm này và dùng nó nếu Cách 1 ra 14:00 mà bạn lại muốn 07:00
   const formatTime = (isoString: string) => {
       if (!isoString) return "";
-      // Cắt chuỗi lấy yyyy-mm-ddThh:mm bỏ chữ Z
       const raw = isoString.replace("Z", ""); 
       const d = new Date(raw);
       return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')} ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
   };
-  
-  // ========================================================================
-
 
   const schema = {
     name: "tickets",
     title: "Vé / Hóa đơn",
 
-    // 🛠️ FIX QUAN TRỌNG: Chuyển Object thành ID để Form hiểu
     toForm: (data: any) => {
       const clone = { ...data };
-      
-      // 1. Xử lý Showtimes: Nếu là object có _id thì lấy _id, ngược lại giữ nguyên
       if (clone.showtimeId && typeof clone.showtimeId === 'object') {
           clone.showtimeId = clone.showtimeId._id || clone.showtimeId.id;
       }
-
-      // 2. Xử lý User
       if (clone.userId && typeof clone.userId === 'object') {
           clone.userId = clone.userId._id || clone.userId.id;
       }
-
-      // 3. Xử lý Ghế
       if (Array.isArray(clone.seats)) {
         clone.seats = clone.seats.map((s: any) => {
             if (typeof s === 'object') return `${s.row}${s.number}`;
@@ -98,14 +82,12 @@ export default function AdminTickets() {
           key: "showtimeId",
           label: "Phim & Suất chiếu", 
           render: (row: any) => {
-              // Tìm showtime object từ row (nếu có sẵn) hoặc từ state
               let s = (row.showtimeId && typeof row.showtimeId === 'object') 
                     ? row.showtimeId 
                     : showtimes.find(x => x._id === row.showtimeId);
 
               if (!s) return "---";
 
-              // Tìm tên phim
               let mTitle = "Phim ẩn";
               if (s.movieId && typeof s.movieId === 'object') mTitle = s.movieId.title;
               else {
@@ -127,6 +109,14 @@ export default function AdminTickets() {
         }
       },
       { 
+          key: "paymentStatus", 
+          label: "Thanh toán",
+          render: (row: any) => {
+             const map: any = { pending: "Chờ", completed: "✅ Đã xong", failed: "❌ Thất bại" };
+             return map[row.paymentStatus] || row.paymentStatus;
+          }
+      },
+      { 
           key: "totalAmount", 
           label: "Tổng tiền",
           render: (row: any) => Number(row.totalAmount).toLocaleString('vi-VN') + ' ₫'
@@ -142,30 +132,37 @@ export default function AdminTickets() {
             label: u.name || u.email || "Unknown", 
             value: u._id 
         })),
+        readonlyOnEdit: true // 🔒 KHÓA
       },
       {
         key: "showtimeId",
         label: "Lịch chiếu",
         type: "select",
         required: true,
-        // Map options với format giờ đã chuẩn hóa
         options: showtimes.map((s) => {
             const movie = movies.find(m => m._id === s.movieId);
             const movieName = movie ? movie.title : (s.movieTitle || "Phim chưa rõ");
             return {
-                label: `${movieName} - ${formatTime(s.startTime)}`, // Hiển thị giờ ở đây
+                label: `${movieName} - ${formatTime(s.startTime)}`,
                 value: s._id,
             };
         }),
+        readonlyOnEdit: true // 🔒 KHÓA
       },
       { 
           key: "seats", 
-          label: "Ghế (Chỉ xem)", 
+          label: "Ghế", 
           type: "text", 
           required: true, 
-          readonlyOnEdit: true 
+          readonlyOnEdit: true // 🔒 KHÓA (đã có từ trước)
       },
-      { key: "totalAmount", label: "Tổng tiền (₫)", type: "number", required: true },
+      { 
+          key: "totalAmount", 
+          label: "Tổng tiền (₫)", 
+          type: "number", 
+          required: true,
+          readonlyOnEdit: true // 🔒 KHÓA
+      },
       {
         key: "bookingStatus",
         label: "Trạng thái Đặt",
@@ -175,7 +172,9 @@ export default function AdminTickets() {
           { label: "Đã đặt (Active)", value: "active" },
           { label: "Đã hủy (Cancelled)", value: "cancelled" },
         ],
+        readonlyOnEdit: true // 🔒 KHÓA (Admin không được tự ý hủy vé ở đây nếu chỉ muốn chỉnh thanh toán)
       },
+      // 👇 CHỈ TRƯỜNG NÀY LÀ KHÔNG CÓ readonlyOnEdit
       {
         key: "paymentStatus",
         label: "Trạng thái Thanh toán",
@@ -197,9 +196,10 @@ export default function AdminTickets() {
           { label: "VNPay", value: "vnpay" },
           { label: "Momo", value: "momo" },
         ],
+        readonlyOnEdit: true // 🔒 KHÓA
       },
     ],
   };
 
-  return <CrudTable schema={schema as any} />;
+  return <CrudTable schema={schema as any} canCreate={false} />;
 }
