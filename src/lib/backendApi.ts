@@ -143,7 +143,6 @@ export const api = {
     }
     if (collection === 'staff-reports') return this.listStaffReports();
     if (collection === 'orders') return this.listOrders(params);
-    if (collection === 'tickets') return this.listTickets(params);
     
     // --- THÊM DÒNG NÀY ---
     // Nếu BE yêu cầu chính xác là /vouchers/admin thì dùng dòng này:
@@ -167,8 +166,12 @@ export const api = {
         return res.data;
     }
 
-    // Code 2 map 'bookings'
-    if (collection === 'bookings') return this.listBookings(params);
+    // Chuyển hướng tickets sang hàm listBookings (gọi API /bookings)
+    if (collection === 'tickets') {
+        const data = await this.listBookings(params);
+        // API trả về object { bookings: [...] }, ta cần lấy mảng bookings
+        return data.bookings || []; 
+    }
     // ----------------------------------------------------------------------
 
     // Mặc định
@@ -308,6 +311,8 @@ export const api = {
     if (['cinemaHalls'].includes(collection)) endpoint = 'cinemahalls';
     if (collection === 'staff-reports') endpoint = 'staff-reports'; // Thêm dòng này nếu cần update report
 
+    if (collection === 'tickets') endpoint = 'bookings';
+
     // 1. Thêm dòng này để trỏ đúng đường dẫn admin
     if (collection === 'notifications') endpoint = 'notifications/admin';
 
@@ -378,6 +383,8 @@ export const api = {
     if (collection === 'notifications') {
         endpoint = 'notifications/admin';
     }
+
+    if (collection === 'tickets') endpoint = 'bookings';
 
     const res = await axios.delete(`${BASE_URL}/${endpoint}/${id}`, getHeader());
     return res.data;
