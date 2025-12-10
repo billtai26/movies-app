@@ -23,6 +23,7 @@ const formatDateForInput = (isoString: any) => {
 
 export default function CrudTable({
   schema,
+  data,
   canEdit = true,
   canCreate = true, // <--- 1. THÊM PROP NÀY (mặc định là true để không ảnh hưởng trang khác)
   canDelete = true, // <--- 2. THÊM PROP NÀY (mặc định là true)
@@ -30,6 +31,7 @@ export default function CrudTable({
   renderRowActions,
 }: {
   schema: EntitySchema;
+  data?: any[]; 
   canEdit?: boolean;
   canCreate?: boolean; // Khai báo kiểu
   canDelete?: boolean; // Khai báo kiểu
