@@ -142,7 +142,11 @@ export const api = {
         return res.data;
     }
     if (collection === 'staff-reports') return this.listStaffReports();
-    if (collection === 'orders') return this.listOrders(params);
+    // Mới: Chuyển hướng orders sang bookings
+    if (collection === 'orders') {
+        const data = await this.listBookings(params);
+        return data.bookings || []; // Trả về mảng bookings
+    }
     
     // --- THÊM DÒNG NÀY ---
     // Nếu BE yêu cầu chính xác là /vouchers/admin thì dùng dòng này:
@@ -356,6 +360,9 @@ export const api = {
         delete payload.user;     // Nếu object user dính vào từ lúc get list
     }
 
+    // Thêm dòng này:
+    if (collection === 'orders') endpoint = 'bookings';
+
     // Gọi PUT hoặc PATCH tùy backend
     const method = (
       collection === 'orders' || 
@@ -372,6 +379,9 @@ export const api = {
     let endpoint = collection;
     if (collection === 'theaters') endpoint = 'cinemas';
     if (collection === 'staff-reports') endpoint = 'staff-reports';
+
+    // Thêm dòng này:
+    if (collection === 'orders') endpoint = 'bookings'; // <--- Map orders -> bookings
 
     // 1. Xử lý riêng cho Vouchers (Thêm /admin vào đường dẫn)
     if (collection === 'vouchers') {

@@ -40,8 +40,9 @@ export default function OrderEdit() {
   }, []);
 
   const handleEdit = (order: any) => {
-    setEditing(order);
-    setStatus(order.status || "pending");
+  setEditing(order);
+  // Backend dùng paymentStatus, Frontend state dùng biến 'status' để binding vào input
+  setStatus(order.paymentStatus || "pending");
   };
 
   const handleDelete = async (order: any) => {
@@ -62,14 +63,24 @@ export default function OrderEdit() {
 
   const handleSave = async () => {
     if (!editing) return;
+    
+    // Lấy ID chính xác để so sánh
+    const editingId = editing.id || editing._id; 
+
     try {
       setLoading(true);
-      await api.update("orders", editing.id || editing._id, { status });
+      await api.update("orders", editingId, { 
+        paymentStatus: status 
+      });
       
-      // Cập nhật lại UI
-      setOrders(prev => prev.map(o => 
-        (o.id === editing.id || o._id === editing._id) ? { ...o, status } : o
-      ));
+      setOrders(prev => prev.map(o => {
+        const currentId = o.id || o._id;
+        // Chỉ cập nhật nếu ID trùng khớp
+        if (currentId === editingId) {
+            return { ...o, paymentStatus: status };
+        }
+        return o; // Giữ nguyên các đơn hàng khác
+      }));
       
       toast.success("Cập nhật trạng thái thành công!");
       setEditing(null);
@@ -153,15 +164,15 @@ const start = (page - 1) * pageSize;
                   {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : '—'}
                 </td>
                 <td className="px-3 py-2 font-medium text-blue-600">
-                  {(order.total || order.amount || 0).toLocaleString("vi-VN")}
+                  {(order.totalAmount || order.amount || 0).toLocaleString("vi-VN")}
                 </td>
                 <td className="px-3 py-2">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                    order.status === 'paid' ? 'bg-green-100 text-green-700' :
-                    order.status === 'refunded' ? 'bg-red-100 text-red-700' :
-'bg-yellow-100 text-yellow-700'
+                    (order.paymentStatus === 'completed' || order.paymentStatus === 'paid') ? 'bg-green-100 text-green-700' :
+                    (order.paymentStatus === 'refunded') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {order.status}
+                    {/* Hiển thị paymentStatus hoặc bookingStatus */}
+                    {order.paymentStatus || order.bookingStatus || order.status}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-center">
@@ -229,10 +240,14 @@ const start = (page - 1) * pageSize;
               value={status}
               onChange={setStatus}
               options={[
-                { value: "pending", label: "Chờ xử lý" },
-                { value: "paid", label: "Đã thanh toán" },
-                { value: "refunded", label: "Hoàn tiền" },
-                { value: "cancelled", label: "Đã hủy" },
+                // SỬA CÁC DÒNG NÀY:
+                { value: "pending", label: "Chờ thanh toán" },
+                { value: "completed", label: "Đã thanh toán" }, // Đổi 'paid' -> 'completed'
+                { value: "failed", label: "Thất bại/Hủy" },
+                { value: "refunded", label: "Hoàn tiền" }      // Đổi thành 'failed'
+                
+                // Lưu ý: Backend hiện tại chưa hỗ trợ 'refunded' hay 'cancelled' cho trường paymentStatus
+                // Nếu muốn dùng 'refunded', bạn phải sửa cả Backend (file bookingModel.js và bookingValidation.js)
               ]}
             />
           </div>
