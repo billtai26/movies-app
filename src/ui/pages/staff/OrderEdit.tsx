@@ -3,6 +3,7 @@ import { api } from "../../../lib/api"; // ✅ Dùng API thật
 import CustomSelect from "../../../ui/components/CustomSelect";
 import toast from "react-hot-toast";
 import LoadingOverlay from "../../components/LoadingOverlay"; // Thêm loading
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function OrderEdit() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -45,19 +46,31 @@ export default function OrderEdit() {
   setStatus(order.paymentStatus || "pending");
   };
 
-  const handleDelete = async (order: any) => {
-    if (confirm(`Bạn có chắc muốn xóa đơn #${order.id || order._id}?`)) {
-      try {
-        setLoading(true);
-        await api.remove("orders", order._id || order.id);
-        toast.success("Đã xóa đơn hàng");
-        setOrders(prev => prev.filter(o => (o._id || o.id) !== (order._id || order.id)));
-        if (editing?.id === order.id) setEditing(null);
-      } catch (error) {
-        toast.error("Lỗi khi xóa đơn hàng");
-      } finally {
-        setLoading(false);
-      }
+  // Thêm state để lưu đơn hàng đang chờ xóa
+  const [deletingOrder, setDeletingOrder] = useState<any | null>(null);
+
+  // Hàm mở Modal (thay thế cho việc gọi confirm)
+  const openDeleteModal = (order: any) => {
+    setDeletingOrder(order);
+  };
+
+  // Hàm thực hiện xóa (sẽ được gọi khi user bấm nút "Xóa" trong Modal)
+  const confirmDelete = async () => {
+    if (!deletingOrder) return;
+    
+    try {
+      setLoading(true);
+      await api.remove("orders", deletingOrder.id || deletingOrder._id);
+      
+      toast.success("Đã xóa đơn hàng");
+      setOrders(prev => prev.filter(o => (o._id || o.id) !== (deletingOrder._id || deletingOrder.id)));
+      
+      if (editing?.id === deletingOrder.id) setEditing(null);
+    } catch (error) {
+      toast.error("Lỗi khi xóa đơn hàng");
+    } finally {
+      setLoading(false);
+      setDeletingOrder(null); // Đóng modal
     }
   };
 
@@ -102,7 +115,7 @@ export default function OrderEdit() {
   // Pagination logic
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-const start = (page - 1) * pageSize;
+  const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const pageRows = filtered.slice(start, end);
 
@@ -184,7 +197,7 @@ const start = (page - 1) * pageSize;
                       Sửa
                     </button>
                     <button
-                      onClick={() => handleDelete(order)}
+                      onClick={() => openDeleteModal(order)} // Gọi hàm mở Modal
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
                     >
                       Xóa
@@ -268,7 +281,21 @@ className="px-3 py-1 rounded-md border hover:bg-gray-100"
           </div>
         </div>
       )}
-      
+      {/* Modal xác nhận xóa */}
+      <ConfirmModal
+        open={!!deletingOrder}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa đơn hàng #${deletingOrder?.id || deletingOrder?._id}? Hành động này không thể hoàn tác.`}
+        onConfirm={confirmDelete}
+        // 1. Sửa onCancel thành onClose
+        onClose={() => setDeletingOrder(null)} 
+        // 2. XÓA 2 dòng này đi (vì component không hỗ trợ)
+        // confirmText="Xóa đơn hàng"
+        // confirmType="danger"
+        
+        // 3. Thêm isLoading (nếu muốn hiển thị spinner quay quay)
+        isLoading={loading}
+      />
       <LoadingOverlay isLoading={loading} message="Đang xử lý..." />
     </div>
   );
