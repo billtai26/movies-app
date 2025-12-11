@@ -3,6 +3,7 @@ import { api } from "../../../lib/api"; // ✅ Dùng API thật
 import CustomSelect from "../../../ui/components/CustomSelect";
 import toast from "react-hot-toast";
 import LoadingOverlay from "../../components/LoadingOverlay"; // Thêm loading
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function OrderEdit() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -40,36 +41,59 @@ export default function OrderEdit() {
   }, []);
 
   const handleEdit = (order: any) => {
-    setEditing(order);
-    setStatus(order.status || "pending");
+  setEditing(order);
+  // Backend dùng paymentStatus, Frontend state dùng biến 'status' để binding vào input
+  setStatus(order.paymentStatus || "pending");
   };
 
-  const handleDelete = async (order: any) => {
-    if (confirm(`Bạn có chắc muốn xóa đơn #${order.id || order._id}?`)) {
-      try {
-        setLoading(true);
-        await api.remove("orders", order._id || order.id);
-        toast.success("Đã xóa đơn hàng");
-        setOrders(prev => prev.filter(o => (o._id || o.id) !== (order._id || order.id)));
-        if (editing?.id === order.id) setEditing(null);
-      } catch (error) {
-        toast.error("Lỗi khi xóa đơn hàng");
-      } finally {
-        setLoading(false);
-      }
+  // Thêm state để lưu đơn hàng đang chờ xóa
+  const [deletingOrder, setDeletingOrder] = useState<any | null>(null);
+
+  // Hàm mở Modal (thay thế cho việc gọi confirm)
+  const openDeleteModal = (order: any) => {
+    setDeletingOrder(order);
+  };
+
+  // Hàm thực hiện xóa (sẽ được gọi khi user bấm nút "Xóa" trong Modal)
+  const confirmDelete = async () => {
+    if (!deletingOrder) return;
+    
+    try {
+      setLoading(true);
+      await api.remove("orders", deletingOrder.id || deletingOrder._id);
+      
+      toast.success("Đã xóa đơn hàng");
+      setOrders(prev => prev.filter(o => (o._id || o.id) !== (deletingOrder._id || deletingOrder.id)));
+      
+      if (editing?.id === deletingOrder.id) setEditing(null);
+    } catch (error) {
+      toast.error("Lỗi khi xóa đơn hàng");
+    } finally {
+      setLoading(false);
+      setDeletingOrder(null); // Đóng modal
     }
   };
 
   const handleSave = async () => {
     if (!editing) return;
+    
+    // Lấy ID chính xác để so sánh
+    const editingId = editing.id || editing._id; 
+
     try {
       setLoading(true);
-      await api.update("orders", editing.id || editing._id, { status });
+      await api.update("orders", editingId, { 
+        paymentStatus: status 
+      });
       
-      // Cập nhật lại UI
-      setOrders(prev => prev.map(o => 
-        (o.id === editing.id || o._id === editing._id) ? { ...o, status } : o
-      ));
+      setOrders(prev => prev.map(o => {
+        const currentId = o.id || o._id;
+        // Chỉ cập nhật nếu ID trùng khớp
+        if (currentId === editingId) {
+            return { ...o, paymentStatus: status };
+        }
+        return o; // Giữ nguyên các đơn hàng khác
+      }));
       
       toast.success("Cập nhật trạng thái thành công!");
       setEditing(null);
@@ -91,7 +115,7 @@ export default function OrderEdit() {
   // Pagination logic
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-const start = (page - 1) * pageSize;
+  const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const pageRows = filtered.slice(start, end);
 
@@ -153,15 +177,15 @@ const start = (page - 1) * pageSize;
                   {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : '—'}
                 </td>
                 <td className="px-3 py-2 font-medium text-blue-600">
-                  {(order.total || order.amount || 0).toLocaleString("vi-VN")}
+                  {(order.totalAmount || order.amount || 0).toLocaleString("vi-VN")}
                 </td>
                 <td className="px-3 py-2">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                    order.status === 'paid' ? 'bg-green-100 text-green-700' :
-                    order.status === 'refunded' ? 'bg-red-100 text-red-700' :
-'bg-yellow-100 text-yellow-700'
+                    (order.paymentStatus === 'completed' || order.paymentStatus === 'paid') ? 'bg-green-100 text-green-700' :
+                    (order.paymentStatus === 'refunded') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {order.status}
+                    {/* Hiển thị paymentStatus hoặc bookingStatus */}
+                    {order.paymentStatus || order.bookingStatus || order.status}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-center">
@@ -173,7 +197,7 @@ const start = (page - 1) * pageSize;
                       Sửa
                     </button>
                     <button
-                      onClick={() => handleDelete(order)}
+                      onClick={() => openDeleteModal(order)} // Gọi hàm mở Modal
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
                     >
                       Xóa
@@ -229,10 +253,14 @@ const start = (page - 1) * pageSize;
               value={status}
               onChange={setStatus}
               options={[
-                { value: "pending", label: "Chờ xử lý" },
-                { value: "paid", label: "Đã thanh toán" },
-                { value: "refunded", label: "Hoàn tiền" },
-                { value: "cancelled", label: "Đã hủy" },
+                // SỬA CÁC DÒNG NÀY:
+                { value: "pending", label: "Chờ thanh toán" },
+                { value: "completed", label: "Đã thanh toán" }, // Đổi 'paid' -> 'completed'
+                { value: "failed", label: "Thất bại/Hủy" },
+                { value: "refunded", label: "Hoàn tiền" }      // Đổi thành 'failed'
+                
+                // Lưu ý: Backend hiện tại chưa hỗ trợ 'refunded' hay 'cancelled' cho trường paymentStatus
+                // Nếu muốn dùng 'refunded', bạn phải sửa cả Backend (file bookingModel.js và bookingValidation.js)
               ]}
             />
           </div>
@@ -253,7 +281,21 @@ className="px-3 py-1 rounded-md border hover:bg-gray-100"
           </div>
         </div>
       )}
-      
+      {/* Modal xác nhận xóa */}
+      <ConfirmModal
+        open={!!deletingOrder}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa đơn hàng #${deletingOrder?.id || deletingOrder?._id}? Hành động này không thể hoàn tác.`}
+        onConfirm={confirmDelete}
+        // 1. Sửa onCancel thành onClose
+        onClose={() => setDeletingOrder(null)} 
+        // 2. XÓA 2 dòng này đi (vì component không hỗ trợ)
+        // confirmText="Xóa đơn hàng"
+        // confirmType="danger"
+        
+        // 3. Thêm isLoading (nếu muốn hiển thị spinner quay quay)
+        isLoading={loading}
+      />
       <LoadingOverlay isLoading={loading} message="Đang xử lý..." />
     </div>
   );
