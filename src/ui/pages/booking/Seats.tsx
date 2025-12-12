@@ -8,6 +8,7 @@ import Countdown from "../../components/Countdown";
 import { useAuth } from "../../../store/auth";
 import { toast } from "react-toastify";
 
+// Định nghĩa kiểu dữ liệu ghế
 type SeatState = "empty" | "held" | "booked" | "selected";
 type Seat = {
   id: string;
@@ -39,92 +40,74 @@ export default function Seats() {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   const [selectedTime, setSelectedTime] = useState("");
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  const [availableShows, setAvailableShows] = useState<any[]>([]);
   const [limitOpen, setLimitOpen] = useState(false);
   const [needSelectOpen, setNeedSelectOpen] = useState(false);
 
   const [secondsLeft, setSecondsLeft] = useState(HOLD_DURATION_SECONDS);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ============================= LOAD SHOWTIME =============================
+  // ============================= LOAD DATA =============================
   useEffect(() => {
     if (!showtimeId) return;
 
-    api
-      .getShowtime(showtimeId)
-      .then((showtimeDetails: any) => {
-        setSt(showtimeDetails);
+    api.getShowtime(showtimeId).then((showtimeDetails: any) => {
+      setSt(showtimeDetails);
+      // Format giờ hiển thị (Dùng UTC để tránh lệch múi giờ)
+      if (showtimeDetails?.startTime) {
+        const d = new Date(showtimeDetails.startTime);
+        setSelectedTime(`${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`);
+      }
 
-        if (showtimeDetails?.seats) {
-          const toSeat = (seatObj: any): Seat => {
-            const sn = seatObj.seatNumber;
-            const status = seatObj.status;
-            const heldBy = seatObj.heldBy;
-            const price = seatObj.price;
+      if (showtimeDetails?.seats) {
+        const toSeat = (seatObj: any): Seat => {
+          const sn = seatObj.seatNumber;
+          const status = seatObj.status;
+          const heldBy = seatObj.heldBy;
+          const price = seatObj.price;
+          const type = seatObj.type || "normal"; 
 
-            const row = sn.replace(/\d+/, "");
-            const col = Number(sn.replace(/\D+/, ""));
+          const row = sn.replace(/\d+/, "");
+          const col = Number(sn.replace(/\D+/, ""));
 
-            let state: SeatState = "empty";
-            const isSaved = incomingSelected.includes(sn);
+          let state: SeatState = "empty";
+          const isSaved = incomingSelected.includes(sn);
 
-            if (status === "booked") state = "booked";
-            else if (isSaved) state = "selected";
-            else if (heldBy) state = heldBy === myUserId ? "selected" : "held";
+          if (status === "booked") state = "booked";
+          else if (isSaved) state = "selected";
+          else if (heldBy) state = heldBy === myUserId ? "selected" : "held";
 
-            return {
-              id: sn,
-              row,
-              col,
-              type: "normal",
-              state,
-              userId: state === "selected" ? myUserId : heldBy,
-              price,
-            };
+          return {
+            id: sn,
+            row,
+            col,
+            type,
+            state,
+            userId: state === "selected" ? myUserId : heldBy,
+            price,
           };
+        };
+        setSeats(showtimeDetails.seats.map(toSeat));
+      }
 
-          setSeats(showtimeDetails.seats.map(toSeat));
-        }
-
-        // Load movie
-        api.getMovie(showtimeDetails.movieId).then(setMovie);
-
-        // Load theater
-        api
-          .listTheaters()
-          .then((res: any) => {
-            const list = Array.isArray(res) ? res : res.cinemas || [];
-            const t = list.find(
-              (x: any) =>
-                String(x._id || x.id) ===
-                String(showtimeDetails.theaterId || showtimeDetails.cinemaId)
-            );
-            setTheater(t);
-          })
-          .catch(() => {});
-
-        // Load room
-        api
-          .listRooms()
-          .then((res: any) => {
-            const list = Array.isArray(res) ? res : res.cinemaHalls || [];
-            const r = list.find(
-              (x: any) =>
-                String(x._id || x.id) === String(showtimeDetails.roomId)
-            );
-            setRoom(r);
-          })
-          .catch(() => {});
-      })
-      .catch(() => {});
+      // Load thông tin liên quan
+      api.getMovie(showtimeDetails.movieId).then(setMovie);
+      api.listTheaters().then((res: any) => {
+        const list = Array.isArray(res) ? res : res.cinemas || [];
+        const t = list.find((x: any) => String(x._id || x.id) === String(showtimeDetails.theaterId || showtimeDetails.cinemaId));
+        setTheater(t);
+      });
+      api.listRooms().then((res: any) => {
+        const list = Array.isArray(res) ? res : res.cinemaHalls || [];
+        const r = list.find((x: any) => String(x._id || x.id) === String(showtimeDetails.roomId));
+        setRoom(r);
+      });
+    }).catch(() => {});
   }, [showtimeId, myUserId]);
 
   // ============================= SOCKET =============================
   useEffect(() => {
     if (!showtimeId || !myUserId) return;
-
-    const newSocket = io("http://localhost:8017");
+    const newSocket = io("http://localhost:8017"); 
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
@@ -135,17 +118,14 @@ export default function Seats() {
       setSeats((prev) =>
         prev.map((s) => {
           if (s.id !== updatedSeat.id) return s;
-
           if (updatedSeat.state === "held") {
             return updatedSeat.userId === myUserId
               ? { ...s, state: "selected", userId: myUserId }
               : { ...s, state: "held", userId: updatedSeat.userId };
           }
-
           if (updatedSeat.state === "empty") {
             return { ...s, state: "empty", userId: undefined };
           }
-
           return { ...s, state: updatedSeat.state, userId: updatedSeat.userId };
         })
       );
@@ -153,78 +133,105 @@ export default function Seats() {
 
     newSocket.on("seats:booked", (bookedSeatIds: string[]) => {
       setSeats((prev) =>
-        prev.map((s) =>
-          bookedSeatIds.includes(s.id) ? { ...s, state: "booked" } : s
-        )
+        prev.map((s) => (bookedSeatIds.includes(s.id) ? { ...s, state: "booked" } : s))
       );
     });
 
-    return () => newSocket.disconnect();
+    return () => { newSocket.disconnect(); };
   }, [showtimeId, myUserId]);
 
-  // ============================= SELECTED SEATS =============================
+  // ============================= HELPERS =============================
   const mySelectedSeats = useMemo(
     () => seats.filter((s) => s.state === "selected" && s.userId === myUserId),
     [seats, myUserId]
   );
+  const mySelectedSeatIds = useMemo(() => mySelectedSeats.map((s) => s.id), [mySelectedSeats]);
 
-  const mySelectedSeatIds = useMemo(
-    () => mySelectedSeats.map((s) => s.id),
-    [mySelectedSeats]
-  );
-
-  // ============================= SUMMARY =============================
   const summary = useMemo(() => {
     const selected = mySelectedSeats;
-
-    if (selected.length === 0) {
-      return {
-        singles: 0,
-        singleIds: [],
-        pricePerSeat: 0,
-        total: 0,
-      };
-    }
+    if (selected.length === 0) return { singles: 0, singleIds: [], pricePerSeat: 0, total: 0 };
 
     const singleIds = selected.map((s) => s.id);
-    const avgPrice = Math.round(
-      selected.reduce((sum, s) => sum + s.price, 0) / selected.length
-    );
-
     const total = selected.reduce((sum, s) => sum + s.price, 0);
+    const avgPrice = Math.round(total / selected.length);
 
-    return {
-      singles: singleIds.length,
-      singleIds,
-      pricePerSeat: avgPrice,
-      total,
-    };
+    return { singles: singleIds.length, singleIds, pricePerSeat: avgPrice, total };
   }, [mySelectedSeats]);
 
-  // ============================= RELEASE ALL =============================
+  // ============================= ACTIONS =============================
+  const handleToggle = async (seatId: string) => {
+    await handleToggleMany([seatId]);
+  };
+
+  const handleToggleMany = async (seatIds: string[]) => {
+    if (!myUserId) {
+      toast.warning("Vui lòng đăng nhập!");
+      return;
+    }
+
+    const targetSeats = seats.filter(s => seatIds.includes(s.id));
+    if (targetSeats.length === 0) return;
+
+    const isUnavailable = targetSeats.some(s => s.state === 'booked' || (s.state === 'held' && s.userId !== myUserId));
+    if (isUnavailable) {
+      toast.warning("Một trong các ghế bạn chọn không khả dụng.");
+      return;
+    }
+
+    const allSelectedByMe = targetSeats.every(s => s.state === 'selected' && s.userId === myUserId);
+
+    try {
+      if (allSelectedByMe) {
+        // RELEASE
+        await api.releaseSeats(showtimeId!, seatIds);
+        setSeats((prev) =>
+          prev.map((s) => seatIds.includes(s.id) ? { ...s, state: "empty", userId: undefined } : s)
+        );
+        socket?.emit("seat:release_many", { showtimeId, seatIds, userId: myUserId });
+      } else {
+        // HOLD
+        const currentCount = mySelectedSeats.length;
+        const newCount = targetSeats.filter(s => s.state !== 'selected').length;
+        if (currentCount + newCount > 8) {
+          setLimitOpen(true);
+          return;
+        }
+        await api.holdSeats(showtimeId!, seatIds);
+        setSeats((prev) =>
+          prev.map((s) => seatIds.includes(s.id) ? { ...s, state: "selected", userId: myUserId } : s)
+        );
+        seatIds.forEach(id => {
+            socket?.emit("seat:hold", { showtimeId, seatId: id, userId: myUserId });
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi thao tác ghế! Có thể ghế vừa bị người khác chọn.");
+      api.getShowtime(showtimeId!).then((d: any) => setSt(d));
+    }
+  };
+
   const releaseAllMySeats = (notify = true) => {
     if (!socket || mySelectedSeatIds.length === 0) return;
-
-    socket.emit("seat:release_many", {
-      showtimeId,
-      seatIds: mySelectedSeatIds,
-      userId: myUserId,
-    });
-
+    socket.emit("seat:release_many", { showtimeId, seatIds: mySelectedSeatIds, userId: myUserId });
     api.releaseSeats?.(showtimeId!, mySelectedSeatIds).catch(() => {});
-
     setSeats((prev) =>
-      prev.map((s) =>
-        mySelectedSeatIds.includes(s.id)
-          ? { ...s, state: "empty", userId: undefined }
-          : s
-      )
+      prev.map((s) => mySelectedSeatIds.includes(s.id) ? { ...s, state: "empty", userId: undefined } : s)
     );
-
     if (notify) toast.info("Đã hết thời gian giữ ghế.");
   };
 
-  // ============================= TIMER =============================
+  const handleNext = () => {
+    if (mySelectedSeats.length === 0) {
+      toast.info("Bạn chưa chọn ghế nào!");
+      return;
+    }
+    nav("/booking/combos", {
+      state: { id: showtimeId, selected: mySelectedSeatIds },
+    });
+  };
+
+  // Timer logic
   useEffect(() => {
     if (mySelectedSeats.length > 0) {
       if (!timerRef.current) {
@@ -242,186 +249,214 @@ export default function Seats() {
         }, 1000);
       }
     } else {
-      clearInterval(timerRef.current!);
+      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
       setSecondsLeft(HOLD_DURATION_SECONDS);
     }
-
-    return () => {
-      clearInterval(timerRef.current!);
-      timerRef.current = null;
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [mySelectedSeats.length]);
-
-  // ============================= CLICK SEAT =============================
-  const handleToggle = async (seatId: string) => {
-    if (!myUserId) {
-      toast.warning("Vui lòng đăng nhập!");
-      return;
-    }
-
-    const seat = seats.find((s) => s.id === seatId);
-    if (!seat) return;
-    if (seat.state === "booked") return;
-    if (seat.state === "held" && seat.userId !== myUserId) return;
-
-    try {
-      if (seat.state === "empty") {
-        if (mySelectedSeats.length >= 8) {
-          setLimitOpen(true);
-          return;
-        }
-
-        await api.holdSeats(showtimeId!, [seatId]);
-
-        setSeats((prev) =>
-          prev.map((s) =>
-            s.id === seatId
-              ? { ...s, state: "selected", userId: myUserId }
-              : s
-          )
-        );
-
-        socket?.emit("seat:hold", { showtimeId, seatId, userId: myUserId });
-      } else if (seat.state === "selected") {
-        await api.releaseSeats(showtimeId!, [seatId]);
-
-        setSeats((prev) =>
-          prev.map((s) =>
-            s.id === seatId
-              ? { ...s, state: "empty", userId: undefined }
-              : s
-          )
-        );
-
-        socket?.emit("seat:release", { showtimeId, seatId, userId: myUserId });
-      }
-    } catch (err: any) {
-      toast.error("Lỗi thao tác ghế!");
-      api.getShowtime(showtimeId!).then((d: any) => setSt(d));
-    }
-  };
 
   // ============================= RENDER =============================
   const formatDateLabel = (dateStr: string) => {
     const dt = new Date(dateStr);
-    const weekdays = [
-      "Chủ nhật",
-      "Thứ Hai",
-      "Thứ Ba",
-      "Thứ Tư",
-      "Thứ Năm",
-      "Thứ Sáu",
-      "Thứ Bảy",
-    ];
-    return `${weekdays[dt.getDay()]}, ${String(dt.getDate()).padStart(
-      2,
-      "0"
-    )}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+    const weekdays = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    return `${weekdays[dt.getUTCDay()]}, ${String(dt.getUTCDate()).padStart(2, "0")}/${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${dt.getUTCFullYear()}`;
   };
 
-  if (!st || !seats.length)
-    return (
-      <div className="flex items-center justify-center h-96">
-        Loading...
-      </div>
-    );
+  if (!st || !seats.length) return <div className="flex items-center justify-center h-96">Loading...</div>;
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_1fr_400px]">
-      <div className="md:col-span-3">
+    <div className="min-h-screen bg-gray-50 pb-32 md:pb-0">
+      <div className="container mx-auto p-4">
         <BookingBreadcrumb currentStep="seats" />
-      </div>
 
-      {/* LEFT */}
-      <div className="md:col-span-2 space-y-4">
-        <div className="card p-4">
-          <SeatMap
-            seats={seats}
-            aisleCols={[7]}
-            aisleRows={["D", "G"]}
-            maxSelected={8}
-            onLimitExceeded={() => setLimitOpen(true)}
-            onToggle={handleToggle}
-          />
+        {/* --- [MOBILE] HIỂN THỊ ĐẦY ĐỦ THÔNG TIN PHIM --- */}
+        <div className="md:hidden mt-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+           <div className="flex gap-4">
+              <img 
+                src={movie?.posterUrl} 
+                alt="Movie Poster" 
+                className="w-24 h-36 rounded-lg object-cover shadow-sm flex-shrink-0" 
+              />
+              <div className="flex flex-col justify-between flex-1">
+                 <div>
+                    <h2 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2">
+                       {movie?.title}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                       {movie?.genres?.join(", ")}
+                    </p>
+                 </div>
+                 <div className="mt-2 space-y-1">
+                    <div className="text-sm font-medium text-gray-800">
+                       {theater?.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                       {room?.name} • 2D Phụ đề
+                    </div>
+                 </div>
+                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
+                    <div className="flex items-center gap-2">
+                       <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded border border-blue-100">
+                          {selectedTime}
+                       </span>
+                       <span className="text-xs text-gray-500">
+                          {st?.startTime && formatDateLabel(st.startTime)}
+                       </span>
+                    </div>
+                    <Countdown secondsLeft={secondsLeft} autoRun={false} />
+                 </div>
+              </div>
+           </div>
         </div>
-      </div>
 
-      {/* RIGHT SUMMARY */}
-      <div className="space-y-4 md:sticky md:top-4">
-        <div className="card p-5 space-y-4">
-          <div className="flex justify-between">
-            <span className="text-sm opacity-70">Thời gian giữ ghế:</span>
-            <Countdown secondsLeft={secondsLeft} autoRun={false} />
-          </div>
-
-          <div className="flex gap-4">
-            <img src={movie?.poster} className="h-48 w-32 rounded-lg" />
-            <div>
-              <div className="text-xl font-semibold">{movie?.title}</div>
+        <div className="grid gap-6 md:grid-cols-[1fr_350px] lg:grid-cols-[1fr_400px] mt-4">
+          
+          {/* --- LEFT: SƠ ĐỒ GHẾ --- */}
+          <div className="bg-white p-4 rounded-lg shadow border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto pb-4">
+                <div className="min-w-[600px] md:min-w-0"> 
+                    <SeatMap
+                        seats={seats}
+                        aisleCols={[7]}
+                        aisleRows={["D", "G"]}
+                        maxSelected={8}
+                        onLimitExceeded={() => setLimitOpen(true)}
+                        onToggle={handleToggle}
+                        onToggleMany={handleToggleMany}
+                    />
+                </div>
             </div>
           </div>
 
-          <div className="opacity-80 mt-2">
-            {theater?.name} {room?.name && `- ${room.name}`}
-          </div>
-
-          <div className="opacity-80">
-            Suất: {selectedTime} – {formatDateLabel(st.startTime)}
-          </div>
-
-          <hr className="my-3 border-dashed" />
-
-          {summary.singles > 0 && (
-            <>
-              <div className="flex justify-between">
-                <span>{summary.singles}x Ghế đơn</span>
-                <b>{summary.pricePerSeat.toLocaleString()} đ</b>
+          {/* --- RIGHT: TÓM TẮT (DESKTOP) --- */}
+          <div className="hidden md:block space-y-4 sticky top-4 h-fit">
+            <div className="card p-5 space-y-4 bg-white shadow rounded-lg border border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-70">Thời gian giữ ghế:</span>
+                <Countdown secondsLeft={secondsLeft} autoRun={false} />
               </div>
-              <div className="text-xs opacity-70">
-                Ghế: {summary.singleIds.join(", ")}
+
+              <div className="flex gap-4">
+                <img src={movie?.posterUrl} className="h-48 w-32 rounded-lg object-cover shadow-sm" alt="Poster" />
+                <div>
+                  <div className="text-xl font-bold text-gray-800">{movie?.title}</div>
+                  <div className="text-sm text-gray-500 mt-1">{movie?.genres?.join(", ")}</div>
+                </div>
               </div>
-            </>
-          )}
 
-          {summary.singles === 0 && (
-            <div className="text-xs opacity-60">Ghế: Chưa chọn</div>
-          )}
+              <div className="opacity-80 mt-2 text-sm space-y-1">
+                <div className="font-bold">{theater?.name}</div>
+                <div>{room?.name}</div>
+              </div>
 
-          <hr className="my-3 border-dashed" />
+              <div className="opacity-80 text-sm">
+                Suất: <span className="font-bold text-blue-600">{selectedTime}</span> – {st?.startTime && formatDateLabel(st?.startTime)}
+              </div>
 
-          <div className="flex justify-between text-xl font-bold">
-            <span>Tổng cộng</span>
-            <b className="text-orange-600">
-              {summary.total.toLocaleString()} đ
-            </b>
+              <hr className="my-3 border-dashed" />
+
+              {summary.singles > 0 ? (
+                <>
+                  <div className="flex justify-between font-medium">
+                    <span>{summary.singles}x Ghế</span>
+                    <b>{summary.total.toLocaleString()} đ</b>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 break-words">
+                    Ghế: {summary.singleIds.join(", ")}
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-gray-400 italic">Vui lòng chọn ghế</div>
+              )}
+
+              <hr className="my-3 border-dashed" />
+
+              <div className="flex justify-between text-xl font-bold items-end">
+                <span>Tổng cộng</span>
+                <b className="text-orange-600 text-2xl">
+                  {summary.total.toLocaleString()} đ
+                </b>
+              </div>
+            </div>
+
+            <div className="flex justify-between gap-3">
+              <button 
+                type="button" 
+                className="px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition text-gray-700 font-medium" 
+                onClick={() => nav("/booking/select")}
+              >
+                Quay lại
+              </button>
+
+              <button
+                type="button"
+                className={`flex-1 px-6 py-3 rounded-lg text-white transition font-bold shadow-md ${
+                  mySelectedSeats.length === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-orange-500 hover:bg-orange-600"
+                }`}
+                onClick={handleNext}
+              >
+                Tiếp tục
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex justify-between mt-3">
-          <button className="btn-back" onClick={() => nav("/booking/select")}>
-            Quay lại
-          </button>
-
-          <button
-            className="btn-next"
-            onClick={() => {
-              if (mySelectedSeats.length === 0) {
-                setNeedSelectOpen(true);
-                return;
-              }
-              nav("/booking/combos", {
-                state: {
-                  id: showtimeId,
-                  selected: mySelectedSeatIds,
-                },
-              });
-            }}
-          >
-            Tiếp tục
-          </button>
         </div>
       </div>
+
+      {/* --- [MOBILE] FIXED BOTTOM BAR (CÓ NÚT BACK) --- */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50 md:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+         {/* Dòng hiển thị ghế đã chọn */}
+         {summary.singles > 0 && (
+            <div className="mb-2 text-sm truncate px-1">
+               <span className="text-gray-500">Ghế: </span>
+               <span className="font-bold text-gray-900">{summary.singleIds.join(", ")}</span>
+            </div>
+         )}
+         
+         <div className="flex items-center gap-3">
+            {/* Nút Back (Mũi tên trái) - Đã thêm type="button" */}
+            <button 
+               type="button"
+               onClick={() => nav(-1)}
+               className="h-12 w-12 flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-600 active:bg-gray-100 transition"
+               aria-label="Quay lại"
+            >
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+               </svg>
+            </button>
+
+            {/* Thông tin Tổng tiền */}
+            <div className="flex flex-col items-center">
+               <span className="text-[10px] text-gray-500 uppercase tracking-wide">Tổng tiền</span>
+               <span className="text-lg font-bold text-orange-600 leading-none">{summary.total.toLocaleString()} đ</span>
+            </div>
+            
+            {/* Nút Tiếp tục - Đã thêm type="button" */}
+            <button
+               type="button"
+               onClick={handleNext}
+               className={`flex-1 h-12 rounded-lg font-bold text-white shadow-sm transition ${
+                  mySelectedSeats.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
+               }`}
+            >
+               Tiếp tục
+            </button>
+         </div>
+      </div>
+
+      {/* Limit Modal */}
+      {limitOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-sm text-center w-full">
+            <h3 className="text-lg font-bold text-red-600 mb-2">Thông báo</h3>
+            <p className="text-gray-600 mb-4">Bạn chỉ được chọn tối đa 8 ghế mỗi lần đặt.</p>
+            <button className="w-full py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition" onClick={() => setLimitOpen(false)}>
+              Đã hiểu
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
