@@ -1,4 +1,3 @@
-
 import { create } from 'zustand'
 
 export type Role = 'user' | 'staff' | 'admin' | null
@@ -23,7 +22,8 @@ type AuthState = {
 
 const loadPersisted = () => {
   try {
-    const raw = localStorage.getItem('auth')
+    // SỬA: Dùng sessionStorage thay vì localStorage
+    const raw = sessionStorage.getItem('auth')
     if (!raw) return null
     return JSON.parse(raw)
   } catch {
@@ -44,7 +44,10 @@ export const useAuth = create<AuthState>((set, get) => {
       avatar: state.avatar,
       userId: state.userId,
     }
-    try { localStorage.setItem('auth', JSON.stringify(toSave)) } catch {}
+    try { 
+      // SỬA: Lưu vào sessionStorage
+      sessionStorage.setItem('auth', JSON.stringify(toSave)) 
+    } catch {}
     set(next as any)
   }
 
@@ -84,7 +87,10 @@ export const useAuth = create<AuthState>((set, get) => {
     },
 
     logout: () => {
-      try { localStorage.removeItem('auth') } catch {}
+      try { 
+        // SỬA: Xóa khỏi sessionStorage khi đăng xuất
+        sessionStorage.removeItem('auth') 
+      } catch {}
       set({ token: null, role: null, name: null, email: null, avatar: null, userId: null })
     },
 
