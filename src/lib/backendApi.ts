@@ -3,18 +3,15 @@ import { BASE_URL, AUTH_ENDPOINTS } from './config'
 
 const getAuthToken = () => {
   try {
-    const rawAuth = localStorage.getItem('auth')
+    // SỬA QUAN TRỌNG: Đổi localStorage thành sessionStorage để khớp với file auth.ts
+    const rawAuth = sessionStorage.getItem('auth') 
+    
     if (rawAuth) {
       const st = JSON.parse(rawAuth)
       return st?.token || null
     }
-    const legacy = localStorage.getItem('auth-storage')
-    if (legacy) {
-      const st2 = JSON.parse(legacy)
-      return st2.state?.token || null
-    }
   } catch (error) {
-    console.error("Failed to parse auth token from localStorage", error);
+    console.error("Failed to parse auth token from sessionStorage", error);
   }
   return null;
 }
