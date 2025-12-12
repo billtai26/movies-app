@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CustomSelect from "./CustomSelect";
 import { api } from "../../lib/api";
@@ -6,9 +6,10 @@ import AuthModals from "./AuthModals";
 import { useAuth } from "../../store/auth";
 import { DropdownProvider } from "./DropdownContext";
 
-type Movie = { _id?: string; id?: string | number; title?: string; name?: string; poster?: string };
-type Cinema = { _id?: string; id?: string | number; name: string; city?: string };
-type Showtime = { _id?: string; id?: string | number; movieId: string; theaterId?: string; cinemaId?: string; startTime?: string; time?: string; end?: string };
+// Định nghĩa lại Type cho khớp với dữ liệu thật trả về từ MongoDB
+type Movie = { _id: string; title: string; };
+type Cinema = { _id: string; name: string; };
+type Showtime = { _id: string; startTime: string; endTime?: string; };
 
 function next7Days() {
   const list: { value: string; label: string }[] = [];
@@ -34,122 +35,114 @@ type Props = {
 
 export default function QuickBooking({ stacked = false, className = "" }: Props) {
   const nav = useNavigate();
-  const [movieRows, setMovieRows] = React.useState<Movie[]>([]);
-  const [cinemaRows, setCinemaRows] = React.useState<Cinema[]>([]);
-  const [showtimeRows, setShowtimeRows] = React.useState<Showtime[]>([]);
-  React.useEffect(() => {
-    Promise.allSettled([
-      api.listMovies({ status: 'now_showing' }),
-      api.listTheaters(),
-      api.listShowtimes()
-    ]).then(([mRes, cRes, sRes]) => {
-      if (mRes.status === 'fulfilled') {
-        const arr = (mRes.value as any)?.movies || (mRes.value as any)?.data || mRes.value || [];
-        setMovieRows(Array.isArray(arr) ? arr as Movie[] : []);
-      }
-      if (cRes.status === 'fulfilled') {
-        const raw = cRes.value as any
-        const arr = Array.isArray(raw) ? raw : (raw?.cinemas || raw?.theaters || raw?.data || [])
-        const list = (Array.isArray(arr) ? arr : []).map((t:any)=> ({ _id: t._id, id: t._id || t.id, name: t.name, city: t.city || t.location?.city || t.region }))
-        setCinemaRows(list as Cinema[]);
-      }
-      if (sRes.status === 'fulfilled') {
-        const raw = sRes.value as any
-        const arr = Array.isArray(raw) ? raw : (raw?.showtimes || raw?.data || [])
-        const list = (Array.isArray(arr) ? arr : []).map((s:any)=> ({ _id: s._id, id: s._id || s.id, movieId: s.movieId || s.movie?._id || s.movie, theaterId: s.theaterId || s.cinemaId || s.cinema?._id, startTime: s.startTime || s.start || s.start_at }))
-        setShowtimeRows(list as Showtime[]);
-      }
-    });
-  }, []);
+  
+  // State lưu dữ liệu từ API
+  const [movieRows, setMovieRows] = useState<Movie[]>([]);
+  const [cinemaRows, setCinemaRows] = useState<Cinema[]>([]);
+  const [showtimeRows, setShowtimeRows] = useState<Showtime[]>([]);
 
-  const movies = (movieRows.length
-    ? movieRows
-    : [
-        { id: 1, title: "Nhà Ma Xó" },
-        { id: 2, title: "Cục Vàng Của Ngoại" },
-        { id: 3, title: "Cái Mả" },
-        { id: 4, title: "Trà Chối Mes" },
-        { id: 5, title: "Good Boy" },
-        { id: 6, title: "Kẻ Truy Sát" },
-        { id: 7, title: "Người Hùng Bóng Đêm" },
-        { id: 8, title: "Phim Shin Cậu Bé Bút Chì: Nóng Bỏng Tay! Những Vũ Công Siêu Cay Kasukabe" },
-        { id: 9, title: "Bốn Đường Môn Lớn: Thử Thách Cực Hạn" },
-        { id: 10, title: "Kẻ Dòng Thế" },
-        { id: 11, title: "Cửu Long Thành Trại: Vây Thành" },
-        { id: 12, title: "Cléo Từ 5 Đến 7" },
-        { id: 13, title: "Mục Sư, Thầy Đồng Và Con Quỷ Ám Trí" },
-        { id: 14, title: "Bịt Mắt Bắt Nai" },
-      ]
-  ).map((m) => ({ value: String((m as any)._id ?? m.id), label: String(m.title ?? (m as any).name ?? '') }));
-
-  const cinemas = (cinemaRows.length
-    ? cinemaRows
-    : [
-        { id: 1, name: "Only Cinema Quận 1" },
-        { id: 2, name: "Only Cinema Tân Bình" },
-        { id: 3, name: "CGV Vincom Center" },
-        { id: 4, name: "Only Cinema Nguyễn Du" },
-        { id: 5, name: "Lotte Cinema Diamond Plaza" },
-        { id: 6, name: "BHD Star Cineplex" },
-        { id: 7, name: "Mega GS Cinemas" },
-        { id: 8, name: "Cinestar Hai Bà Trưng" },
-        { id: 9, name: "Beta Cinemas Thảo Điền" },
-        { id: 10, name: "Platinum Cineplex" },
-      ]
-  ).map((c) => ({ value: String((c as any)._id ?? c.id), label: c.name }));
-
+  // State lưu lựa chọn của người dùng
   const [movieId, setMovieId] = useState("");
   const [cinemaId, setCinemaId] = useState("");
   const [date, setDate] = useState("");
   const [showId, setShowId] = useState("");
 
+  // 1. Lấy danh sách Phim và Rạp khi trang vừa load
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [mRes, cRes] = await Promise.all([
+          api.listMovies({ status: 'now_showing' }), // Chỉ lấy phim đang chiếu
+          api.listTheaters()
+        ]);
+
+        // Xử lý dữ liệu Phim (Backend trả về { movies: [...] } hoặc mảng trực tiếp)
+        const moviesData = (mRes as any)?.movies || mRes || [];
+        setMovieRows(Array.isArray(moviesData) ? moviesData : []);
+
+        // Xử lý dữ liệu Rạp (Backend trả về { cinemas: [...] } hoặc mảng trực tiếp)
+        const cinemasData = (cRes as any)?.cinemas || cRes || [];
+        setCinemaRows(Array.isArray(cinemasData) ? cinemasData : []);
+      } catch (error) {
+        console.error("Lỗi lấy dữ liệu QuickBooking:", error);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  // 2. Lấy danh sách Suất chiếu KHI movieId hoặc cinemaId thay đổi
+  // Sử dụng hàm listShowtimesByMovie trong backendApi.ts để lấy dữ liệu chính xác hơn
+  useEffect(() => {
+    // Reset showId và danh sách suất cũ khi đổi phim/rạp
+    setShowtimeRows([]);
+    setShowId(""); 
+
+    if (movieId && cinemaId) {
+      const fetchShowtimes = async () => {
+        try {
+          // Gọi API thật: lấy suất theo Phim và Rạp
+          const sRes = await api.listShowtimesByMovie(movieId, cinemaId);
+          const showtimesData = (sRes as any)?.showtimes || sRes || [];
+          setShowtimeRows(Array.isArray(showtimesData) ? showtimesData : []);
+        } catch (error) {
+          console.error("Lỗi lấy suất chiếu:", error);
+        }
+      };
+      fetchShowtimes();
+    }
+  }, [movieId, cinemaId]);
+
+  // 3. Map dữ liệu Phim cho Dropdown (Chỉ dùng dữ liệu thật)
+  const movies = movieRows.map((m) => ({
+    value: m._id, // Dùng _id của MongoDB
+    label: m.title
+  }));
+
+  // 4. Map dữ liệu Rạp cho Dropdown (Chỉ dùng dữ liệu thật)
+  const cinemas = cinemaRows.map((c) => ({
+    value: c._id,
+    label: c.name
+  }));
+
   const dateOptions = next7Days();
 
+  // 5. Lọc và Map dữ liệu Suất chiếu
   const showOptions = useMemo(() => {
-    // Chỉ hiển thị danh sách suất khi đã chọn đủ movie, cinema, date
+    // Phải chọn đủ 3 thông tin mới hiện suất
     if (!movieId || !cinemaId || !date) return [];
 
-    const base = showtimeRows.length ? showtimeRows : [];
-
-    const filtered = base
+    return showtimeRows
       .filter((s) => {
-        const startIso = (s as any).start ?? s.startTime ?? '';
-        const theater = s.cinemaId ?? s.theaterId ?? '';
-        return String(s.movieId) === movieId && String(theater) === cinemaId && startIso.startsWith(date);
+        // Lọc những suất có ngày bắt đầu khớp với ngày đang chọn
+        // Lưu ý: startTime từ DB là ISO (UTC), date là YYYY-MM-DD (Local). 
+        // startsWith có thể lệch múi giờ, nhưng tạm thời dùng cách này theo code cũ.
+        return (s.startTime || "").startsWith(date);
       })
       .map((s) => ({
-        value: String((s as any)._id ?? s.id),
-        label:
-          new Date(((s as any).start ?? s.startTime)!).toLocaleTimeString("vi-VN", {
+        value: s._id,
+        label: new Date(s.startTime).toLocaleTimeString("vi-VN", {
             hour: "2-digit",
             minute: "2-digit",
+            timeZone: "UTC",
           }) +
-          (s.end
-            ? ` – ${new Date(s.end).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+          (s.endTime
+            ? ` – ${new Date(s.endTime).toLocaleTimeString("vi-VN", { 
+              hour: "2-digit", 
+              minute: "2-digit",
+              timeZone: "UTC", 
+            })}`
             : ""),
       }));
-
-    // Nếu không có dữ liệu thực, hiển thị các giờ chuẩn để demo
-    if (filtered.length === 0) {
-      const standardTimes = ["11:15", "13:00", "14:45", "16:30", "18:15", "20:00", "22:00"];
-      return standardTimes.map((t, idx) => ({ value: `fallback-${date}-${idx}`, label: t }));
-    }
-
-    return filtered;
   }, [showtimeRows, movieId, cinemaId, date]);
 
+  // Xử lý sự kiện mua vé
   const handleLoginSuccess = () => {
-    // Sau khi đăng nhập thành công, tiếp tục với flow mua vé
     if (!movieId || !cinemaId || !showId) {
       alert("⚠️ Vui lòng chọn đầy đủ thông tin!");
       return;
     }
-
-    // Luôn điều hướng vào trang chọn ghế
-    const realShow = showtimeRows.find((s:any) => String((s?._id ?? s?.id)) === String(showId));
-    const targetShowId = realShow ? showId : String(showId);
-    
-    nav(`/booking/seats/${targetShowId}`);
+    nav(`/booking/seats/${showId}`);
   };
 
   const handleBuy = () => {
@@ -158,27 +151,20 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
       return;
     }
 
-    // if not logged in, open login modal
-    const token = useAuth.getState().token
+    const token = useAuth.getState().token;
     if (!token) {
-      setLoginOpen(true)
-      return
+      setLoginOpen(true);
+      return;
     }
-
-    // Luôn điều hướng vào trang chọn ghế
-    // Nếu showId là thật thì dùng, không thì dùng một ID mặc định
-    const realShow = showtimeRows.find((s:any) => String((s?._id ?? s?.id)) === String(showId));
-    const targetShowId = realShow ? showId : String(showId);
     
-    nav(`/booking/seats/${targetShowId}`);
+    nav(`/booking/seats/${showId}`);
   };
 
-  const [loginOpen, setLoginOpen] = React.useState(false)
+  const [loginOpen, setLoginOpen] = React.useState(false);
   const canBuy = !!movieId && !!cinemaId && !!date && !!showId;
 
   return (
     <DropdownProvider>
-      {/* Thanh mua vé nhanh: có thể hiển thị ngang (mặc định) hoặc dọc (stacked) */}
       <div
         className={
           (
@@ -188,9 +174,9 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
           ).trim()
         }
       >
-        {/* Form */}
         <div className="px-4 py-3">
           <div className={stacked ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 lg:grid-cols-5 gap-2 items-stretch"}>
+            
             {/* Chọn Phim */}
             <div className="lg:col-span-1">
               <CustomSelect
@@ -230,20 +216,20 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
               />
             </div>
             
-            {/* Chọn Suất */}
+            {/* Chọn Suất - Giờ đây phụ thuộc vào kết quả API listShowtimesByMovie */}
             <div className="lg:col-span-1">
               <CustomSelect
                 id="showtime-select"
                 value={showId}
                 leadingLabel="Chọn Suất"
                 step={4}
-                placeholder="Chọn suất"
+                placeholder={showOptions.length === 0 ? "Không có suất" : "Chọn suất"}
                 options={showOptions}
                 onChange={setShowId}
               />
             </div>
             
-            {/* Ô Mua Vé Nhanh */}
+            {/* Nút Mua */}
             <div className={stacked ? "relative" : "lg:col-span-1 relative"}>
               {stacked ? (
                 <div className="w-full h-11 rounded-lg bg-[#f5a667] hover:bg-[#f19d50] text-white shadow-md">
@@ -257,7 +243,6 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
                 </div>
               ) : (
                 <>
-                  {/* Desktop: phủ full chiều cao nội dung thanh trắng (kể cả padding) */}
                   <div className={`hidden lg:block absolute -top-3 -bottom-3 left-[-8px] right-[-16px] rounded-r-lg bg-[#f5a667] hover:bg-[#f19d50] text-white shadow-md z-10 ${canBuy ? '' : 'opacity-60 pointer-events-none'}`}>
                     <button
                       className="w-full h-full bg-transparent text-white font-bold text-sm cursor-pointer"
@@ -266,7 +251,6 @@ export default function QuickBooking({ stacked = false, className = "" }: Props)
                       Mua vé nhanh
                     </button>
                   </div>
-                  {/* Mobile/Tablet: giữ nút bình thường */}
                   <div className="lg:hidden w-full h-11 rounded-lg bg-[#f5a667] hover:bg-[#f19d50] text-white shadow-md">
                     <button
                       className="w-full h-full bg-transparent text-white font-bold text-sm cursor-pointer disabled:opacity-60"

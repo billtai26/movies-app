@@ -45,6 +45,7 @@
 .btn-outline {
   @apply btn border border-gray-300 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
 }
+
 /* Booking flow buttons (Back / Next) consistent across pages */
 .btn-back {
   @apply inline-flex items-center justify-center px-0 py-0 font-medium text-[15px];
@@ -53,11 +54,13 @@
 }
 .btn-back:hover { opacity: 0.85; }
 .dark .btn-back:hover { opacity: 0.9; }
+
 .btn-next {
   @apply inline-flex items-center justify-center rounded-full px-8 py-2.5 font-semibold text-white shadow transition;
   background: var(--brand);
 }
 .btn-next:hover { filter: brightness(0.97); }
+
 .card {
   @apply p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm;
 }
@@ -83,10 +86,34 @@ body {
   @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
   overflow-x: hidden;
 }
-/* Hide accidental horizontal scroll caused by full-bleed sections */
+
+/* ================================================================= */
+/* 🔥 PHẦN SỬA LỖI GIẬT MÀN HÌNH (LAYOUT SHIFT FIX) 🔥 */
+/* ================================================================= */
+
+/* 1. Luôn hiển thị scrollbar dọc mà không bao giờ ẩn */
 html { 
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
+
+/* 2. Khi modal/dropdown mở, cấm thêm padding bù trừ scrollbar */
+body[data-scroll-locked] {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* 3. Fallback cho các component khác */
+body.overflow-hidden {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* ================================================================= */
+
 header.nav {
   @apply bg-white/70 backdrop-blur dark:bg-gray-900/70;
 }
@@ -333,7 +360,7 @@ input[type="password"]::-ms-clear {
   height: 0;
 }
 
-/* Ẩn thanh cuộn mọi trình duyệt */
+/* Ẩn thanh cuộn mọi trình duyệt (class phụ trợ) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
