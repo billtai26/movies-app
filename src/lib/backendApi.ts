@@ -245,7 +245,8 @@ export const api = {
     // Map đúng tên endpoint
     if (collection === 'staff-reports') endpoint = 'staff-reports';
     if (collection === 'comments') endpoint = 'comments';
-
+    if (collection === 'theaters') endpoint = 'cinemas'; // 🔥 FIX: theaters -> cinemas
+    
     // --- THÊM: Map vouchers đúng endpoint ---
     if (collection === 'vouchers') endpoint = 'vouchers';
 
