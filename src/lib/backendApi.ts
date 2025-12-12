@@ -329,6 +329,20 @@ export const api = {
     ['_id', 'createdAt', 'updatedAt', '_destroy', 'slug'].forEach(k => delete payload[k]);
 
     if (collection === 'showtimes') {
+        delete payload.room;
+        delete payload.cinema;
+        delete payload.theater;
+        delete payload.movie;
+        
+        // --- XOÁ HOẶC COMMENT 2 DÒNG NÀY ---
+        // delete payload.basePrice;  <-- Cho phép gửi basePrice
+        // delete payload.vipPrice;   <-- Cho phép gửi vipPrice
+        // ------------------------------------
+        
+        delete payload.seats; // Vẫn giữ xóa seats (vì ta sẽ tính lại seats ở backend)
+    }
+
+    if (collection === 'showtimes') {
         delete payload.cinemaId; delete payload.movieId; delete payload.theaterId; delete payload.seats;
     }
 
