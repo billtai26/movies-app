@@ -39,7 +39,7 @@ export default function Tickets(){
     const theater = t?.cinema?.name || t?.theater?.name || t?.cinema || t?.theater || ''
     const room = t?.room?.name || t?.room || ''
     const startTime = t?.startTime || t?.showtime?.startTime || t?.time || null
-    const total = t?.total || t?.price || null
+    const total = t?.totalAmount || t?.total || t?.price || null
     const status = t?.status || 'done'
     const createdAt = t?.createdAt || null
     const ticketUserId = t?.user?._id || t?.user?.id || t?.user || t?.userId || null
@@ -131,7 +131,7 @@ export default function Tickets(){
               <div>Rạp: {selected.theater}{selected.room?` - ${selected.room}`:''}</div>
               <div>Suất: {selected.startTime ? new Date(selected.startTime).toLocaleString() : '...'}</div>
               <div>Ghế: {selected.seats?.join(', ') || '...'}</div>
-              <div>Tổng tiền: {selected.total!=null ? `${Number(selected.total).toLocaleString()} đ` : '...'}</div>
+              <div>Tổng tiền: {selected.total != null ? `${Number(selected.total).toLocaleString()} đ` : '...'}</div>
               <div>Trạng thái: {selected.status}</div>
             </div>
           </div>
