@@ -58,9 +58,9 @@ export default function MovieCard({ movie }: { movie: Movie }) {
 
         {/* Age Rating - Bottom Right */}
         <div className="absolute bottom-2 right-2">
-          <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+          {/* <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
             {movie?.ageRating || "T18"}
-          </span>
+          </span> */}
         </div>
       </div>
 
