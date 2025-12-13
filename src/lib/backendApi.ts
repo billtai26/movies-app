@@ -322,29 +322,55 @@ export const api = {
     return { success: true };
   },
 
-  async momoCreate(body: any) {
-     // Backend: POST /payments/momo
-     const res = await axios.post(`${BASE_URL}/payments/momo`, body, getHeader());
-     return res.data;
-  },
+ // 🔥 MoMo QR Payment
+momoCreate: async (data: any) => {
+  const token = getAuthToken();
+
+  const res = await axios.post(
+    // ĐÚNG: /v1/payments/momo/payment
+    `${BASE_URL}/payments/momo/payment`,
+    data,
+    {
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : undefined
+    }
+  );
+
+  // BE trả về { success, data: {...} }
+  // => trả thẳng data bên trong cho Payment.tsx
+  return res.data?.data || res.data;
+},
+
+  momoConfirm: async (params: any) => {
+  // Thường callback từ MoMo không cần token, nhưng có cũng không sao
+  const token = getAuthToken();
+
+  const res = await axios.post(
+    `${BASE_URL}/payments/momo/callback`,
+    params,
+    token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : undefined
+  );
+
+  // BE trả về { ... , invoice }
+  return res.data;
+},
   
-  // AI Chat (Nếu backend chưa có route này, bạn cần thêm vào BE hoặc comment lại)
-  async aiChat(userId: string, message: string) {
-      try {
-        const res = await axios.post(`${BASE_URL}/ai/chat`, { userId, message });
-        return res.data;
-      } catch (e) {
-        console.warn("AI Chat API not ready");
-        return { reply: "AI đang bảo trì." };
-      }
+// ================= AI CHAT =================
+  async aiHistory(userId: string) {
+    const res = await axios.get(`${BASE_URL}/ai/history`, {
+      params: { userId }
+    });
+    return res.data; // mảng [{role, content}]
   },
 
-  async aiHistory(userId: string) {
-      try {
-        const res = await axios.get(`${BASE_URL}/ai/history/${userId}`);
-        return res.data;
-      } catch (e) {
-        return [];
-      }
-  }
+  async aiChat(userId: string | null, message: string) {
+    const res = await axios.post(`${BASE_URL}/ai/chat`, {
+      userId,
+      message
+    });
+    return res.data; // { reply: string }
+  },
 }
