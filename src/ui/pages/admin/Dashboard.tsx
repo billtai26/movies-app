@@ -48,10 +48,10 @@ export default function AdminDashboard() {
     (async () => {
       try {
         const [rev, tick, tops, theaters] = await Promise.all([
-          api.getAll("revenue"),  
-          api.getAll("tickets"),
-          api.getAll("movies"),  
-          api.getAll("theaters"),
+          api.list("revenue"),   // Thay api.getAll("revenue")
+          api.list("tickets"),   // Thay api.getAll("tickets")
+          api.list("movies"),    // Thay api.getAll("movies")
+          api.list("theaters"),
         ]);
         setRevenueData(rev || []);
         setTicketData(tick || []);
@@ -105,8 +105,8 @@ export default function AdminDashboard() {
       {/* KPI Cards */}
       <div className="grid md:grid-cols-4 gap-4">
         {[
-          { title: "Doanh thu hôm nay", value: "₫36,500,000", icon: faMoneyBillWave, color: "bg-green-500" },
-          { title: "Vé bán ra", value: "1,042", icon: faTicketAlt, color: "bg-blue-500" },
+          { title: "Doanh thu hôm nay", value: "₫500,000", icon: faMoneyBillWave, color: "bg-green-500" },
+          { title: "Vé bán ra", value: "142", icon: faTicketAlt, color: "bg-blue-500" },
           { title: "Người dùng mới", value: "37", icon: faUserPlus, color: "bg-purple-500" },
           { title: "Bình luận chờ duyệt", value: "17", icon: faComments, color: "bg-orange-500" },
         ].map((item, i) => (
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* MAP */}
-      <div className="p-4 rounded-xl bg-white dark:bg-gray-800 shadow">
+      {/* <div className="p-4 rounded-xl bg-white dark:bg-gray-800 shadow">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">
             Bản đồ hệ thống rạp Cinesta
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
             ))}
           </MapContainer>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
