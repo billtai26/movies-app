@@ -41,9 +41,18 @@ export default function Seats() {
 
   const [selectedTime, setSelectedTime] = useState("");
   const [limitOpen, setLimitOpen] = useState(false);
-  const [needSelectOpen, setNeedSelectOpen] = useState(false);
 
-  const [secondsLeft, setSecondsLeft] = useState(HOLD_DURATION_SECONDS);
+  // Hàm lấy thời gian còn lại
+  const getRemainingTime = () => {
+    const savedEndTime = localStorage.getItem("seat_hold_expiration");
+    if (savedEndTime) {
+      const diff = Math.floor((parseInt(savedEndTime) - Date.now()) / 1000);
+      return diff > 0 ? diff : 0;
+    }
+    return HOLD_DURATION_SECONDS;
+  };
+
+  const [secondsLeft, setSecondsLeft] = useState(getRemainingTime);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ============================= LOAD DATA =============================
@@ -52,7 +61,6 @@ export default function Seats() {
 
     api.getShowtime(showtimeId).then((showtimeDetails: any) => {
       setSt(showtimeDetails);
-      // Format giờ hiển thị (Dùng UTC để tránh lệch múi giờ)
       if (showtimeDetails?.startTime) {
         const d = new Date(showtimeDetails.startTime);
         setSelectedTime(`${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`);
@@ -89,7 +97,6 @@ export default function Seats() {
         setSeats(showtimeDetails.seats.map(toSeat));
       }
 
-      // Load thông tin liên quan
       api.getMovie(showtimeDetails.movieId).then(setMovie);
       api.listTheaters().then((res: any) => {
         const list = Array.isArray(res) ? res : res.cinemas || [];
@@ -158,6 +165,13 @@ export default function Seats() {
     return { singles: singleIds.length, singleIds, pricePerSeat: avgPrice, total };
   }, [mySelectedSeats]);
 
+  // [HÀM MỚI] Reset lại đồng hồ về 7 phút (dùng khi tương tác ghế)
+  const resetTimer = () => {
+    const endTime = Date.now() + HOLD_DURATION_SECONDS * 1000;
+    localStorage.setItem("seat_hold_expiration", endTime.toString());
+    setSecondsLeft(HOLD_DURATION_SECONDS);
+  };
+
   // ============================= ACTIONS =============================
   const handleToggle = async (seatId: string) => {
     await handleToggleMany([seatId]);
@@ -182,14 +196,22 @@ export default function Seats() {
 
     try {
       if (allSelectedByMe) {
-        // RELEASE
+        // RELEASE (BỎ CHỌN)
         await api.releaseSeats(showtimeId!, seatIds);
         setSeats((prev) =>
           prev.map((s) => seatIds.includes(s.id) ? { ...s, state: "empty", userId: undefined } : s)
         );
         socket?.emit("seat:release_many", { showtimeId, seatIds, userId: myUserId });
+
+        // [SỬA ĐỔI QUAN TRỌNG]: Nếu bỏ chọn ghế nhưng VẪN CÒN ghế khác -> Reset lại đồng hồ
+        // (Nếu bỏ hết sạch ghế thì useEffect bên dưới sẽ tự lo việc xóa timer)
+        const remainingCount = mySelectedSeats.length - seatIds.length;
+        if (remainingCount > 0) {
+            resetTimer();
+        }
+
       } else {
-        // HOLD
+        // HOLD (CHỌN THÊM)
         const currentCount = mySelectedSeats.length;
         const newCount = targetSeats.filter(s => s.state !== 'selected').length;
         if (currentCount + newCount > 8) {
@@ -203,6 +225,9 @@ export default function Seats() {
         seatIds.forEach(id => {
             socket?.emit("seat:hold", { showtimeId, seatId: id, userId: myUserId });
         });
+
+        // [SỬA ĐỔI QUAN TRỌNG]: Khi chọn thêm ghế -> Reset lại đồng hồ ngay
+        resetTimer();
       }
     } catch (err) {
       console.error(err);
@@ -213,6 +238,8 @@ export default function Seats() {
 
   const releaseAllMySeats = (notify = true) => {
     if (!socket || mySelectedSeatIds.length === 0) return;
+    localStorage.removeItem("seat_hold_expiration");
+
     socket.emit("seat:release_many", { showtimeId, seatIds: mySelectedSeatIds, userId: myUserId });
     api.releaseSeats?.(showtimeId!, mySelectedSeatIds).catch(() => {});
     setSeats((prev) =>
@@ -231,30 +258,43 @@ export default function Seats() {
     });
   };
 
-  // Timer logic
+  // ============================= TIMER LOGIC (UPDATED) =============================
   useEffect(() => {
+    // [SỬA ĐỔI QUAN TRỌNG]: Nếu danh sách ghế chưa tải xong (length = 0),
+    // thì KHÔNG chạy logic bên dưới để tránh xóa nhầm localStorage.
+    if (seats.length === 0) return;
+
     if (mySelectedSeats.length > 0) {
+      // Nếu chưa có thời gian (lần đầu chọn), tạo mới. 
+      // Nếu đã có (quay lại từ trang khác), giữ nguyên.
+      if (!localStorage.getItem("seat_hold_expiration")) {
+        const endTime = Date.now() + HOLD_DURATION_SECONDS * 1000;
+        localStorage.setItem("seat_hold_expiration", endTime.toString());
+      }
+      
       if (!timerRef.current) {
         timerRef.current = setInterval(() => {
-          setSecondsLeft((sec) => {
-            if (sec <= 1) {
-              clearInterval(timerRef.current!);
-              timerRef.current = null;
-              releaseAllMySeats(true);
-              nav("/movies");
-              return 0;
-            }
-            return sec - 1;
-          });
+          const remaining = getRemainingTime();
+          setSecondsLeft(remaining);
+
+          if (remaining <= 0) {
+            clearInterval(timerRef.current!);
+            timerRef.current = null;
+            releaseAllMySeats(true);
+            nav("/movies");
+          }
         }, 1000);
       }
     } else {
+      // Chỉ khi danh sách ghế ĐÃ TẢI XONG mà user không chọn ghế nào
+      // thì mới xóa timer.
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
       setSecondsLeft(HOLD_DURATION_SECONDS);
+      localStorage.removeItem("seat_hold_expiration");
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [mySelectedSeats.length]);
+  }, [mySelectedSeats.length, seats.length]); // Thêm seats.length vào dependency
 
   // ============================= RENDER =============================
   const formatDateLabel = (dateStr: string) => {
@@ -270,7 +310,7 @@ export default function Seats() {
       <div className="container mx-auto p-4">
         <BookingBreadcrumb currentStep="seats" />
 
-        {/* --- [MOBILE] HIỂN THỊ ĐẦY ĐỦ THÔNG TIN PHIM --- */}
+        {/* --- [MOBILE] --- */}
         <div className="md:hidden mt-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
            <div className="flex gap-4">
               <img 
@@ -403,9 +443,8 @@ export default function Seats() {
         </div>
       </div>
 
-      {/* --- [MOBILE] FIXED BOTTOM BAR (CÓ NÚT BACK) --- */}
+      {/* --- [MOBILE] FIXED BOTTOM BAR --- */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50 md:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-         {/* Dòng hiển thị ghế đã chọn */}
          {summary.singles > 0 && (
             <div className="mb-2 text-sm truncate px-1">
                <span className="text-gray-500">Ghế: </span>
@@ -414,7 +453,6 @@ export default function Seats() {
          )}
          
          <div className="flex items-center gap-3">
-            {/* Nút Back (Mũi tên trái) - Đã thêm type="button" */}
             <button 
                type="button"
                onClick={() => nav(-1)}
@@ -426,13 +464,11 @@ export default function Seats() {
                </svg>
             </button>
 
-            {/* Thông tin Tổng tiền */}
             <div className="flex flex-col items-center">
                <span className="text-[10px] text-gray-500 uppercase tracking-wide">Tổng tiền</span>
                <span className="text-lg font-bold text-orange-600 leading-none">{summary.total.toLocaleString()} đ</span>
             </div>
             
-            {/* Nút Tiếp tục - Đã thêm type="button" */}
             <button
                type="button"
                onClick={handleNext}
@@ -445,7 +481,6 @@ export default function Seats() {
          </div>
       </div>
 
-      {/* Limit Modal */}
       {limitOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white p-6 rounded-xl shadow-xl max-w-sm text-center w-full">
