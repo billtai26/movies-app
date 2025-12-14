@@ -69,7 +69,7 @@ export default function StaffLayout() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mr-6">
             <button
               className="btn-outline text-sm px-3 py-1"
               onClick={() => {
