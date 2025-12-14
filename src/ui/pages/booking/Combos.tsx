@@ -4,6 +4,7 @@ import BookingBreadcrumb from '../../components/BookingBreadcrumb'
 import Countdown from '../../components/Countdown'
 import LoadingOverlay from '../../components/LoadingOverlay'
 import { api } from '../../../lib/backendApi'
+import { toast } from 'react-toastify'
 
 interface ComboItem {
   _id: string;
@@ -36,6 +37,16 @@ export default function Combos() {
     couples: 0,
     singleIds: [] as string[],
     total: 0
+  });
+
+  // [UPDATED] Tính thời gian còn lại khi vào trang này
+  const [timeLeft, setTimeLeft] = React.useState(() => {
+    const savedEndTime = localStorage.getItem("seat_hold_expiration");
+    if (savedEndTime) {
+      const diff = Math.floor((parseInt(savedEndTime) - Date.now()) / 1000);
+      return diff > 0 ? diff : 0;
+    }
+    return 0; 
   });
 
   /* ============================
@@ -115,9 +126,11 @@ export default function Combos() {
     if (!iso) return '';
     const d = new Date(iso);
     const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} - ${
-      days[d.getDay()]
-    }, ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    
+    // SỬA ĐỔI: Dùng getUTC... để lấy giờ gốc từ server, không tự động cộng thêm 7 tiếng
+    return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')} - ${
+      days[d.getUTCDay()]
+    }, ${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
   };
 
   if (loading) {
@@ -177,7 +190,15 @@ export default function Combos() {
           {/* TIMER */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">Thời gian giữ ghế:</div>
-            <Countdown secondsLeft={420} />
+            {/* [UPDATED] Truyền timeLeft đã tính toán vào đây */}
+            <Countdown 
+              secondsLeft={timeLeft} 
+              onExpire={() => {
+                toast.info("Hết thời gian giữ ghế!");
+                localStorage.removeItem("seat_hold_expiration");
+                nav("/movies");
+              }}
+            />
           </div>
 
           {/* MOVIE INFO */}
