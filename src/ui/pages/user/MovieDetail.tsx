@@ -217,8 +217,8 @@ export default function MovieDetail() {
               </div>
 
               <div className="mt-3 space-x-6 text-gray-700">
-                <span>Quốc gia: <b>{countryText}</b></span>
-                <span>Năm sản xuất: <b>{productionYearText}</b></span>
+                {/* <span>Quốc gia: <b>{countryText}</b></span>
+                <span>Năm sản xuất: <b>{productionYearText}</b></span> */}
               </div>
 
               {/* Thể loại - hiển thị ngang, chỉ wrap khi hết chỗ */}
@@ -267,39 +267,75 @@ export default function MovieDetail() {
 
           {/* Lịch chiếu theo rạp */}
           <div id="schedule" className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-[2px] h-5 bg-blue-600"></span>
-              <h3 className="text-lg font-semibold">Lịch Chiếu</h3>
-            </div>
-            {/* Hàng tabs + mũi tên + bộ lọc bên phải */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <button aria-label="Cuộn trái" onClick={()=>scrollTabs('prev')} className="w-6 h-6 grid place-items-center text-gray-700 hover:text-blue-600">‹</button>
-                <div ref={tabsRef} className="flex gap-3 overflow-x-auto py-2 no-scrollbar">
+            {/* --- BẮT ĐẦU ĐOẠN CODE SỬA ĐỔI --- */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+              
+              {/* Khu vực chọn ngày (Tabs) */}
+              <div className="flex items-center gap-2 flex-1 min-w-0 bg-gray-50 lg:bg-transparent p-2 lg:p-0 rounded-xl border lg:border-none border-gray-100">
+                {/* Nút Previous - Ẩn trên mobile để tiết kiệm diện tích, chỉ hiện từ tablet trở lên */}
+                <button 
+                  aria-label="Cuộn trái" 
+                  onClick={() => scrollTabs('prev')} 
+                  className="hidden md:grid w-8 h-8 place-items-center text-gray-500 hover:text-blue-600 hover:bg-gray-200 rounded-full transition-colors shrink-0"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+
+                {/* Container chứa các Tabs */}
+                <div ref={tabsRef} className="flex gap-3 overflow-x-auto py-1 no-scrollbar scroll-smooth flex-1">
                   {dates.map(d => (
                     <button
                       key={d.value}
-                      className={`w-20 h-14 rounded-md border shadow-sm flex flex-col items-center justify-center transition-colors ${selectedDate===d.value ? 'bg-blue-600 text-white border-blue-600 shadow' : 'bg-white hover:bg-blue-50'}`}
-                      onClick={()=>setSelectedDate(d.value)}
+                      // Thay đổi: Thêm shrink-0 để không bị co lại, min-w để đảm bảo kích thước chạm ngón tay
+                      className={`shrink-0 min-w-[5rem] h-14 rounded-lg border shadow-sm flex flex-col items-center justify-center transition-all ${
+                        selectedDate === d.value 
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' 
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                      onClick={() => setSelectedDate(d.value)}
                     >
-                      <div className="text-xs font-medium leading-none">{d.label}</div>
-                      <div className="text-[11px] opacity-80 leading-none mt-1">{d.value}</div>
+                      <div className="text-xs font-bold uppercase tracking-wide">{d.label}</div>
+                      <div className={`text-[11px] leading-none mt-1 ${selectedDate === d.value ? 'text-blue-100' : 'text-gray-500'}`}>{d.value}</div>
                     </button>
                   ))}
                 </div>
-                <button aria-label="Cuộn phải" onClick={()=>scrollTabs('next')} className="w-6 h-6 grid place-items-center text-gray-700 hover:text-blue-600">›</button>
+
+                {/* Nút Next */}
+                <button 
+                  aria-label="Cuộn phải" 
+                  onClick={() => scrollTabs('next')} 
+                  className="hidden md:grid w-8 h-8 place-items-center text-gray-500 hover:text-blue-600 hover:bg-gray-200 rounded-full transition-colors shrink-0"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
               </div>
-              <div className="flex items-center gap-3">
-                <select className="px-3 py-2 border rounded-md text-sm" value={region} onChange={e=>setRegion(e.target.value)}>
+
+              {/* Khu vực bộ lọc (Dropdowns) */}
+              <div className="flex gap-3 w-full lg:w-auto">
+                <select 
+                  className="flex-1 lg:flex-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                  value={region} 
+                  onChange={e => setRegion(e.target.value)}
+                >
                   <option value="all">Toàn quốc</option>
                   <option value="only">Only Cinema</option>
                 </select>
-                <select className="px-3 py-2 border rounded-md text-sm" value={theaterFilter} onChange={e=>setTheaterFilter(e.target.value)}>
+                
+                <select 
+                  className="flex-[2] lg:flex-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none truncate max-w-[200px] lg:max-w-none" 
+                  value={theaterFilter} 
+                  onChange={e => setTheaterFilter(e.target.value)}
+                >
                   <option value="all">Tất cả rạp</option>
-                  {theaterSource.map(t=> <option key={(t as any)._id || t.id} value={(t as any)._id || t.id}>{t.name}</option>)}
+                  {theaterSource.map(t => <option key={(t as any)._id || t.id} value={(t as any)._id || t.id}>{t.name}</option>)}
                 </select>
               </div>
             </div>
+            {/* --- KẾT THÚC ĐOẠN CODE SỬA ĐỔI --- */}
             {/* Đường ngang xanh cố định dưới tabs */}
             <div className="mt-2 h-[2px] bg-blue-600 w-full" />
             {/* Theo rạp */}
