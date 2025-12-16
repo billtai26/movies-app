@@ -15,12 +15,18 @@ export default function AdminStaffReports() {
   const [data, setData] = useState<StaffReport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const getToken = () => sessionStorage.getItem("accessToken"); 
   // Gọi API
   const fetchReports = async () => {
     try {
       setIsLoading(true);
+      const token = getToken(); // Lấy token
       // Đảm bảo Backend đang chạy ở port 8000
-      const response = await axios.get("http://localhost:8017/v1/admin_staff_reports"); 
+      const response = await axios.get("http://localhost:8017/v1/admin_staff_reports", {
+      headers: {
+        Authorization: `Bearer ${token}` // 🔥 QUAN TRỌNG: Gửi token kèm theo
+      }
+    });
       
       // Kiểm tra cấu trúc trả về. Nếu backend trả về { data: [...] } thì phải dùng response.data.data
       const result = Array.isArray(response.data) ? response.data : response.data.data || [];
@@ -40,9 +46,13 @@ export default function AdminStaffReports() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      await axios.put(`http://localhost:8017/v1/admin_staff_reports/${id}`, {
-        status: newStatus,
-      });
+      const token = getToken(); 
+    await axios.put(`http://localhost:8017/v1/admin_staff_reports/${id}`, 
+      { status: newStatus }, // Body data
+      { 
+        headers: { Authorization: `Bearer ${token}` } // 🔥 Config header nằm ở tham số thứ 3
+      }
+    );
       setData((prevData) =>
         prevData.map((item) =>
           item._id === id ? { ...item, status: newStatus as any } : item
