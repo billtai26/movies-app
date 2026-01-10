@@ -70,8 +70,8 @@ function extractTaggedJsonArray(reply: string, tag: string) {
 }
 
 export default function AiChatBox() {
-  const { user } = useAuth();
-  const userId = user?._id;
+  const _id = useAuth((state) => state._id);
+  const userId = _id;
 
   // ✅ mặc định mở sẵn; user có thể thu nhỏ
   const [minimized, setMinimized] = useState(false);

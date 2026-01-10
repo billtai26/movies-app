@@ -16,7 +16,7 @@ export default function AdminRevenue() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.getAll("revenue"); // gọi đúng /api/revenue
+        const res = await api.list("revenue"); // gọi đúng /api/revenue
         if (res && Array.isArray(res) && res.length > 0) {
           setData(res);
         } else {
