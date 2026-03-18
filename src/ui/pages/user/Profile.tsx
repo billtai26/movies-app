@@ -7,7 +7,7 @@ import LoadingOverlay from "../../components/LoadingOverlay";
 
 export default function Profile() {
   // Lấy hàm cập nhật store để đồng bộ Navbar sau khi sửa profile
-  const { setSession, name: authName, email: authEmail, avatar: authAvatar, role: authRole } = useAuth(); 
+  const { setSession, token, name: authName, email: authEmail, avatar: authAvatar, role: authRole } = useAuth(); 
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -48,7 +48,7 @@ export default function Profile() {
             password: "",
           });
           setSession({
-            token: localStorage.getItem('auth') ? JSON.parse(localStorage.getItem('auth')!).token : "",
+            token: token, // Dùng ngay token đang có trong store
             name: data.username,
             email: data.email,
             avatar: data.avatarUrl,
@@ -145,7 +145,7 @@ export default function Profile() {
       
       // Đồng bộ store
       setSession({
-        token: JSON.parse(localStorage.getItem('auth')!).token,
+        token: token, 
         name: updatedData.username,
         email: updatedData.email
       });
