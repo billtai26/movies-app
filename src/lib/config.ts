@@ -1,7 +1,7 @@
 // Toggle between mock data and real backend API
 export const useMock = false
 // Base URL for your backend when useMock = false
-export const BASE_URL = "https://movies-app-api-03q8.onrender.com" // change when backend is ready
+export const BASE_URL = "https://movies-app-api-03q8.onrender.com/v1" // change when backend is ready
 export const AUTH_ENDPOINTS = {
   login: [
     "/users/login"
